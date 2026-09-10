@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-canvas: #F5F5F3;
+  --color-surface-card: #FFFFFF;
+  --color-paper-warm: #F3EBDD;
+  --color-border-soft: #D9D7D2;
+
+  --color-primary: #466800;
+  --color-primary-container: #B7FF32;
+  --color-on-primary-container: #4E7400;
+  --color-on-primary: #FFFFFF;
+
+  --color-secondary: #8433C4;
+  --color-secondary-container: #BD6EFE;
+  --color-secondary-fixed: #F2DAFF;
+  --color-secondary-fixed-dim: #E0B6FF;
+
+  --color-tertiary: #645A71;
+  --color-tertiary-container: #F2E4FF;
+
+  --color-surface: #FCF9F8;
+  --color-surface-bright: #FCF9F8;
+  --color-surface-dim: #DCD9D9;
+  --color-surface-variant: #E5E2E1;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-container-low: #F6F3F2;
+  --color-surface-container: #F0EDEC;
+  --color-surface-container-high: #EBE7E7;
+  --color-surface-container-highest: #E5E2E1;
+
+  --color-on-surface: #1C1B1B;
+  --color-on-surface-variant: #424934;
+  --color-on-background: #1C1B1B;
+
+  --color-mood-calm-joy: #70E000;
+  --color-mood-hope-energy: #FFD166;
+  --color-mood-anxiety-stress: #FF6B6B;
+  --color-mood-sadness-reflect: #4D96FF;
+  --color-mood-purple: #9D4EDD;
+
+  --font-space: var(--font-space-grotesk), sans-serif;
+  --font-sans: var(--font-plus-jakarta), sans-serif;
+  --font-serif: var(--font-playfair), serif;
+}
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--color-bg-canvas);
+    color: var(--color-on-surface);
+    font-family: var(--font-plus-jakarta), sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Neo-Brutalist shadows & borders */
+.border-neo {
+  border: 2.5px solid #111111;
+}
+
+.border-neo-sm {
+  border: 2px solid #111111;
+}
+
+.shadow-neo-sm {
+  box-shadow: 2px 2px 0px #111111;
+}
+
+.shadow-neo {
+  box-shadow: 4px 4px 0px #111111;
+}
+
+.shadow-neo-lg {
+  box-shadow: 6px 6px 0px #111111;
+}
+
+.shadow-neo-hover {
+  transition: all 0.15s ease-in-out;
+}
+.shadow-neo-hover:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #111111;
+}
+.shadow-neo-hover:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #111111;
+}
+
+/* Notebook lines background pattern */
+.bg-notebook-lines {
+  background-image: linear-gradient(#e5e2e1 1px, transparent 1px);
+  background-size: 100% 1.75rem;
+}
+
+/* Scrapbook grid dot pattern */
+.bg-scrapbook-dots {
+  background-image: radial-gradient(#d9d7d2 1.5px, transparent 1.5px);
+  background-size: 18px 18px;
+}
