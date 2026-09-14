@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface NeoButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'paper' | 'outline' | 'danger';
+  variant?: 'primary' | 'secondary' | 'paper' | 'outline' | 'danger' | 'dark';
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
 }
@@ -20,6 +20,7 @@ export function NeoButton({
     paper: 'bg-paper-warm text-on-surface hover:bg-[#ebdcc7]',
     outline: 'bg-white text-on-surface hover:bg-gray-50',
     danger: 'bg-mood-anxiety-stress text-white hover:opacity-90',
+    dark: 'bg-neutral-500 text-white hover:bg-neutral-800',
   };
 
   const sizeStyles = {

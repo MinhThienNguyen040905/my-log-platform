@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/layout/Navbar";
+import { ToastProvider } from "@/lib/toast-context";
 import { JournalProvider } from "@/lib/journal-context";
 
 const spaceGrotesk = Space_Grotesk({
@@ -35,7 +35,8 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} ${playfairDisplay.variable} h-full antialiased`}
+      data-scroll-behavior="smooth"
+      className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} ${playfairDisplay.variable} h-full antialiased scroll-smooth`}
     >
       <head>
         <link
@@ -44,10 +45,11 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-bg-canvas text-on-surface font-sans">
-        <JournalProvider>
-          <Navbar />
-          <main className="flex-1 pt-20 w-full">{children}</main>
-        </JournalProvider>
+        <ToastProvider>
+          <JournalProvider>
+            {children}
+          </JournalProvider>
+        </ToastProvider>
       </body>
     </html>
   );
