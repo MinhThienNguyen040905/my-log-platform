@@ -1,4 +1,5 @@
 import React from 'react';
+import { Star } from 'lucide-react';
 
 interface WashiTapeProps {
   color?: 'lime' | 'peach' | 'lavender' | 'blue';
@@ -19,9 +20,9 @@ export function WashiTape({ color = 'lime', rotate = -3, className = '' }: Washi
       style={{ transform: `rotate(${rotate}deg)` }}
       className={`h-6 px-6 border-2 shadow-[2px_2px_0px_#111111] pointer-events-none select-none ${colorMap[color]} ${className}`}
     >
-      <div className="w-full h-full opacity-30 flex items-center justify-between">
-        <span className="text-[10px] tracking-widest font-mono uppercase">MYLOG</span>
-        <span className="text-[10px] tracking-widest font-mono uppercase">★</span>
+      <div className="w-full h-full flex items-center justify-between">
+        <span className="text-[10px] font-bold tracking-widest font-mono uppercase">MYLOG</span>
+        <Star className="w-2.5 h-2.5 fill-black stroke-black" />
       </div>
     </div>
   );

@@ -786,6 +786,7 @@ src/
 -   Create asymmetrical compositions
 -   Keep functional UI simple
 -   Make the diary content the visual focus
+-   Use Lucide React SVG icons with consistent stroke widths (2px - 2.5px) and theme colors across all UI components and moods
 
 ## DON'T
 
@@ -798,6 +799,7 @@ src/
 -   Use huge numbers of animations
 -   Make every card look identical
 -   Overcrowd the Hero section
+-   Do not use default browser/OS emojis (e.g. 😊, ⚡, 😰, 🌧️) for UI controls, moods, or icons (they render inconsistently across OSs and disrupt Neo-Brutalism high-contrast vector borders)
 
 ------------------------------------------------------------------------
 
