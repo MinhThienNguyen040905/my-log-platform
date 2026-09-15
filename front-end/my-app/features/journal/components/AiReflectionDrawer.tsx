@@ -54,10 +54,19 @@ export const AiReflectionDrawer: React.FC<AiReflectionDrawerProps> = ({
   };
 
   return (
-    <aside
-      className="fixed lg:absolute top-20 right-0 w-full sm:w-[380px] lg:w-[380px] h-[calc(100vh-80px)] bg-surface-card border-l-2 sm:border-2 border-black sm:rounded-l-3xl shadow-neo-lg z-40 p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300"
-    >
-      <div className="flex flex-col gap-5">
+    <>
+      {/* Backdrop overlay for mobile & tablet focus */}
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 lg:hidden animate-in fade-in duration-200"
+        aria-hidden="true"
+      />
+
+      {/* Slide-over Drawer (Pinned cleanly to screen right edge) */}
+      <aside
+        className="fixed top-20 right-0 w-full sm:w-[420px] h-[calc(100vh-80px)] bg-surface-card border-l-2 border-black shadow-neo-lg z-50 p-6 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-300"
+      >
+        <div className="flex flex-col gap-5">
         {/* Drawer Header */}
         <div className="flex items-center justify-between pb-3 border-b-2 border-black">
           <div className="flex items-center gap-2">
@@ -229,7 +238,7 @@ export const AiReflectionDrawer: React.FC<AiReflectionDrawerProps> = ({
           Lưu vào Lịch ký ức
         </NeoButton>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };
-
