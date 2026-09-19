@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Shield, Globe, Clock, Check, X } from 'lucide-react';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
-import { useJournal } from '@/lib/journal-context';
+import { useJournal } from '@/features/journal';
 import { useToast } from '@/lib/toast-context';
 
 export interface ProfileModalProps {
@@ -232,3 +232,4 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     </div>
   );
 }
+

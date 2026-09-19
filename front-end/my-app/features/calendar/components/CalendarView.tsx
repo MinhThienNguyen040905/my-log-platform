@@ -3,9 +3,9 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { DayPicker, type DayButtonProps } from 'react-day-picker';
-import { useJournal } from '@/lib/journal-context';
+import { useJournal } from '@/features/journal';
 import { useToast } from '@/lib/toast-context';
-import { JournalEntry, MoodType } from '@/lib/types';
+import { JournalEntry, MoodType } from '@/types';
 import { WashiTape, PolaroidCard, StickerBadge } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { NotificationModal } from '@/components/ui/NotificationModal';
@@ -511,7 +511,7 @@ export function CalendarView() {
 
                   {/* Entry Snippet Content */}
                   <p className="font-serif text-sm sm:text-base text-on-surface leading-relaxed line-clamp-3 italic">
-                    &ldquo;{entry.content}&rdquo;
+                    &ldquo;{entry.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}&rdquo;
                   </p>
 
                   {/* Optional Polaroid thumbnail preview */}
@@ -644,9 +644,16 @@ export function CalendarView() {
             <div className="p-6 sm:p-7 py-5 overflow-y-auto custom-scrollbar flex-1 flex flex-col gap-6">
               {/* Full Content */}
               <div className="p-4 sm:p-6 bg-white rounded-2xl border-2 border-black shadow-inner">
-                <p className="font-serif text-base sm:text-lg text-on-surface leading-loose italic whitespace-pre-line">
-                  {selectedEntry.content}
-                </p>
+                {selectedEntry.content.includes('<') ? (
+                  <div
+                    className="font-serif text-base sm:text-lg text-on-surface leading-loose tiptap"
+                    dangerouslySetInnerHTML={{ __html: selectedEntry.content }}
+                  />
+                ) : (
+                  <p className="font-serif text-base sm:text-lg text-on-surface leading-loose italic whitespace-pre-line">
+                    {selectedEntry.content}
+                  </p>
+                )}
               </div>
 
               {/* Polaroid Attachment if present */}

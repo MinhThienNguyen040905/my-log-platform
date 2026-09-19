@@ -2,10 +2,9 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useJournal } from '@/lib/journal-context';
+import { useJournal, SafetyModal } from '@/features/journal';
 import { WashiTape, PolaroidCard, StickerBadge } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
-import { SafetyModal } from '@/components/ui/SafetyModal';
 import {
   Flame,
   Calendar,
