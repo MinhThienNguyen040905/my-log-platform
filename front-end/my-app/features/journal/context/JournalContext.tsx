@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { JournalEntry, WellnessGoal, DailyStat, UserProfile } from '@/lib/types';
+import { JournalEntry, WellnessGoal, DailyStat, UserProfile } from '@/types';
 import { INITIAL_ENTRIES, MOCK_GOALS, MOCK_14_DAYS_STATS } from '@/lib/mock-data';
 
 const DEFAULT_PROFILE: UserProfile = {

@@ -53,6 +53,16 @@
     font-family: var(--font-plus-jakarta), sans-serif;
     -webkit-font-smoothing: antialiased;
   }
+
+  ::selection {
+    background-color: #B7FF32;
+    color: #1C1B1B;
+  }
+
+  ::-moz-selection {
+    background-color: #B7FF32;
+    color: #1C1B1B;
+  }
 }
 
 /* Neo-Brutalist shadows & borders */
@@ -118,4 +128,61 @@
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: #466800;
+}
+
+/* TipTap Editor tactile styles */
+.tiptap {
+  outline: none;
+  cursor: text;
+  user-select: text;
+}
+.tiptap ::selection {
+  background-color: #B7FF32;
+  color: #1C1B1B;
+}
+.tiptap p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  font-style: italic;
+}
+.tiptap h2 {
+  font-family: var(--font-space), sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #1c1b1b;
+}
+.tiptap h3 {
+  font-family: var(--font-space), sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  color: #1c1b1b;
+}
+.tiptap p {
+  margin-bottom: 0.75rem;
+  line-height: 1.75;
+}
+.tiptap ul, .tiptap ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.tiptap blockquote {
+  border-left: 4px solid #111111;
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 0 0.75rem 0.75rem 0;
+  font-style: italic;
+}
+.tiptap img {
+  display: block;
+  max-width: 100%;
+  margin: 1rem auto;
+  border-radius: 1rem;
 }

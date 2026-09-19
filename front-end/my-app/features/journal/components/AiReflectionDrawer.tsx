@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useToast } from '@/lib/toast-context';
-import { AIAnalysisResult } from '@/lib/types';
+import { AIAnalysisResult } from '@/types';
 
 interface AiReflectionDrawerProps {
   isOpen: boolean;

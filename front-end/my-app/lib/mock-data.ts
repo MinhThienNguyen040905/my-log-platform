@@ -1,4 +1,4 @@
-import { JournalEntry, WellnessGoal, DailyStat } from './types';
+import { JournalEntry, WellnessGoal, DailyStat } from '@/types';
 
 export const INITIAL_ENTRIES: JournalEntry[] = [
   {

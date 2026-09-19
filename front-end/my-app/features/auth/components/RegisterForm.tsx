@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, Mail, Key, User, ShieldCheck, Spark
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useToast } from '@/lib/toast-context';
-import { useJournal } from '@/lib/journal-context';
+import { useJournal } from '@/features/journal';
 
 export function RegisterForm() {
   const router = useRouter();

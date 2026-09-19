@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { HeartHandshake, PhoneCall, ShieldAlert, X, Heart, ExternalLink } from 'lucide-react';
+import { HeartHandshake, PhoneCall, ShieldAlert, X, Heart } from 'lucide-react';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 

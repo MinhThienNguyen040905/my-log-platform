@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useJournal } from '@/lib/journal-context';
+import { useJournal } from '@/features/journal';
 import { useToast } from '@/lib/toast-context';
 import { WashiTape, StickerBadge } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';

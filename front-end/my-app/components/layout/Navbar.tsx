@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { useJournal } from '@/lib/journal-context';
+import { useJournal } from '@/features/journal';
 import { useToast } from '@/lib/toast-context';
-import { ProfileModal } from '@/components/ui/ProfileModal';
+import { ProfileModal } from '@/features/user';
 import {
   Flame,
   Menu,
@@ -340,42 +340,22 @@ export function Navbar() {
         {navItems.map((item) => {
           const active = isActive(item.path);
           const IconComp = item.icon;
-          const isEditor = item.path === '/journal-editor';
-
-          if (isEditor) {
-            return (
-              <Link
-                key={item.path}
-                href={item.path}
-                className="relative -top-3 flex flex-col items-center group"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-primary-container border-2 border-black shadow-[3px_3px_0px_#111] flex items-center justify-center text-black group-hover:scale-105 transition-transform">
-                  <IconComp className="w-5 h-5 stroke-[2.5]" />
-                </div>
-                <span className="font-space text-[10px] font-extrabold text-black mt-0.5">
-                  Viết sổ
-                </span>
-              </Link>
-            );
-          }
 
           return (
             <Link
               key={item.path}
               href={item.path}
               className={`flex flex-col items-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
-                active ? 'text-black font-extrabold' : 'text-gray-500 hover:text-black font-semibold'
+                active ? 'text-black font-medium' : 'text-gray-500 hover:text-black font-medium'
               }`}
             >
-              <div
-                className={`p-1 rounded-lg ${
-                  active ? 'bg-paper-warm border border-black shadow-[1px_1px_0px_#111]' : ''
-                }`}
-              >
-                <IconComp className="w-5 h-5 stroke-[2.2]" />
+              <div className="p-1 flex items-center justify-center">
+                <IconComp className="w-5 h-5 stroke-[2]" />
               </div>
               <span className="font-space text-[10px] tracking-tight truncate max-w-[70px]">
-                {item.label === 'History & Calendar'
+                {item.label === 'Journal Editor'
+                  ? 'Viết sổ'
+                  : item.label === 'History & Calendar'
                   ? 'Lịch & Ký ức'
                   : item.label === 'Insights & AI Reports'
                   ? 'Báo cáo AI'

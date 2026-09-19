@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/lib/toast-context";
-import { JournalProvider } from "@/lib/journal-context";
+import { JournalProvider } from "@/features/journal";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
