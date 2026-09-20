@@ -1,0 +1,10 @@
+spring:
+  config:
+    activate:
+      on-profile: worker
+  main:
+    web-application-type: none
+    keep-alive: true
+
+mylog:
+  runtime-role: worker

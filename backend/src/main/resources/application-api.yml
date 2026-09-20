@@ -1,0 +1,7 @@
+spring:
+  config:
+    activate:
+      on-profile: api
+
+mylog:
+  runtime-role: api

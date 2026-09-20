@@ -1,0 +1,55 @@
+name: mylog-backend
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: mylog
+      POSTGRES_USER: mylog
+      POSTGRES_PASSWORD: mylog_local_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - mylog-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mylog -d mylog"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - mylog-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: mylog
+      RABBITMQ_DEFAULT_PASS: mylog_local_password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - mylog-rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  mylog-postgres-data:
+  mylog-redis-data:
+  mylog-rabbitmq-data:
