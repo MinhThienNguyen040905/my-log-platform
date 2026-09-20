@@ -187,9 +187,9 @@ export function LoginForm() {
                     <label className='font-space text-xs font-bold uppercase text-on-surface' htmlFor='login-password'>
                       Mật khẩu
                     </label>
-                    <button type='button' className='font-space text-xs font-bold text-primary hover:underline'>
+                    <Link href='/auth/forgot-password' className='font-space text-xs font-bold text-primary hover:underline'>
                       Quên mật khẩu?
-                    </button>
+                    </Link>
                   </div>
                   <div className='relative flex items-center'>
                     <Key className='w-4 h-4 text-gray-500 absolute left-3.5 pointer-events-none' />
