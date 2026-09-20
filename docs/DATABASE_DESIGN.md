@@ -4,7 +4,7 @@
 | --- | --- |
 | Version | 1.0 |
 | Status | Proposed |
-| Database | PostgreSQL |
+| Database | PostgreSQL trên Supabase |
 | Scope | Backend transactional and operational data |
 | Migration tool | Flyway |
 | Related document | [Backend Architecture](./BACKEND_ARCHITECTURE.md) |
@@ -27,7 +27,9 @@ Tài liệu này mô tả thiết kế database chi tiết cho backend MyLog. N�
 - Privacy, deletion, retention và audit.
 - Baseline PostgreSQL DDL để chuyển thành Flyway migrations.
 
-PostgreSQL là nguồn dữ liệu chính. Redis chỉ chứa cache, rate limit và dữ liệu tạm thời; RabbitMQ chỉ vận chuyển message, không thay thế database.
+PostgreSQL trên Supabase là nguồn dữ liệu chính của staging/production. Backend kết nối bằng JDBC qua Session pooler; PostgreSQL Docker chỉ phục vụ local development và integration test. Redis chỉ chứa cache, rate limit và dữ liệu tạm thời; RabbitMQ chỉ vận chuyển message, không thay thế database.
+
+Backend không sử dụng Supabase Data API cho dữ liệu nghiệp vụ. Các role `anon` và `authenticated` bị thu hồi quyền trên schema application; RLS được bật mà không tạo client policy. Authentication và authorization được thực thi tại Spring Boot backend.
 
 ---
 

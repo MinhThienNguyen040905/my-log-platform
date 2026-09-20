@@ -1,0 +1,22 @@
+spring:
+  config:
+    activate:
+      on-profile: supabase
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:5}
+      minimum-idle: ${DB_POOL_MIN_IDLE:1}
+      keepalive-time: ${DB_POOL_KEEPALIVE_MS:300000}
+      data-source-properties:
+        sslmode: ${DB_SSL_MODE:require}
+        ApplicationName: mylog-backend
+  flyway:
+    url: ${FLYWAY_URL:${DB_URL}}
+    user: ${FLYWAY_USERNAME:${DB_USERNAME}}
+    password: ${FLYWAY_PASSWORD:${DB_PASSWORD}}
+
+mylog:
+  database-provider: supabase

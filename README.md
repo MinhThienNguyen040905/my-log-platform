@@ -261,13 +261,15 @@ User (1)
 - **Icons & Visualization:** [Lucide React](https://lucide.dev/), SVG Custom Charts & Metric Indicators
 - **Internationalization (i18n):** [i18next](https://www.i18next.com/) & [react-i18next](https://react.i18next.com/) (Hỗ trợ Tiếng Việt & English)
 
-### Backend (`/back-end`)
-- **Core Platform:** Java 17 / 21 + [Spring Boot 3](https://spring.io/projects/spring-boot)
-- **Security:** Spring Security 6, JWT (JSON Web Tokens), BCrypt Password Encoder
+### Backend (`/backend`)
+- **Core Platform:** Java 21 + [Spring Boot 4](https://spring.io/projects/spring-boot)
+- **Security:** Spring Security, JWT (JSON Web Tokens), BCrypt Password Encoder
 - **Persistence:** Spring Data JPA (Hibernate), HikariCP Connection Pool
 - **Database Migration:** [Flyway](https://flywaydb.org/)
-- **Asynchronous Execution:** Spring `@Async` / TaskExecutor cho pipeline AI
-- **Database:** [PostgreSQL 15+](https://www.postgresql.org/)
+- **Asynchronous Execution:** RabbitMQ worker và Transactional Outbox
+- **Database:** PostgreSQL trên [Supabase](https://supabase.com/)
+- **Cache:** Redis
+- **API Documentation:** OpenAPI / Swagger UI
 - **AI Client Abstraction:** Spring AI hoặc WebClient kết nối OpenAI GPT / Google Gemini API
 
 ---
@@ -290,7 +292,7 @@ my-log-platform/
 │       ├── lib/                   # Utilities, Context Providers (Journal, Toast, i18n)
 │       ├── locales/               # Từ điển đa ngôn ngữ (vi, en)
 │       └── package.json           # Dependencies frontend
-└── back-end/                      # Ứng dụng Java Spring Boot Backend
+└── backend/                       # Ứng dụng Java Spring Boot Backend
     ├── src/
     │   ├── main/
     │   │   ├── java/com/mylog/    # Mã nguồn nghiệp vụ Java
@@ -314,55 +316,39 @@ my-log-platform/
 
 ### Yêu cầu tiên quyết (Prerequisites)
 - **Node.js:** phiên bản `v20.x` hoặc `v22.x` trở lên (kèm `npm`)
-- **Java Development Kit (JDK):** phiên bản `17` hoặc `21`
-- **PostgreSQL:** phiên bản `15` trở lên đang chạy cục bộ (hoặc Docker container)
-- **Maven:** phiên bản `3.9+`
+- **Java Development Kit (JDK):** phiên bản `21` trở lên
+- **Supabase:** một project và database password
+- **Docker:** dùng để chạy Redis, RabbitMQ và PostgreSQL local/test
+- Không cần cài Maven toàn cục; project có Maven Wrapper.
 
 ---
 
-### Bước 1: Khởi tạo Database PostgreSQL
-Tạo cơ sở dữ liệu mới trên PostgreSQL của bạn:
-```sql
-CREATE DATABASE mylog_db;
-CREATE USER mylog_user WITH ENCRYPTED PASSWORD 'mylog_secret_password';
-GRANT ALL PRIVILEGES ON DATABASE mylog_db TO mylog_user;
-```
+### Bước 1: Lấy thông tin kết nối Supabase
+
+Trong Supabase Dashboard, chọn **Connect > Session pooler** và sao chép chính xác host, username cùng database password. Backend dùng JDBC và SSL để kết nối trực tiếp tới PostgreSQL của Supabase.
 
 ---
 
 ### Bước 2: Cấu hình và khởi chạy Backend (Spring Boot)
 
 1. Di chuyển vào thư mục backend:
-   ```bash
-   cd back-end
+   ```powershell
+   cd backend
    ```
 
-2. Tạo hoặc cập nhật file biến môi trường `src/main/resources/application-local.yml` (hoặc đặt các biến môi trường tương ứng):
-   ```yaml
-   spring:
-     datasource:
-       url: jdbc:postgresql://localhost:5432/mylog_db
-       username: mylog_user
-       password: mylog_secret_password
-     jpa:
-       hibernate:
-         ddl-auto: validate
-     flyway:
-       enabled: true
-
-   app:
-     jwt:
-       secret: your-very-secure-256-bit-secret-key-change-it-in-production
-       access-token-expiration-ms: 900000     # 15 phút
-       refresh-token-expiration-ms: 604800000 # 7 ngày
-     ai:
-       provider: gemini # hoặc openai
-       api-key: ${AI_API_KEY}
+2. Thiết lập biến môi trường từ connection info của Supabase:
+   ```powershell
+   $env:SPRING_PROFILES_ACTIVE = 'api,supabase'
+   $env:DB_URL = 'jdbc:postgresql://YOUR_POOLER_HOST:5432/postgres'
+   $env:DB_USERNAME = 'postgres.YOUR_PROJECT_REF'
+   $env:DB_PASSWORD = 'YOUR_DATABASE_PASSWORD'
+   $env:DB_SSL_MODE = 'require'
    ```
 
-3. Build và khởi chạy backend:
-   ```bash
-   mvn clean spring-boot:run
+3. Chạy Redis, RabbitMQ và backend:
+   ```powershell
+   docker compose up -d redis rabbitmq
+   .\mvnw.cmd spring-boot:run
    ```
    > Backend sẽ khởi động mặc định tại cổng: `http://localhost:8080`. Flyway sẽ tự động chạy các script khởi tạo bảng trong database.
 

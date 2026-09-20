@@ -1469,6 +1469,11 @@ secret manager
 DB_URL
 DB_USERNAME
 DB_PASSWORD
+DB_SSL_MODE
+DB_POOL_MAX_SIZE
+FLYWAY_URL
+FLYWAY_USERNAME
+FLYWAY_PASSWORD
 REDIS_URL
 RABBITMQ_URL
 JWT_SIGNING_KEY
@@ -1526,7 +1531,7 @@ Recommended local ports:
 | MinIO API | 9000 |
 | MinIO Console | 9001 |
 
-Local profile dùng mock AI provider mặc định. Provider thật chỉ bật khi developer chủ động cấu hình API key.
+Staging/production bật đồng thời profile runtime (`api` hoặc `worker`) và profile `supabase`. `DB_URL` dùng Supabase Session pooler cho application; `FLYWAY_URL` có thể dùng direct connection riêng trong môi trường hỗ trợ IPv6. SSL luôn được yêu cầu. Local profile tiếp tục dùng PostgreSQL Docker và mock AI provider mặc định.
 
 ---
 
@@ -1543,7 +1548,7 @@ RabbitMQ
 ├── Worker instance 1
 └── Worker instance N
 
-Managed PostgreSQL
+Supabase PostgreSQL
 Managed Redis
 Managed RabbitMQ
 S3-compatible object storage

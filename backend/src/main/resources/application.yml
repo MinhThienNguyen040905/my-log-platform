@@ -9,9 +9,6 @@ spring:
     virtual:
       enabled: true
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/mylog}
-    username: ${DB_USERNAME:mylog}
-    password: ${DB_PASSWORD:mylog_local_password}
     hikari:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
       minimum-idle: ${DB_POOL_MIN_IDLE:2}

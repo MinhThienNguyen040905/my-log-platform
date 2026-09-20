@@ -2,6 +2,10 @@ spring:
   config:
     activate:
       on-profile: local
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mylog}
+    username: ${DB_USERNAME:mylog}
+    password: ${DB_PASSWORD:mylog_local_password}
 
 management:
   endpoint:
