@@ -92,6 +92,7 @@ $env:SPRING_PROFILES_ACTIVE = 'worker,supabase'
 
 ## Tài liệu kiến trúc
 
+- [Backend Implementation Plan](../docs/BACKEND_IMPLEMENTATION_PLAN.md)
 - [Backend Architecture](../docs/BACKEND_ARCHITECTURE.md)
 - [Database Design](../docs/DATABASE_DESIGN.md)
 - [Software Requirements](../docs/SOFTWARE_REQUIREMENTS_SPECIFICATION.md)
