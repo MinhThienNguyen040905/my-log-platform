@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import com.mylog.MylogBackendApplication;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.core.importer.ImportOption;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +25,7 @@ class ModuleArchitectureTest {
             "statistics");
 
     private final JavaClasses productionClasses = new ClassFileImporter()
+            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
             .importPackagesOf(MylogBackendApplication.class);
 
     @Test
@@ -61,6 +63,21 @@ class ModuleArchitectureTest {
                 .dependOnClassesThat()
                 .resideInAnyPackage(featurePackages)
                 .because("shared technical code must not depend on business feature modules")
+                .allowEmptyShould(true)
+                .check(productionClasses);
+    }
+
+    @Test
+    void journalCoreDoesNotDependOnRedisOrMessaging() {
+        noClasses()
+                .that()
+                .resideInAPackage("com.mylog.journal..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage(
+                        "org.springframework.data.redis..",
+                        "org.springframework.amqp..")
+                .because("journal persistence must remain available without Redis or RabbitMQ")
                 .allowEmptyShould(true)
                 .check(productionClasses);
     }

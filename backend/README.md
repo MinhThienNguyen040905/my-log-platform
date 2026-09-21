@@ -109,6 +109,20 @@ Register yêu cầu `email`, `password`, `displayName`, `acceptTerms=true` và `
 
 Password dài 10–72 ký tự, tối đa 72 byte UTF-8 và phải có chữ hoa, chữ thường cùng chữ số. Email được chuẩn hóa bằng `trim + lowercase` trước khi kiểm tra unique.
 
+## Journal API
+
+```text
+POST   /api/v1/journals
+GET    /api/v1/journals?cursor=&limit=&from=&to=
+GET    /api/v1/journals/{journalId}
+PATCH  /api/v1/journals/{journalId}
+DELETE /api/v1/journals/{journalId}
+```
+
+`POST` chấp nhận `Idempotency-Key` tùy chọn. `PATCH` yêu cầu `version` hiện tại trong JSON và trả `409 JOURNAL_VERSION_CONFLICT` nếu journal đã được sửa; create/get/update cũng trả `ETag`. History dùng opaque cursor theo `(created_at, id)`, mặc định 20 và tối đa 100 phần tử.
+
+`occurredAt` được kết hợp với IANA `timezoneAtEntry` để tạo `entryDate`. Delete là soft-delete và mọi repository query đều scope theo authenticated user, vì vậy journal không tồn tại, đã xóa hoặc thuộc user khác đều trả `404 JOURNAL_NOT_FOUND`.
+
 ## Xác minh
 
 ```powershell

@@ -3,7 +3,7 @@
 | Thuộc tính | Giá trị |
 | --- | --- |
 | Version | 1.0 |
-| Status | M0–M1 complete; M2 ready for implementation |
+| Status | M0–M2 complete; M3 ready for implementation |
 | Owner | Backend developer |
 | Baseline | Spring Boot modular monolith |
 | Database | Supabase PostgreSQL |
@@ -249,12 +249,12 @@ PATCH /api/v1/users/me
 
 #### Domain
 
-- [ ] `JournalEntry` entity và aggregate rules.
-- [ ] Score validation: mood bắt buộc 1–10; stress/energy nullable 1–10.
-- [ ] `journalVersion` tăng khi content ảnh hưởng analysis thay đổi.
-- [ ] Optimistic lock bằng `version`.
-- [ ] Soft delete và ownership-safe query.
-- [ ] Entry date được tính từ `occurredAt + timezoneAtEntry`.
+- [x] `JournalEntry` entity và aggregate rules.
+- [x] Score validation: mood bắt buộc 1–10; stress/energy nullable 1–10.
+- [x] `journalVersion` tăng khi content ảnh hưởng analysis thay đổi.
+- [x] Optimistic lock bằng `version`.
+- [x] Soft delete và ownership-safe query.
+- [x] Entry date được tính từ `occurredAt + timezoneAtEntry`.
 
 #### API
 
@@ -268,27 +268,27 @@ DELETE /api/v1/journals/{journalId}
 
 #### Contract rules
 
-- [ ] Cursor pagination theo `(created_at, id)`.
-- [ ] `POST` hỗ trợ `Idempotency-Key`.
-- [ ] `PATCH` dùng version/ETag hoặc request version để phát hiện concurrent edit.
-- [ ] Autosave dùng cùng update API, debounce thuộc trách nhiệm frontend.
-- [ ] Response không trả internal operational fields.
+- [x] Cursor pagination theo `(created_at, id)`.
+- [x] `POST` hỗ trợ `Idempotency-Key` bền vững trong PostgreSQL và từ chối reuse với request khác.
+- [x] `PATCH` dùng request `version` để phát hiện concurrent edit; response đồng thời trả `ETag`.
+- [x] Autosave dùng cùng update API, debounce thuộc trách nhiệm frontend.
+- [x] Response không trả owner ID, soft-delete timestamp hoặc idempotency metadata.
 
 #### Tests
 
-- [ ] CRUD happy path.
-- [ ] Multiple journals cùng ngày.
-- [ ] Validation score/content.
-- [ ] Pagination ổn định khi insert journal mới.
-- [ ] Optimistic conflict.
-- [ ] User A không đọc/update/delete journal của user B.
-- [ ] Soft-deleted journal không xuất hiện trong history/dashboard.
+- [x] CRUD happy path.
+- [x] Multiple journals cùng ngày.
+- [x] Validation score/content.
+- [x] Pagination ổn định khi insert journal mới.
+- [x] Optimistic conflict.
+- [x] User A không đọc/update/delete journal của user B.
+- [x] Soft-deleted journal không xuất hiện trong history/dashboard.
 
 #### Acceptance criteria
 
-- Journal save hoạt động khi Redis, RabbitMQ và AI provider unavailable.
-- API p95 local dưới target của SRS với dataset kiểm thử hợp lý.
-- Frontend có thể hoàn thành editor/history dựa trên contract này.
+- [x] Journal core không phụ thuộc Redis, RabbitMQ hoặc AI provider; architecture test bảo vệ invariant này.
+- [x] History API p95 local dưới target 2 giây của SRS với dataset 1.000 journals.
+- [x] Swagger mô tả contract đủ để frontend triển khai editor/history.
 
 ---
 

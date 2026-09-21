@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -44,6 +45,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     ResponseEntity<ApiErrorResponse> handleConflict(ConflictException exception) {
         return response(HttpStatus.CONFLICT, exception.code(), exception.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    ResponseEntity<ApiErrorResponse> handleOptimisticLock(
+            ObjectOptimisticLockingFailureException exception) {
+        return response(
+                HttpStatus.CONFLICT,
+                ApiErrorCodes.JOURNAL_VERSION_CONFLICT,
+                "Journal entry was modified by another request",
+                List.of());
     }
 
     @ExceptionHandler(BadRequestException.class)
