@@ -3,7 +3,7 @@
 | Thuộc tính | Giá trị |
 | --- | --- |
 | Version | 1.0 |
-| Status | Ready for implementation |
+| Status | M0 complete; M1 ready for implementation |
 | Owner | Backend developer |
 | Baseline | Spring Boot modular monolith |
 | Database | Supabase PostgreSQL |
@@ -11,7 +11,7 @@
 | Message broker | RabbitMQ |
 | Target | MVP/P0 |
 | Estimated duration | 6 tuần, 1 backend developer |
-| Last updated | 2026-09-20 |
+| Last updated | 2026-09-21 |
 
 ---
 
@@ -52,6 +52,8 @@ Tài liệu liên quan:
 - Dockerfile.
 - Migration `V001` cho identity, journal và operational core.
 - Migration `V002` khóa Supabase Data API roles và bật RLS.
+- Migration `V003` hoàn thiện identity/consent schema.
+- Migration `V004` khóa quyền kế thừa từ PostgreSQL pseudo-role `PUBLIC`.
 - Supabase project `my-log-platform` tại Singapore.
 
 ### 2.2. Chưa hoàn thành
@@ -68,7 +70,7 @@ Tài liệu liên quan:
 
 ### 2.3. Quy tắc migration hiện tại
 
-`V001` và `V002` được xem là immutable. Mọi thay đổi schema tiếp theo phải bắt đầu từ `V003`.
+`V001`–`V004` đã chạy trên Supabase và được xem là immutable. Mọi thay đổi schema tiếp theo phải bắt đầu từ `V005`.
 
 ---
 
@@ -156,30 +158,33 @@ Frontend có thể tích hợp sớm sau khi Identity và Journal API ổn đị
 
 #### Công việc
 
-- [ ] Chạy `V001` và `V002` trên Supabase bằng Flyway.
-- [ ] Kiểm tra tables, indexes, constraints và RLS state.
-- [ ] Thêm Testcontainers base cho PostgreSQL, Redis và RabbitMQ.
-- [ ] Thêm integration-test profile riêng, không dùng Supabase thật trong CI.
-- [ ] Chuẩn hóa `ApiErrorResponse`, error code và validation response.
-- [ ] Thêm request/correlation ID filter.
-- [ ] Thêm log masking cho Authorization, cookie và secret headers.
-- [ ] Thêm ArchUnit rules cho module boundaries.
-- [ ] Thêm CI workflow: compile → unit test → integration test → package.
-- [ ] Chốt JWT signing key format và secret management.
+- [x] Chạy `V001`–`V004` trên Supabase bằng Flyway.
+- [x] Kiểm tra tables, indexes, constraints và RLS state.
+- [x] Thêm Testcontainers base cho PostgreSQL, Redis và RabbitMQ.
+- [x] Thêm integration-test profile riêng, không dùng Supabase thật trong CI.
+- [x] Chuẩn hóa `ApiErrorResponse`, error code và validation response.
+- [x] Thêm request/correlation ID filter.
+- [x] Thêm log masking cho Authorization, cookie và secret headers.
+- [x] Thêm ArchUnit rules cho module boundaries.
+- [x] Thêm CI workflow: compile → unit test → integration test → package.
+- [x] Chốt JWT signing key format và secret management.
 
 #### Migration
 
 - `V003__complete_identity_schema.sql`
-  - `user_consents` nếu thuộc MVP.
+  - `user_consents` thuộc MVP.
   - Bổ sung constraint/index còn thiếu cho identity.
+- `V004__harden_public_schema_privileges.sql`
+  - Thu hồi quyền kế thừa từ PostgreSQL pseudo-role `PUBLIC`.
+  - Chặn `anon`/`authenticated` truy cập trực tiếp application schema.
 
 #### Acceptance criteria
 
-- Supabase schema ở đúng Flyway version.
-- CI chạy được trên database sạch.
-- Không có secret trong source control hoặc test output.
-- `mvnw verify` thành công.
-- Architecture test chặn dependency sai chiều.
+- [x] Supabase schema ở đúng Flyway version `004`.
+- [x] CI workflow chạy integration test trên database sạch bằng Testcontainers.
+- [x] Không có secret trong source control hoặc test output.
+- [x] `mvnw verify` thành công.
+- [x] Architecture test chặn dependency sai chiều.
 
 ---
 
@@ -341,13 +346,13 @@ statistics.updated
 
 #### Schema migrations
 
-- `V004__create_analysis_schema.sql`
+- `V005__create_analysis_schema.sql`
   - `journal_analyses`
   - `journal_emotions`
   - `topics`
   - `journal_topics`
   - `journal_corrections`
-- `V005__create_reflection_and_safety_schema.sql`
+- `V006__create_reflection_and_safety_schema.sql`
   - `reflection_questions`
   - `reflection_responses` nếu thuộc MVP interaction.
   - `safety_events`
@@ -416,14 +421,14 @@ POST  /api/v1/journals/{journalId}/reflections/regenerate
 
 #### Schema migrations
 
-- `V006__create_statistics_and_insight_schema.sql`
+- `V007__create_statistics_and_insight_schema.sql`
   - `daily_user_statistics`
   - `daily_emotion_statistics`
   - `insights`
   - `insight_evidence`
   - `suggested_actions`
   - `feedback`
-- `V007__add_statistics_and_insight_indexes.sql`
+- `V008__add_statistics_and_insight_indexes.sql`
 
 #### Statistics
 
@@ -580,11 +585,12 @@ Không được cắt:
 | V001 | Core identity, journal, jobs, outbox, idempotency |
 | V002 | Supabase Data API lockdown và RLS baseline |
 | V003 | Complete identity/consent schema |
-| V004 | Analysis, emotion, topic và correction schema |
-| V005 | Reflection, safety và AI usage schema |
-| V006 | Statistics, insight, action và feedback schema |
-| V007 | Statistics/insight indexes và query optimization |
-| V008+ | Chỉ thêm theo feature thực tế; report/media/privacy thuộc P1 |
+| V004 | Thu hồi quyền kế thừa từ `PUBLIC` trên application schema |
+| V005 | Analysis, emotion, topic và correction schema |
+| V006 | Reflection, safety và AI usage schema |
+| V007 | Statistics, insight, action và feedback schema |
+| V008 | Statistics/insight indexes và query optimization |
+| V009+ | Chỉ thêm theo feature thực tế; report/media/privacy thuộc P1 |
 
 Mỗi migration phải được test với:
 
@@ -723,9 +729,9 @@ Backend MVP chỉ được xem là hoàn thành khi:
 
 Thứ tự 10 task đầu tiên:
 
-1. Chạy Flyway `V001/V002` trên Supabase và xác minh schema.
-2. Tạo Testcontainers integration-test foundation.
-3. Tạo `V003__complete_identity_schema.sql`.
+1. ~~Chạy Flyway `V001`–`V004` trên Supabase và xác minh schema.~~ Hoàn thành.
+2. ~~Tạo Testcontainers integration-test foundation.~~ Hoàn thành.
+3. ~~Tạo `V003__complete_identity_schema.sql`.~~ Hoàn thành.
 4. Implement `User` và `RefreshToken` persistence.
 5. Implement register + password hashing.
 6. Implement login + JWT access token.

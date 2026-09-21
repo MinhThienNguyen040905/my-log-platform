@@ -23,6 +23,16 @@ $env:DB_URL = 'jdbc:postgresql://YOUR_POOLER_HOST:5432/postgres'
 $env:DB_USERNAME = 'postgres.YOUR_PROJECT_REF'
 $env:DB_PASSWORD = 'YOUR_DATABASE_PASSWORD'
 $env:DB_SSL_MODE = 'require'
+$env:JWT_SIGNING_KEY_BASE64 = 'YOUR_BASE64URL_ENCODED_RANDOM_KEY'
+```
+
+Tạo JWT signing key tối thiểu 32 byte cho shell hiện tại:
+
+```powershell
+$keyBytes = New-Object byte[] 32
+$rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+try { $rng.GetBytes($keyBytes) } finally { $rng.Dispose() }
+$env:JWT_SIGNING_KEY_BASE64 = [Convert]::ToBase64String($keyBytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
 ```
 
 Không commit database password, connection string chứa password hoặc file `.env`. File [.env.example](./.env.example) chỉ là mẫu tên biến.
@@ -44,7 +54,7 @@ docker compose up -d redis rabbitmq
 
 Flyway tự động áp dụng migration trong `src/main/resources/db/migration` lên Supabase khi ứng dụng khởi động.
 
-Migration `V002` thu hồi quyền Data API của các role `anon`/`authenticated` và bật RLS không-policy cho bảng nghiệp vụ. Mọi truy cập dữ liệu đi qua backend, nơi thực thi authentication và authorization.
+Migration `V002` bật RLS không-policy và thu hồi quyền Data API trực tiếp; `V004` thu hồi thêm quyền kế thừa từ PostgreSQL pseudo-role `PUBLIC`. Mọi truy cập dữ liệu đi qua backend, nơi thực thi authentication và authorization.
 
 ## Phát triển offline với PostgreSQL local
 
@@ -66,6 +76,7 @@ api         REST API runtime
 worker      Background worker runtime không có HTTP server
 supabase    Supabase datasource, SSL và connection pool
 test        Automated tests
+integration-test  Testcontainers PostgreSQL, Redis và RabbitMQ; không dùng Supabase
 ```
 
 Chạy worker với Supabase:
@@ -89,6 +100,8 @@ $env:SPRING_PROFILES_ACTIVE = 'worker,supabase'
 .\mvnw.cmd test
 .\mvnw.cmd verify
 ```
+
+`verify` chạy unit test, ArchUnit và integration test trên hạ tầng Testcontainers. Bài kiểm tra schema Supabase thật được bảo vệ bằng biến `RUN_SUPABASE_IT=true`, nên CI thông thường không thể kết nối nhầm vào Supabase.
 
 ## Tài liệu kiến trúc
 

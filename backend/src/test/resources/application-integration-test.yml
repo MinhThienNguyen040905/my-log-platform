@@ -1,0 +1,24 @@
+spring:
+  config:
+    activate:
+      on-profile: integration-test
+  main:
+    web-application-type: none
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+mylog:
+  security:
+    jwt:
+      signing-key-base64: bXlsb2ctaW50ZWdyYXRpb24tdGVzdC1rZXktZG8tbm90LXVzZS1pbi1wcm9k
+
+management:
+  tracing:
+    enabled: false
