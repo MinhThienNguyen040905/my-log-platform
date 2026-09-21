@@ -94,6 +94,21 @@ $env:SPRING_PROFILES_ACTIVE = 'worker,supabase'
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - RabbitMQ UI: `http://localhost:15672`
 
+## Identity API
+
+```text
+POST  /api/v1/auth/register
+POST  /api/v1/auth/login
+POST  /api/v1/auth/refresh
+POST  /api/v1/auth/logout
+GET   /api/v1/users/me
+PATCH /api/v1/users/me
+```
+
+Register yêu cầu `email`, `password`, `displayName`, `acceptTerms=true` và `acceptPrivacy=true`. Login/register trả access token trong JSON; refresh token chỉ được gửi bằng cookie `HttpOnly`. Cookie dùng `SameSite=Strict`, `Secure=true` mặc định và được hạ xuống `false` chỉ trong profile local/integration-test.
+
+Password dài 10–72 ký tự, tối đa 72 byte UTF-8 và phải có chữ hoa, chữ thường cùng chữ số. Email được chuẩn hóa bằng `trim + lowercase` trước khi kiểm tra unique.
+
 ## Xác minh
 
 ```powershell

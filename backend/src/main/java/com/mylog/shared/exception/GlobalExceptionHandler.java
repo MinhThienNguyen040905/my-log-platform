@@ -10,6 +10,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -43,6 +44,34 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     ResponseEntity<ApiErrorResponse> handleConflict(ConflictException exception) {
         return response(HttpStatus.CONFLICT, exception.code(), exception.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    ResponseEntity<ApiErrorResponse> handleBadRequest(BadRequestException exception) {
+        return response(HttpStatus.BAD_REQUEST, exception.code(), exception.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    ResponseEntity<ApiErrorResponse> handleUnauthorized(UnauthorizedException exception) {
+        return response(HttpStatus.UNAUTHORIZED, exception.code(), exception.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    ResponseEntity<ApiErrorResponse> handleRateLimit(RateLimitExceededException exception) {
+        ApiErrorResponse body = responseFactory.create(
+                ApiErrorCodes.RATE_LIMIT_EXCEEDED, exception.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(exception.retryAfter().toSeconds()))
+                .body(body);
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    ResponseEntity<ApiErrorResponse> handleUnavailable(ServiceUnavailableException exception) {
+        return response(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                exception.code(),
+                exception.getMessage(),
+                List.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

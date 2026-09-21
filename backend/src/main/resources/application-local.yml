@@ -11,6 +11,10 @@ mylog:
   security:
     jwt:
       signing-key-base64: ${JWT_SIGNING_KEY_BASE64:bXlsb2ctbG9jYWwtZGV2LWtleS1kb250LXVzZS1pbi1wcm9k}
+    password:
+      bcrypt-strength: 10
+    refresh-cookie:
+      secure: false
 
 management:
   endpoint:

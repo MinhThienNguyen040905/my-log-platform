@@ -18,6 +18,14 @@ mylog:
   security:
     jwt:
       signing-key-base64: bXlsb2ctaW50ZWdyYXRpb24tdGVzdC1rZXktZG8tbm90LXVzZS1pbi1wcm9k
+    password:
+      bcrypt-strength: 4
+    refresh-cookie:
+      secure: false
+    rate-limit:
+      register-attempts: 100
+      login-attempts: 100
+      refresh-attempts: 100
 
 management:
   tracing:

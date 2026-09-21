@@ -3,7 +3,7 @@
 | Thuộc tính | Giá trị |
 | --- | --- |
 | Version | 1.0 |
-| Status | M0 complete; M1 ready for implementation |
+| Status | M0–M1 complete; M2 ready for implementation |
 | Owner | Backend developer |
 | Baseline | Spring Boot modular monolith |
 | Database | Supabase PostgreSQL |
@@ -195,12 +195,12 @@ Frontend có thể tích hợp sớm sau khi Identity và Journal API ổn đị
 
 #### Domain và persistence
 
-- [ ] `User`, `UserPreference`, `RefreshToken` entities.
-- [ ] Normalize email bằng `trim + lowercase` trước unique check.
-- [ ] Password hashing bằng BCrypt baseline; benchmark trước khi đổi Argon2id.
-- [ ] Refresh token chỉ lưu hash.
-- [ ] Token family để phát hiện refresh token reuse.
-- [ ] Account status guard: active, locked, deletion pending, deleted.
+- [x] `User`, `UserPreference`, `RefreshToken` entities.
+- [x] Normalize email bằng `trim + lowercase` trước unique check.
+- [x] Password hashing bằng BCrypt baseline; benchmark trước khi đổi Argon2id.
+- [x] Refresh token chỉ lưu hash.
+- [x] Token family để phát hiện refresh token reuse.
+- [x] Account status guard: active, locked, deletion pending, deleted.
 
 #### API
 
@@ -215,30 +215,30 @@ PATCH /api/v1/users/me
 
 #### Security
 
-- [ ] JWT access token ngắn hạn.
-- [ ] Refresh token rotation khi refresh.
-- [ ] Revoke token family khi phát hiện reuse.
-- [ ] Security filter tạo authenticated principal từ JWT.
-- [ ] Rate-limit register, login và refresh bằng Redis.
-- [ ] CORS theo allowlist, không dùng wildcard với credentials.
-- [ ] Chuẩn bị transport refresh token bằng Secure HttpOnly cookie nếu frontend cùng site; nếu khác site phải chốt rõ SameSite/CORS.
+- [x] JWT access token ngắn hạn.
+- [x] Refresh token rotation khi refresh.
+- [x] Revoke token family khi phát hiện reuse.
+- [x] Security filter tạo authenticated principal từ JWT.
+- [x] Rate-limit register, login và refresh bằng Redis.
+- [x] CORS theo allowlist, không dùng wildcard với credentials.
+- [x] Refresh token qua cookie HttpOnly, Secure ở production và SameSite Strict. Nếu frontend chuyển sang cross-site, phải bổ sung CSRF trước khi dùng SameSite None.
 
 #### Tests
 
-- [ ] Register thành công và duplicate email.
-- [ ] Password policy validation.
-- [ ] Login đúng/sai password.
-- [ ] Access token hết hạn.
-- [ ] Refresh rotation và reuse detection.
-- [ ] Logout revoke token.
-- [ ] User không đọc/sửa profile của user khác.
+- [x] Register thành công và duplicate email.
+- [x] Password policy validation.
+- [x] Login đúng/sai password.
+- [x] Access token hết hạn.
+- [x] Refresh rotation và reuse detection.
+- [x] Logout revoke token.
+- [x] User không đọc/sửa profile của user khác.
 
 #### Acceptance criteria
 
-- Không lưu raw password hoặc raw refresh token.
-- Mọi protected endpoint trả `401` khi thiếu/sai token.
-- Ownership violation trả `404` hoặc `403` theo policy thống nhất.
-- Swagger mô tả Bearer authentication và mọi response chính.
+- [x] Không lưu raw password hoặc raw refresh token.
+- [x] Mọi protected endpoint trả `401` khi thiếu/sai token.
+- [x] Profile endpoint chỉ dùng subject của authenticated principal; resource ownership trong các milestone sau dùng repository-scoped query và trả `404`.
+- [x] Swagger mô tả Bearer authentication và mọi response chính.
 
 ---
 
