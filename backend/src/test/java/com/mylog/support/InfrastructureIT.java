@@ -16,12 +16,21 @@ import org.springframework.test.context.ActiveProfiles;
 class InfrastructureIT extends AbstractIntegrationTest {
 
     private static final List<String> EXPECTED_TABLES = List.of(
+            "ai_usage_records",
             "analysis_jobs",
             "idempotency_records",
+            "journal_analyses",
+            "journal_corrections",
+            "journal_emotions",
             "journal_entries",
+            "journal_topics",
             "outbox_events",
             "processed_messages",
+            "reflection_questions",
+            "reflection_responses",
             "refresh_tokens",
+            "safety_events",
+            "topics",
             "user_consents",
             "user_preferences",
             "users");
@@ -39,7 +48,7 @@ class InfrastructureIT extends AbstractIntegrationTest {
     void infrastructureIsAvailableAndSchemaIsMigrated() {
         Integer migrationCount = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE success", Integer.class);
-        assertThat(migrationCount).isEqualTo(4);
+        assertThat(migrationCount).isEqualTo(6);
 
         List<String> tables = jdbcTemplate.queryForList(
                 """

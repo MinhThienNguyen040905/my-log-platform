@@ -5,3 +5,6 @@ spring:
 
 mylog:
   runtime-role: api
+  ai:
+    consumer-enabled: false
+    scheduling-enabled: false

@@ -16,12 +16,21 @@ import org.springframework.test.context.ActiveProfiles;
 class SupabaseSchemaIT {
 
     private static final List<String> APPLICATION_TABLES = List.of(
+            "ai_usage_records",
             "analysis_jobs",
             "idempotency_records",
+            "journal_analyses",
+            "journal_corrections",
+            "journal_emotions",
             "journal_entries",
+            "journal_topics",
             "outbox_events",
             "processed_messages",
+            "reflection_questions",
+            "reflection_responses",
             "refresh_tokens",
+            "safety_events",
+            "topics",
             "user_consents",
             "user_preferences",
             "users");
@@ -40,7 +49,7 @@ class SupabaseSchemaIT {
                 LIMIT 1
                 """,
                 String.class);
-        assertThat(version).isEqualTo("004");
+        assertThat(version).isEqualTo("006");
 
         List<String> tables = jdbcTemplate.queryForList(
                 """

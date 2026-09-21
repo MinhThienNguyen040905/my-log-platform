@@ -129,6 +129,22 @@ Create/update/delete journal ghi event vào PostgreSQL trong cùng transaction. 
 
 Các event Journal hiện có: `journal.created`, `journal.updated`, `journal.deleted` và `journal.analysis.requested`. Payload chỉ chứa ID/version, không chứa journal content. Chi tiết recovery và replay xem [Messaging Runbook](../docs/MESSAGING_RUNBOOK.md).
 
+## AI analysis, safety và reflection
+
+`journal.analysis.requested` được consumer idempotent chuyển thành `analysis_jobs`. Worker claim job bằng `FOR UPDATE SKIP LOCKED`, chạy rule safety trước provider, validate structured output rồi mới ghi analysis, emotion, topic, reflection và usage metadata. Kết quả của journal version cũ được đánh dấu `OBSOLETE` và không thể trở thành current result.
+
+Local/test dùng adapter `mock` xác định. Production hỗ trợ một adapter OpenAI Responses API qua `AI_PROVIDER=openai`; API key chỉ được đọc từ environment. API runtime tắt AI consumer/scheduler, worker runtime bật chúng để có thể scale độc lập. Cấu hình và quy trình xử lý job lỗi xem [AI Operations Runbook](../docs/AI_OPERATIONS_RUNBOOK.md).
+
+Các endpoint M4:
+
+```text
+GET   /api/v1/journals/{journalId}/analysis
+POST  /api/v1/journals/{journalId}/analysis/retry
+PATCH /api/v1/journals/{journalId}/corrections
+GET   /api/v1/journals/{journalId}/reflections
+POST  /api/v1/journals/{journalId}/reflections/regenerate
+```
+
 ## Xác minh
 
 ```powershell
@@ -143,4 +159,5 @@ Các event Journal hiện có: `journal.created`, `journal.updated`, `journal.de
 - [Backend Implementation Plan](../docs/BACKEND_IMPLEMENTATION_PLAN.md)
 - [Backend Architecture](../docs/BACKEND_ARCHITECTURE.md)
 - [Database Design](../docs/DATABASE_DESIGN.md)
+- [AI Operations Runbook](../docs/AI_OPERATIONS_RUNBOOK.md)
 - [Software Requirements](../docs/SOFTWARE_REQUIREMENTS_SPECIFICATION.md)

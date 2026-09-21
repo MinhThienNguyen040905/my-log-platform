@@ -87,6 +87,26 @@ springdoc:
     tags-sorter: alpha
 
 mylog:
+  ai:
+    provider: ${AI_PROVIDER:mock}
+    api-key: ${AI_API_KEY:}
+    endpoint: ${AI_ENDPOINT:https://api.openai.com/v1/responses}
+    model: ${AI_MODEL:gpt-5-mini}
+    prompt-version: ${AI_PROMPT_VERSION:analysis-v1}
+    schema-version: ${AI_SCHEMA_VERSION:1.0}
+    consumer-enabled: ${AI_CONSUMER_ENABLED:true}
+    scheduling-enabled: ${AI_SCHEDULING_ENABLED:true}
+    batch-size: ${AI_JOB_BATCH_SIZE:8}
+    max-attempts: ${AI_JOB_MAX_ATTEMPTS:4}
+    poll-interval: ${AI_JOB_POLL_INTERVAL:1s}
+    claim-lease: ${AI_JOB_CLAIM_LEASE:2m}
+    connect-timeout: ${AI_CONNECT_TIMEOUT:3s}
+    response-timeout: ${AI_RESPONSE_TIMEOUT:30s}
+    retry-base-delay: ${AI_RETRY_BASE_DELAY:5s}
+    retry-max-delay: ${AI_RETRY_MAX_DELAY:5m}
+    circuit-failure-threshold: ${AI_CIRCUIT_FAILURE_THRESHOLD:5}
+    circuit-open-duration: ${AI_CIRCUIT_OPEN_DURATION:30s}
+    max-reflections: ${AI_MAX_REFLECTIONS:3}
   outbox:
     scheduling-enabled: ${OUTBOX_SCHEDULING_ENABLED:true}
     batch-size: ${OUTBOX_BATCH_SIZE:50}

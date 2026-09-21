@@ -3,6 +3,8 @@ package com.mylog.shared.api;
 public final class ApiErrorCodes {
 
     public static final String ACCESS_DENIED = "ACCESS_DENIED";
+    public static final String ANALYSIS_NOT_READY = "ANALYSIS_NOT_READY";
+    public static final String ANALYSIS_NOT_RETRYABLE = "ANALYSIS_NOT_RETRYABLE";
     public static final String ACCOUNT_UNAVAILABLE = "ACCOUNT_UNAVAILABLE";
     public static final String AUTHENTICATION_REQUIRED = "AUTHENTICATION_REQUIRED";
     public static final String CONFLICT = "CONFLICT";

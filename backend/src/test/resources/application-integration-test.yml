@@ -15,6 +15,21 @@ spring:
         enabled: false
 
 mylog:
+  ai:
+    provider: mock
+    consumer-enabled: false
+    scheduling-enabled: false
+    batch-size: 10
+    max-attempts: 3
+    poll-interval: 1h
+    claim-lease: 1s
+    connect-timeout: 1s
+    response-timeout: 1s
+    retry-base-delay: 1ms
+    retry-max-delay: 10ms
+    circuit-failure-threshold: 2
+    circuit-open-duration: 10ms
+    max-reflections: 3
   outbox:
     scheduling-enabled: false
     batch-size: 10

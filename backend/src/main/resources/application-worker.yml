@@ -8,3 +8,6 @@ spring:
 
 mylog:
   runtime-role: worker
+  ai:
+    consumer-enabled: true
+    scheduling-enabled: true

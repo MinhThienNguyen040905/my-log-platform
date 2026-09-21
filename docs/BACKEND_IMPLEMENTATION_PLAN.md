@@ -3,7 +3,7 @@
 | Thuộc tính | Giá trị |
 | --- | --- |
 | Version | 1.0 |
-| Status | M0–M3 complete; M4 ready for implementation |
+| Status | M0–M4 complete; M5 ready for implementation |
 | Owner | Backend developer |
 | Baseline | Spring Boot modular monolith |
 | Database | Supabase PostgreSQL |
@@ -360,24 +360,24 @@ statistics.updated
 
 #### Provider abstraction
 
-- [ ] `AiAnalysisPort` trong application/domain boundary.
-- [ ] Mock adapter deterministic cho local/test.
-- [ ] Một production adapter duy nhất cho MVP.
-- [ ] Connect timeout, response timeout và circuit breaker.
-- [ ] Structured JSON output schema và strict validation.
-- [ ] Prompt version, model name và provider metadata.
-- [ ] Token/cost tracking không chứa journal text.
+- [x] `AiAnalysisPort` trong application/domain boundary.
+- [x] Mock adapter deterministic cho local/test.
+- [x] Một production adapter duy nhất cho MVP.
+- [x] Connect timeout, response timeout và circuit breaker.
+- [x] Structured JSON output schema và strict validation.
+- [x] Prompt version, model name và provider metadata.
+- [x] Token/cost tracking không chứa journal text.
 
 #### Analysis pipeline
 
-- [ ] Claim `analysis_jobs` an toàn.
-- [ ] Load journal theo `journalId + userId + journalVersion`.
-- [ ] Chạy deterministic safety rules trước AI-generated action.
-- [ ] Gọi provider, parse và validate output.
-- [ ] Persist analysis, emotion, topic và safety result trong transaction.
-- [ ] Chỉ analysis đúng current journal version được active.
-- [ ] Retry transient errors; không retry validation error vô hạn.
-- [ ] Update journal state và publish completion event.
+- [x] Claim `analysis_jobs` an toàn.
+- [x] Load journal theo `journalId + userId + journalVersion`.
+- [x] Chạy deterministic safety rules trước AI-generated action.
+- [x] Gọi provider, parse và validate output.
+- [x] Persist analysis, emotion, topic và safety result trong transaction.
+- [x] Chỉ analysis đúng current journal version được active.
+- [x] Retry transient errors; không retry validation error vô hạn.
+- [x] Update journal state và publish completion/failure event.
 
 #### API
 
@@ -391,19 +391,19 @@ POST  /api/v1/journals/{journalId}/reflections/regenerate
 
 #### Safety invariants
 
-- [ ] HIGH/CRITICAL không nhận normal coaching hoặc suggested action.
-- [ ] Không tạo diagnosis, medication advice hoặc therapy claim.
-- [ ] Safety event không lưu toàn bộ journal content.
-- [ ] Response trả safety metadata để frontend hiển thị popup phù hợp.
+- [x] HIGH/CRITICAL không nhận normal coaching hoặc suggested action.
+- [x] Không tạo diagnosis, medication advice hoặc therapy claim.
+- [x] Safety event không lưu toàn bộ journal content.
+- [x] Response trả safety metadata để frontend hiển thị popup phù hợp.
 
 #### Tests
 
-- [ ] Provider success, timeout, 429, 5xx và malformed JSON.
-- [ ] Retry/backoff và circuit breaker.
-- [ ] Stale analysis không ghi đè version mới.
-- [ ] HIGH/CRITICAL chặn normal response.
-- [ ] Correction giữ nguyên AI original và tạo audit record.
-- [ ] Effective emotion/topic ưu tiên user correction.
+- [x] Provider success, timeout, 429, 5xx và malformed JSON.
+- [x] Retry/backoff và circuit breaker.
+- [x] Stale analysis không ghi đè version mới.
+- [x] HIGH/CRITICAL chặn normal response.
+- [x] Correction giữ nguyên AI original và tạo audit record.
+- [x] Effective emotion/topic ưu tiên user correction.
 
 #### Acceptance criteria
 

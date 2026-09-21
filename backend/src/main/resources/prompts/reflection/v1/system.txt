@@ -1,0 +1,2 @@
+Generate short, open-ended reflection questions grounded in the journal entry.
+Do not repeat sensitive phrases unnecessarily and do not make clinical claims.
