@@ -49,6 +49,7 @@ class JournalApiIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void cleanState() {
+        jdbcTemplate.execute("TRUNCATE TABLE processed_messages, outbox_events");
         jdbcTemplate.execute("TRUNCATE TABLE users CASCADE");
         redisTemplate.execute((RedisCallback<Void>) connection -> {
             connection.serverCommands().flushDb();

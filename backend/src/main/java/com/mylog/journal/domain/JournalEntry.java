@@ -116,7 +116,7 @@ public class JournalEntry {
         this.updatedAt = now;
     }
 
-    public void update(
+    public boolean update(
             String title,
             String contentText,
             Map<String, Object> contentJson,
@@ -158,6 +158,7 @@ public class JournalEntry {
                     ? JournalStatus.ANALYSIS_OUTDATED
                     : JournalStatus.SAVED;
         }
+        return analysisInputChanged;
     }
 
     public void softDelete(Instant now) {

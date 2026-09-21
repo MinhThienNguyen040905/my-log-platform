@@ -15,6 +15,15 @@ spring:
         enabled: false
 
 mylog:
+  outbox:
+    scheduling-enabled: false
+    batch-size: 10
+    max-attempts: 3
+    poll-interval: 1h
+    claim-lease: 1s
+    confirm-timeout: 5s
+    retry-base-delay: 1ms
+    retry-max-delay: 10ms
   security:
     jwt:
       signing-key-base64: bXlsb2ctaW50ZWdyYXRpb24tdGVzdC1rZXktZG8tbm90LXVzZS1pbi1wcm9k

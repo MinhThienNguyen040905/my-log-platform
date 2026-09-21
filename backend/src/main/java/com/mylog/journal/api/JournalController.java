@@ -70,7 +70,7 @@ public class JournalController {
                         body.energyScore(),
                         body.occurredAt(),
                         body.timezoneAtEntry(),
-                        body.favorite()),
+                        Boolean.TRUE.equals(body.favorite())),
                 idempotencyKey);
         return ResponseEntity.created(URI.create("/api/v1/journals/" + entry.getId()))
                 .eTag(etag(entry))

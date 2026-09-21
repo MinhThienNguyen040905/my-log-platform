@@ -3,7 +3,7 @@
 | Thuộc tính | Giá trị |
 | --- | --- |
 | Version | 1.0 |
-| Status | M0–M2 complete; M3 ready for implementation |
+| Status | M0–M3 complete; M4 ready for implementation |
 | Owner | Backend developer |
 | Baseline | Spring Boot modular monolith |
 | Database | Supabase PostgreSQL |
@@ -299,15 +299,15 @@ DELETE /api/v1/journals/{journalId}
 
 #### Công việc
 
-- [ ] Tạo outbox event trong cùng transaction khi journal được save/update.
-- [ ] Outbox publisher claim batch bằng `FOR UPDATE SKIP LOCKED`.
-- [ ] Publisher confirm và retry có exponential backoff/jitter.
-- [ ] Event envelope chuẩn: `messageId`, `eventType`, `eventVersion`, `occurredAt`, `aggregateId`, `payload`.
-- [ ] Payload chỉ chứa identifier/version, không chứa journal content.
-- [ ] Consumer idempotency bằng `processed_messages`.
-- [ ] Manual acknowledgement.
-- [ ] Dead-letter queue và operational replay procedure.
-- [ ] Worker health/metrics cho queue lag, retry và DLQ.
+- [x] Tạo outbox event trong cùng transaction khi journal được save/update/delete.
+- [x] Outbox publisher claim batch bằng `FOR UPDATE SKIP LOCKED` và reclaim `PUBLISHING` lease hết hạn.
+- [x] Publisher confirm và retry có exponential backoff/jitter.
+- [x] Event envelope chuẩn: `messageId`, `eventType`, `eventVersion`, `occurredAt`, `aggregateId`, `payload`.
+- [x] Payload chỉ chứa identifier/version, không chứa journal content.
+- [x] Consumer idempotency bằng `processed_messages` trong cùng business transaction.
+- [x] Manual acknowledgement sau commit; lỗi dùng nack không requeue để vào DLQ.
+- [x] Dead-letter queue và operational replay procedure trong `MESSAGING_RUNBOOK.md`.
+- [x] Health/metrics cho outbox lag, publish failure, retry và queue/DLQ depth.
 
 #### Events baseline
 
@@ -324,18 +324,18 @@ statistics.updated
 
 #### Tests
 
-- [ ] Commit journal và outbox là atomic.
-- [ ] RabbitMQ down không làm mất event.
-- [ ] Publisher restart không làm mất pending row.
-- [ ] Duplicate message không tạo duplicate result.
-- [ ] Poison message đi DLQ sau max attempts.
-- [ ] Multiple worker không claim cùng job.
+- [x] Commit journal và outbox là atomic.
+- [x] RabbitMQ down không làm mất event.
+- [x] Publisher restart không làm mất pending row.
+- [x] Duplicate message không tạo duplicate result.
+- [x] Poison message đi DLQ sau max attempts.
+- [x] Multiple publisher không claim cùng event.
 
 #### Acceptance criteria
 
-- Delivery semantics được chứng minh là at-least-once + idempotent consumer.
-- Có metric cho pending outbox, publish failure và DLQ count.
-- Có runbook replay message tối thiểu.
+- [x] Delivery semantics được chứng minh là at-least-once + idempotent consumer.
+- [x] Có metric cho pending outbox, publish failure, retry, queue lag và DLQ count.
+- [x] Có runbook kiểm tra, recovery và replay message.
 
 ---
 

@@ -19,4 +19,4 @@ public record CreateJournalRequest(
         @Min(1) @Max(10) Integer energyScore,
         Instant occurredAt,
         @NotBlank @Size(max = 64) String timezoneAtEntry,
-        boolean favorite) {}
+        Boolean favorite) {}

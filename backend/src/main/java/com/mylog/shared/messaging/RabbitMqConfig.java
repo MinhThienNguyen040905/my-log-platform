@@ -5,6 +5,8 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,8 +14,23 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMqConfig {
 
     @Bean
+    RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory) {
+        return new RabbitAdmin(connectionFactory);
+    }
+
+    @Bean
     TopicExchange myLogEventsExchange() {
         return new TopicExchange(MessagingTopology.EVENTS_EXCHANGE, true, false);
+    }
+
+    @Bean
+    TopicExchange deadLetterExchange() {
+        return new TopicExchange(MessagingTopology.DEAD_LETTER_EXCHANGE, true, false);
+    }
+
+    @Bean
+    Queue journalEventsQueue() {
+        return quorumQueue(MessagingTopology.JOURNAL_EVENTS_QUEUE);
     }
 
     @Bean
@@ -39,6 +56,20 @@ public class RabbitMqConfig {
     @Bean
     Queue deadLetterQueue() {
         return QueueBuilder.durable(MessagingTopology.DEAD_LETTER_QUEUE).build();
+    }
+
+    @Bean
+    Binding journalEventsBinding(Queue journalEventsQueue, TopicExchange myLogEventsExchange) {
+        return BindingBuilder.bind(journalEventsQueue)
+                .to(myLogEventsExchange)
+                .with("journal.#");
+    }
+
+    @Bean
+    Binding deadLetterBinding(Queue deadLetterQueue, TopicExchange deadLetterExchange) {
+        return BindingBuilder.bind(deadLetterQueue)
+                .to(deadLetterExchange)
+                .with("#");
     }
 
     @Bean
@@ -79,8 +110,8 @@ public class RabbitMqConfig {
     private Queue quorumQueue(String name) {
         return QueueBuilder.durable(name)
                 .quorum()
-                .deadLetterExchange(MessagingTopology.EVENTS_EXCHANGE)
-                .deadLetterRoutingKey("dead." + name)
+                .deadLetterExchange(MessagingTopology.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey("consumer." + name)
                 .build();
     }
 }

@@ -87,6 +87,15 @@ springdoc:
     tags-sorter: alpha
 
 mylog:
+  outbox:
+    scheduling-enabled: ${OUTBOX_SCHEDULING_ENABLED:true}
+    batch-size: ${OUTBOX_BATCH_SIZE:50}
+    max-attempts: ${OUTBOX_MAX_ATTEMPTS:5}
+    poll-interval: ${OUTBOX_POLL_INTERVAL:1s}
+    claim-lease: ${OUTBOX_CLAIM_LEASE:30s}
+    confirm-timeout: ${OUTBOX_CONFIRM_TIMEOUT:5s}
+    retry-base-delay: ${OUTBOX_RETRY_BASE_DELAY:2s}
+    retry-max-delay: ${OUTBOX_RETRY_MAX_DELAY:5m}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   security:

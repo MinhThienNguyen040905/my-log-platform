@@ -7,6 +7,8 @@ import com.mylog.shared.api.ApiErrorCodes;
 import com.mylog.shared.exception.BadRequestException;
 import com.mylog.shared.exception.ConflictException;
 import com.mylog.shared.exception.ResourceNotFoundException;
+import com.mylog.shared.messaging.MessagingTopology;
+import com.mylog.shared.outbox.OutboxWriter;
 import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.Instant;
@@ -32,6 +34,7 @@ public class JournalService {
     private final JournalCursorCodec cursorCodec;
     private final JournalIdempotencyService idempotencyService;
     private final JournalRequestHasher requestHasher;
+    private final OutboxWriter outboxWriter;
     private final Clock clock;
 
     public JournalService(
@@ -39,11 +42,13 @@ public class JournalService {
             JournalCursorCodec cursorCodec,
             JournalIdempotencyService idempotencyService,
             JournalRequestHasher requestHasher,
+            OutboxWriter outboxWriter,
             Clock clock) {
         this.repository = repository;
         this.cursorCodec = cursorCodec;
         this.idempotencyService = idempotencyService;
         this.requestHasher = requestHasher;
+        this.outboxWriter = outboxWriter;
         this.clock = clock;
     }
 
@@ -76,6 +81,8 @@ public class JournalService {
                 command.favorite(),
                 now);
         repository.saveAndFlush(entry);
+        appendJournalEvent(entry, MessagingTopology.JOURNAL_CREATED);
+        appendAnalysisRequested(entry);
         idempotencyService.complete(claim.recordId(), entry.getId(), now);
         return entry;
     }
@@ -153,7 +160,7 @@ public class JournalService {
         validateNullableScore(stressScore, "stressScore");
         validateNullableScore(energyScore, "energyScore");
 
-        entry.update(
+        boolean analysisInputChanged = entry.update(
                 title,
                 contentText,
                 contentJson,
@@ -166,7 +173,12 @@ public class JournalService {
                 zone.getId(),
                 favorite,
                 clock.instant());
-        return repository.saveAndFlush(entry);
+        JournalEntry saved = repository.saveAndFlush(entry);
+        appendJournalEvent(saved, MessagingTopology.JOURNAL_UPDATED);
+        if (analysisInputChanged) {
+            appendAnalysisRequested(saved);
+        }
+        return saved;
     }
 
     @Transactional
@@ -174,6 +186,7 @@ public class JournalService {
         JournalEntry entry = owned(userId, journalId);
         entry.softDelete(clock.instant());
         repository.saveAndFlush(entry);
+        appendJournalEvent(entry, MessagingTopology.JOURNAL_DELETED);
     }
 
     private JournalEntry owned(UUID userId, UUID journalId) {
@@ -255,5 +268,30 @@ public class JournalService {
         return new ConflictException(
                 ApiErrorCodes.JOURNAL_VERSION_CONFLICT,
                 "Journal entry was modified by another request");
+    }
+
+    private void appendJournalEvent(JournalEntry entry, String eventType) {
+        outboxWriter.append(
+                "JOURNAL",
+                entry.getId(),
+                eventType,
+                1,
+                eventPayload(entry));
+    }
+
+    private void appendAnalysisRequested(JournalEntry entry) {
+        outboxWriter.append(
+                "JOURNAL",
+                entry.getId(),
+                MessagingTopology.JOURNAL_ANALYSIS_REQUESTED,
+                1,
+                eventPayload(entry));
+    }
+
+    private Map<String, Object> eventPayload(JournalEntry entry) {
+        return Map.of(
+                "journalId", entry.getId().toString(),
+                "userId", entry.getUserId().toString(),
+                "journalVersion", entry.getJournalVersion());
     }
 }

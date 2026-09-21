@@ -123,6 +123,12 @@ DELETE /api/v1/journals/{journalId}
 
 `occurredAt` được kết hợp với IANA `timezoneAtEntry` để tạo `entryDate`. Delete là soft-delete và mọi repository query đều scope theo authenticated user, vì vậy journal không tồn tại, đã xóa hoặc thuộc user khác đều trả `404 JOURNAL_NOT_FOUND`.
 
+## Transactional outbox và RabbitMQ
+
+Create/update/delete journal ghi event vào PostgreSQL trong cùng transaction. Publisher claim bằng `FOR UPDATE SKIP LOCKED`, chờ RabbitMQ publisher confirm rồi mới đánh dấu `PUBLISHED`; failure được retry exponential backoff và chuyển sang `mylog.dead` sau giới hạn cấu hình.
+
+Các event Journal hiện có: `journal.created`, `journal.updated`, `journal.deleted` và `journal.analysis.requested`. Payload chỉ chứa ID/version, không chứa journal content. Chi tiết recovery và replay xem [Messaging Runbook](../docs/MESSAGING_RUNBOOK.md).
+
 ## Xác minh
 
 ```powershell
