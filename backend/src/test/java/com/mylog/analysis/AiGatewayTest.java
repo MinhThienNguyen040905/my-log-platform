@@ -2,11 +2,11 @@ package com.mylog.analysis;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.mylog.analysis.application.AiAnalysisInput;
-import com.mylog.analysis.application.AiAnalysisPort;
-import com.mylog.analysis.application.AiGateway;
-import com.mylog.analysis.application.AiProviderException;
-import com.mylog.analysis.configuration.AiProperties;
+import com.mylog.analysis.provider.AiAnalysisInput;
+import com.mylog.analysis.provider.AiAnalysisPort;
+import com.mylog.analysis.provider.AiGateway;
+import com.mylog.analysis.provider.AiProviderException;
+import com.mylog.analysis.config.AiProperties;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.net.URI;
 import java.time.Clock;

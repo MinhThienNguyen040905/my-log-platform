@@ -5,7 +5,7 @@
 | Version | 1.0 |
 | Status | M0–M4 complete; M5 ready for implementation |
 | Owner | Backend developer |
-| Baseline | Spring Boot modular monolith |
+| Baseline | Pragmatic modular monolith, package-by-feature |
 | Database | Supabase PostgreSQL |
 | Cache | Redis |
 | Message broker | RabbitMQ |
@@ -112,16 +112,18 @@ Tài liệu liên quan:
 
 ## 4. Nguyên tắc triển khai
 
-1. Mỗi module dùng cấu trúc `api`, `application`, `domain`, `infrastructure`.
-2. Controller không truy cập repository trực tiếp.
-3. Domain không phụ thuộc Spring, RabbitMQ, Redis hay AI SDK.
-4. Mọi query theo user phải chứa ownership condition ngay tại repository.
-5. Journal commit không phụ thuộc AI provider hoặc RabbitMQ availability.
-6. Event được ghi cùng transaction với dữ liệu nghiệp vụ bằng outbox.
-7. Consumer phải idempotent; message delivery được xem là at-least-once.
-8. Không đưa journal content, password, JWT hoặc AI prompt chứa dữ liệu riêng tư vào log.
-9. Không sửa migration đã chạy; chỉ thêm migration mới.
-10. Mỗi API hoàn thành phải có OpenAPI annotation và automated test.
+1. Mỗi module dùng cấu trúc rõ ràng `controller`, `dto`, `service`, `entity`, `repository`; thêm `provider`, `messaging`, `security`, `config` khi thực sự cần.
+2. Luồng mặc định là `controller/messaging → service → repository/provider`.
+3. Controller không truy cập repository trực tiếp; service không phụ thuộc controller hoặc HTTP DTO.
+4. Entity không phụ thuộc controller, DTO, service, repository hoặc transport. JPA annotation được chấp nhận cho MVP để tránh duplicate persistence model.
+5. Chỉ tạo port/interface cho boundary có khả năng thay đổi như AI provider, messaging, storage và external API.
+6. Mọi query theo user phải chứa ownership condition ngay tại repository/query service.
+7. Journal commit không phụ thuộc AI provider hoặc RabbitMQ availability.
+8. Event được ghi cùng transaction với dữ liệu nghiệp vụ bằng outbox.
+9. Consumer phải idempotent; message delivery được xem là at-least-once.
+10. Không đưa journal content, password, JWT hoặc AI prompt chứa dữ liệu riêng tư vào log.
+11. Không sửa migration đã chạy; chỉ thêm migration mới.
+12. Mỗi API hoàn thành phải có OpenAPI annotation và automated test.
 
 ---
 
@@ -360,7 +362,7 @@ statistics.updated
 
 #### Provider abstraction
 
-- [x] `AiAnalysisPort` trong application/domain boundary.
+- [x] `AiAnalysisPort` trong `analysis/provider` boundary.
 - [x] Mock adapter deterministic cho local/test.
 - [x] Một production adapter duy nhất cho MVP.
 - [x] Connect timeout, response timeout và circuit breaker.

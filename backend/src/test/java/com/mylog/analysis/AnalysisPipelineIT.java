@@ -6,21 +6,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.mylog.analysis.api.AnalysisResponse;
-import com.mylog.analysis.api.CorrectionRequest;
-import com.mylog.analysis.api.CorrectionRequest.EmotionCorrection;
-import com.mylog.analysis.api.CorrectionRequest.Operation;
-import com.mylog.analysis.api.CorrectionRequest.TopicCorrection;
-import com.mylog.analysis.application.AiAnalysisInput;
-import com.mylog.analysis.application.AiAnalysisOutput;
-import com.mylog.analysis.application.AiAnalysisPort;
-import com.mylog.analysis.application.AiProviderException;
-import com.mylog.analysis.application.AnalysisCommandService;
-import com.mylog.analysis.application.AnalysisJob;
-import com.mylog.analysis.application.AnalysisQueryService;
-import com.mylog.analysis.application.AnalysisWorker;
-import com.mylog.analysis.application.CorrectionService;
-import com.mylog.analysis.infrastructure.persistence.AnalysisJobRepository;
+import com.mylog.analysis.service.AnalysisView;
+import com.mylog.analysis.service.CorrectionCommand;
+import com.mylog.analysis.service.CorrectionCommand.EmotionCorrection;
+import com.mylog.analysis.service.CorrectionCommand.Operation;
+import com.mylog.analysis.service.CorrectionCommand.TopicCorrection;
+import com.mylog.analysis.provider.AiAnalysisInput;
+import com.mylog.analysis.provider.AiAnalysisOutput;
+import com.mylog.analysis.provider.AiAnalysisPort;
+import com.mylog.analysis.provider.AiProviderException;
+import com.mylog.analysis.service.AnalysisCommandService;
+import com.mylog.analysis.entity.AnalysisJob;
+import com.mylog.analysis.service.AnalysisQueryService;
+import com.mylog.analysis.service.AnalysisWorker;
+import com.mylog.analysis.service.CorrectionService;
+import com.mylog.analysis.repository.AnalysisJobRepository;
 import com.mylog.support.AbstractIntegrationTest;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -80,10 +80,10 @@ class AnalysisPipelineIT extends AbstractIntegrationTest {
         jobs.enqueue(fixture.userId(), fixture.journalId(), 1, "ANALYSIS");
         assertThat(worker.processAvailable()).isEqualTo(1);
 
-        AnalysisResponse response = query.get(fixture.userId(), fixture.journalId());
+        AnalysisView response = query.get(fixture.userId(), fixture.journalId());
         assertThat(response.status()).isEqualTo("COMPLETED");
         assertThat(response.result().sentiment()).isEqualTo("POSITIVE");
-        assertThat(response.result().emotions()).extracting(AnalysisResponse.Emotion::effectiveScore)
+        assertThat(response.result().emotions()).extracting(AnalysisView.Emotion::effectiveScore)
                 .containsExactly(new BigDecimal("0.8000"));
         assertThat(query.reflections(fixture.userId(), fixture.journalId()).questions()).hasSize(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM ai_usage_records", Integer.class)).isEqualTo(1);
@@ -150,7 +150,7 @@ class AnalysisPipelineIT extends AbstractIntegrationTest {
 
         worker.processAvailable();
 
-        AnalysisResponse response = query.get(fixture.userId(), fixture.journalId());
+        AnalysisView response = query.get(fixture.userId(), fixture.journalId());
         assertThat(provider.calls).hasValue(0);
         assertThat(response.result().riskLevel()).isEqualTo("CRITICAL");
         assertThat(response.result().explanation()).isNull();
@@ -171,7 +171,7 @@ class AnalysisPipelineIT extends AbstractIntegrationTest {
 
         worker.processAvailable();
 
-        AnalysisResponse response = query.get(fixture.userId(), fixture.journalId());
+        AnalysisView response = query.get(fixture.userId(), fixture.journalId());
         assertThat(response.result().riskLevel()).isEqualTo("HIGH");
         assertThat(response.result().summary()).doesNotContain("Take a walk");
         assertThat(response.result().explanation()).isNull();
@@ -185,18 +185,18 @@ class AnalysisPipelineIT extends AbstractIntegrationTest {
         jobs.enqueue(fixture.userId(), fixture.journalId(), 1, "ANALYSIS");
         worker.processAvailable();
 
-        corrections.correct(fixture.userId(), fixture.journalId(), new CorrectionRequest(
+        corrections.correct(fixture.userId(), fixture.journalId(), new CorrectionCommand(
                 List.of(new EmotionCorrection("JOY", Operation.UPDATE, new BigDecimal("0.2000"))),
                 List.of(
                         new TopicCorrection("work", Operation.REMOVE, null),
                         new TopicCorrection("family", Operation.ADD, new BigDecimal("0.9000")))));
 
-        AnalysisResponse response = query.get(fixture.userId(), fixture.journalId());
-        AnalysisResponse.Emotion joy = response.result().emotions().getFirst();
+        AnalysisView response = query.get(fixture.userId(), fixture.journalId());
+        AnalysisView.Emotion joy = response.result().emotions().getFirst();
         assertThat(joy.originalScore()).isEqualByComparingTo("0.8000");
         assertThat(joy.effectiveScore()).isEqualByComparingTo("0.2000");
         assertThat(joy.corrected()).isTrue();
-        assertThat(response.result().topics()).extracting(AnalysisResponse.Topic::name).containsExactly("family");
+        assertThat(response.result().topics()).extracting(AnalysisView.Topic::name).containsExactly("family");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM journal_corrections", Integer.class)).isEqualTo(3);
         assertThat(jdbc.queryForObject("""
                 SELECT count(*) FROM outbox_events WHERE event_type = 'journal.corrected'

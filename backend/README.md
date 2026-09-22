@@ -2,6 +2,20 @@
 
 Spring Boot backend cho MyLog, được tổ chức theo modular monolith và có thể chạy API/worker bằng các profile riêng.
 
+## Tổ chức source code
+
+Backend dùng package-by-feature với layered architecture thực dụng:
+
+```text
+com.mylog
+├── identity/{controller,dto,service,entity,repository,security,config}
+├── journal/{controller,dto,service,entity,repository}
+├── analysis/{controller,dto,service,entity,repository,provider,messaging,config}
+└── common/{api,controller,config,exception,logging,messaging,outbox,security,web}
+```
+
+Luồng mặc định là `controller/messaging → service → repository/provider`. Controller không gọi repository; service không dùng HTTP DTO hoặc persistence framework trực tiếp; repository không phụ thuộc service; `common` không phụ thuộc feature. Các quy tắc này được khóa bằng ArchUnit. Không tạo package rỗng cho feature chưa triển khai. Xem [Code Organization](../docs/CODE_ORGANIZATION.md).
+
 ## Yêu cầu
 
 - Java 21 trở lên.

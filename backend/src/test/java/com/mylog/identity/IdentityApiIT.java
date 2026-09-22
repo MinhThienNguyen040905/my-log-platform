@@ -9,10 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.mylog.shared.security.JwtProperties;
+import com.mylog.common.security.JwtProperties;
 import com.mylog.support.AbstractIntegrationTest;
-import com.mylog.identity.application.AuthRateLimiter;
-import com.mylog.shared.exception.RateLimitExceededException;
+import com.mylog.identity.service.AuthRateLimiter;
+import com.mylog.common.exception.RateLimitExceededException;
 import jakarta.servlet.http.Cookie;
 import java.time.Instant;
 import java.util.List;

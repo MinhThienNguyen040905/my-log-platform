@@ -129,7 +129,7 @@ Worker runtime chịu trách nhiệm:
 - Report generation.
 - Retry, dead-letter handling và recovery.
 
-#### Shared infrastructure
+#### Common infrastructure
 
 - PostgreSQL: dữ liệu bền vững và transactional state.
 - Redis: cache, quota, short-lived idempotency và coordination.
@@ -166,12 +166,14 @@ Worker runtime chịu trách nhiệm:
 
 ### 5.2. Dependency rules
 
-- Domain package không được import Spring MVC, RabbitMQ hoặc provider SDK.
+- Entity package không được import Spring MVC, RabbitMQ hoặc provider SDK.
 - Controller không truy cập repository trực tiếp.
-- Module khác không được truy cập package `infrastructure` hoặc entity JPA nội bộ.
-- Cross-module write sử dụng application service hoặc domain event.
+- Service không truy cập JPA/JDBC/Redis trực tiếp; dùng repository hoặc explicit port.
+- Repository không phụ thuộc controller, DTO hoặc service.
+- Module khác không được truy cập repository/service/entity nội bộ.
+- Cross-module write sử dụng public service contract hoặc event.
 - Cross-module read có thể sử dụng public query interface.
-- Spring AI chỉ xuất hiện trong provider adapter.
+- AI client SDK chỉ xuất hiện trong provider adapter.
 - Redis không được dùng để đảm bảo duy nhất tính đúng của dữ liệu nghiệp vụ.
 
 ---
@@ -187,29 +189,40 @@ backend/
 ├── README.md
 │
 ├── src/main/java/com/mylog/
-│   ├── MyLogApplication.java
-│   │
-│   ├── shared/
-│   │   ├── config/
-│   │   ├── security/
-│   │   ├── exception/
-│   │   ├── messaging/
-│   │   ├── outbox/
-│   │   ├── cache/
-│   │   ├── idempotency/
-│   │   ├── observability/
-│   │   └── persistence/
-│   │
+│   ├── MylogBackendApplication.java
 │   ├── identity/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── service/
+│   │   ├── entity/
+│   │   ├── repository/
+│   │   ├── security/
+│   │   └── config/
 │   ├── journal/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── service/
+│   │   ├── entity/
+│   │   └── repository/
 │   ├── analysis/
-│   ├── safety/
-│   ├── reflection/
-│   ├── statistics/
-│   ├── insight/
-│   ├── feedback/
-│   ├── report/
-│   └── media/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── service/
+│   │   ├── entity/
+│   │   ├── repository/
+│   │   ├── provider/
+│   │   ├── messaging/
+│   │   └── config/
+│   └── common/
+│       ├── api/
+│       ├── controller/
+│       ├── config/
+│       ├── exception/
+│       ├── logging/
+│       ├── messaging/
+│       ├── outbox/
+│       ├── security/
+│       └── web/
 │
 ├── src/main/resources/
 │   ├── application.yml
@@ -229,35 +242,45 @@ backend/
     └── fixtures/
 ```
 
-### 6.1. Internal module structure
+### 6.1. Cấu trúc module nội bộ
 
 ```text
 journal/
-├── api/
-│   ├── JournalController.java
+├── controller/
+│   └── JournalController.java
+├── dto/
 │   ├── CreateJournalRequest.java
 │   ├── UpdateJournalRequest.java
 │   └── JournalResponse.java
-├── application/
-│   ├── CreateJournalUseCase.java
-│   ├── UpdateJournalUseCase.java
-│   ├── DeleteJournalUseCase.java
-│   └── JournalQueryService.java
-├── domain/
+├── service/
+│   ├── JournalService.java
+│   ├── JournalIdempotencyService.java
+│   └── JournalCursorCodec.java
+├── entity/
 │   ├── JournalEntry.java
-│   ├── JournalStatus.java
-│   ├── JournalRepository.java
-│   └── event/
-│       ├── JournalSaved.java
-│       └── JournalUpdated.java
-└── infrastructure/
-    ├── persistence/
-    │   ├── JpaJournalEntity.java
-    │   ├── SpringDataJournalRepository.java
-    │   └── JournalRepositoryAdapter.java
-    └── messaging/
-        └── JournalEventPublisher.java
+│   └── JournalStatus.java
+└── repository/
+    └── JournalEntryRepository.java
 ```
+
+Đây là **package-by-feature kết hợp layered architecture thực dụng**. Luồng mặc định:
+
+```text
+HTTP/RabbitMQ → controller|messaging → service → repository|provider → external system
+```
+
+Quy tắc bắt buộc:
+
+- `controller` nhận request, map DTO và gọi `service`; không gọi `repository`.
+- `dto` chỉ là contract HTTP, không được đi vào service layer.
+- `service` điều phối use case, validation nghiệp vụ và transaction.
+- `entity` giữ state/invariant; không phụ thuộc controller, DTO, service hoặc messaging.
+- `repository` đóng gói JPA/JDBC persistence; service không truy cập persistence framework trực tiếp.
+- `provider` là boundary cho dịch vụ ngoài có khả năng thay đổi, hiện tại là AI.
+- `common` chỉ chứa kỹ thuật dùng chung và không phụ thuộc feature.
+- Không tạo package/module rỗng cho milestone chưa triển khai.
+
+Chi tiết naming và dependency rule xem [Code Organization](CODE_ORGANIZATION.md).
 
 ### 6.2. Runtime profiles
 
@@ -317,7 +340,7 @@ Chịu trách nhiệm:
 - Quản lý analysis attempt, retry và failure state.
 - Không ghi kết quả nếu journal version không còn hiện hành.
 
-### 7.4. Safety module
+### 7.4. Safety capability trong Analysis
 
 Chịu trách nhiệm:
 
@@ -327,7 +350,7 @@ Chịu trách nhiệm:
 - Lưu SafetyEvent tối thiểu.
 - Phát safety status cho API response.
 
-### 7.5. Reflection module
+### 7.5. Reflection capability trong Analysis
 
 Chịu trách nhiệm:
 
@@ -396,34 +419,27 @@ flowchart TD
     ID[Identity]
     J[Journal]
     A[Analysis]
-    S[Safety]
-    R[Reflection]
     ST[Statistics]
     I[Insight]
     F[Feedback]
     RP[Report]
 
-    J --> ID
-    A --> J
-    A --> S
-    R --> A
-    ST --> J
-    ST --> A
-    I --> ST
-    I --> A
-    F --> R
-    F --> I
-    RP --> ST
-    RP --> I
+    J -. authenticated user id .-> ID
+    J -- journal.analysis.requested --> A
+    A -- journal.analysis.completed --> ST
+    ST -- statistics.updated --> I
+    F -. target id .-> I
+    RP -. read model .-> ST
 ```
 
 Quy tắc:
 
 - Không tạo dependency vòng.
 - `statistics` không phụ thuộc `insight`.
-- `analysis` không phụ thuộc `reflection`.
+- Safety, correction và reflection là capability bên trong `analysis` ở MVP.
 - `journal` không biết AI provider.
-- Module chỉ expose interface cần thiết qua package public.
+- Module giao tiếp bất đồng bộ qua event; không import repository/service của module khác.
+- Module tương lai chỉ được tạo package khi bắt đầu triển khai.
 
 Spring Modulith có thể được dùng để kiểm tra dependency rule và module integration test, nhưng không bắt buộc để domain code hoạt động.
 
@@ -1132,10 +1148,11 @@ public interface AiAnalysisProvider {
 ### 16.2. Adapter layout
 
 ```text
-analysis/infrastructure/provider/
-├── openai/
-├── gemini/
-└── mock/
+analysis/provider/
+├── AiAnalysisPort.java
+├── AiGateway.java
+├── OpenAiAnalysisAdapter.java
+└── MockAiAnalysisAdapter.java
 ```
 
 MVP có một provider production và một deterministic mock provider.
@@ -1656,8 +1673,12 @@ Minimum E2E scenarios:
 Architecture test phải phát hiện:
 
 - Controller gọi repository trực tiếp.
-- Domain import infrastructure/provider SDK.
-- Cross-module access vào internal package.
+- Service import controller hoặc HTTP DTO.
+- Service truy cập JPA/JDBC/Redis trực tiếp thay vì repository hoặc port.
+- Repository phụ thuộc controller, DTO hoặc service.
+- Entity phụ thuộc controller, DTO, service, repository hoặc messaging.
+- `common` phụ thuộc feature.
+- Feature import trực tiếp feature khác.
 - Dependency vòng giữa modules.
 
 ---

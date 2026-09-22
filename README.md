@@ -61,7 +61,7 @@ Khác với các ứng dụng tích hợp chatbot AI thông thường chỉ gọ
 
 ## 🏗 Kiến trúc hệ thống (System Architecture)
 
-Hệ thống được thiết kế theo kiến trúc Module Monolith phân tầng rõ ràng, đảm bảo tách biệt nghiệp vụ và khả năng mở rộng:
+Backend được tổ chức theo **pragmatic modular monolith**: chia theo nghiệp vụ trước (`identity`, `journal`, `analysis`), rồi phân lớp bên trong từng module. Phụ thuộc mặc định đi theo chiều `controller → service → repository`; tích hợp ngoài như AI, RabbitMQ và Redis được cô lập tại adapter tương ứng.
 
 ```text
                ┌────────────────────────────────────────────────────────┐
@@ -75,17 +75,16 @@ Hệ thống được thiết kế theo kiến trúc Module Monolith phân tần
                ├────────────────────────────────────────────────────────┤
                │  [ Controller Layer ] -> REST Endpoints & Validation   │
                │                                                        │
-               │  [ Service & Business Logic Layer ]                    │
-               │   ├── AuthService & UserModule                         │
-               │   ├── JournalService (CRUD, Autosave, State Machine)   │
-               │   ├── SafetyEngine (Risk Detection & Crisis Guard)     │
-               │   ├── StatisticalEngine (Deterministic Math Analytics) │
-               │   └── InsightService (Evidence Verification & Lifecycle│
+               │  [ Feature Modules ]                                   │
+               │   ├── identity/{controller,dto,service,entity,...}      │
+               │   ├── journal/{controller,dto,service,entity,...}       │
+               │   └── analysis/{controller,service,provider,...}        │
                │                                                        │
                │  [ AI Integration Layer - Abstraction Interface ]      │
                │   └── AiAnalysisProvider (OpenAI / Gemini / Mock)      │
                │                                                        │
-               │  [ Repository Layer - Spring Data JPA + Flyway ]       │
+               │  [ Common Infrastructure ]                             │
+               │   Security • Outbox • Messaging • Error Handling       │
                └───────────────────────────┬────────────────────────────┘
                                            │
                                            ▼
@@ -295,20 +294,29 @@ my-log-platform/
 └── backend/                       # Ứng dụng Java Spring Boot Backend
     ├── src/
     │   ├── main/
-    │   │   ├── java/com/mylog/    # Mã nguồn nghiệp vụ Java
-    │   │   │   ├── auth/          # Authentication, JWT, Security Filters
-    │   │   │   ├── journal/       # Journal CRUD, Autosave, State Controller
-    │   │   │   ├── ai/            # AI Pipeline, Provider Abstraction, JSON Parser
-    │   │   │   ├── safety/        # Risk Detection, Safety Events, Crisis Guard
-    │   │   │   ├── statistics/    # Statistical Engine, Aggregators, Pattern Finder
-    │   │   │   ├── insight/       # Evidence Engine, Insight Generator
-    │   │   │   └── feedback/      # Feedback tracking & Preference tuning
+    │   │   ├── java/com/mylog/    # Mã nguồn backend theo feature
+    │   │   │   ├── identity/      # Đăng ký, đăng nhập, token, hồ sơ
+    │   │   │   │   ├── controller/
+    │   │   │   │   ├── dto/
+    │   │   │   │   ├── service/
+    │   │   │   │   ├── entity/
+    │   │   │   │   ├── repository/
+    │   │   │   │   ├── security/
+    │   │   │   │   └── config/
+    │   │   │   ├── journal/       # CRUD journal và idempotency
+    │   │   │   │   └── {controller,dto,service,entity,repository}/
+    │   │   │   ├── analysis/      # AI, safety, correction, reflection
+    │   │   │   │   └── {controller,dto,service,entity,repository,provider,messaging,config}/
+    │   │   │   └── common/        # Hạ tầng dùng chung, không chứa nghiệp vụ
+    │   │   │       └── {api,controller,config,exception,logging,messaging,outbox,security,web}/
     │   │   └── resources/
     │   │       ├── db/migration/  # Các script Flyway SQL Versioning
     │   │       └── application.yml# Cấu hình môi trường & Database
     │   └── test/                  # Unit Tests & Integration Tests
     └── pom.xml                    # Maven Configuration
 ```
+
+Quy tắc package, chiều phụ thuộc và cách thêm module mới được mô tả tại [Code Organization](docs/CODE_ORGANIZATION.md). Thiết kế tổng thể backend nằm tại [Backend Architecture](docs/BACKEND_ARCHITECTURE.md).
 
 ---
 

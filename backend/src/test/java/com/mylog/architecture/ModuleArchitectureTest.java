@@ -14,15 +14,8 @@ class ModuleArchitectureTest {
 
     private static final List<String> FEATURE_MODULES = List.of(
             "analysis",
-            "feedback",
             "identity",
-            "insight",
-            "journal",
-            "media",
-            "reflection",
-            "report",
-            "safety",
-            "statistics");
+            "journal");
 
     private final JavaClasses productionClasses = new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
@@ -51,18 +44,97 @@ class ModuleArchitectureTest {
     }
 
     @Test
-    void sharedModuleDoesNotDependOnFeatureModules() {
+    void commonModuleDoesNotDependOnFeatureModules() {
         String[] featurePackages = FEATURE_MODULES.stream()
                 .map(module -> "com.mylog." + module + "..")
                 .toArray(String[]::new);
 
         noClasses()
                 .that()
-                .resideInAPackage("com.mylog.shared..")
+                .resideInAPackage("com.mylog.common..")
                 .should()
                 .dependOnClassesThat()
                 .resideInAnyPackage(featurePackages)
-                .because("shared technical code must not depend on business feature modules")
+                .because("common technical code must not depend on business feature modules")
+                .allowEmptyShould(true)
+                .check(productionClasses);
+    }
+
+    @Test
+    void servicesDoNotDependOnWebLayer() {
+        noClasses()
+                .that()
+                .resideInAPackage("com.mylog..service..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage(
+                        "com.mylog..controller..",
+                        "com.mylog..dto..")
+                .because("HTTP DTO mapping belongs to controllers")
+                .allowEmptyShould(true)
+                .check(productionClasses);
+    }
+
+    @Test
+    void controllersDoNotDependOnRepositories() {
+        noClasses()
+                .that()
+                .resideInAPackage("com.mylog..controller..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage("com.mylog..repository..")
+                .because("controllers must call services instead of repositories")
+                .allowEmptyShould(true)
+                .check(productionClasses);
+    }
+
+    @Test
+    void repositoriesDoNotDependOnUpperLayers() {
+        noClasses()
+                .that()
+                .resideInAPackage("com.mylog..repository..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage(
+                        "com.mylog..controller..",
+                        "com.mylog..dto..",
+                        "com.mylog..service..")
+                .because("repositories are persistence adapters and must not depend on orchestration or HTTP types")
+                .allowEmptyShould(true)
+                .check(productionClasses);
+    }
+
+    @Test
+    void servicesDoNotUsePersistenceFrameworksDirectly() {
+        noClasses()
+                .that()
+                .resideInAPackage("com.mylog..service..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage(
+                        "org.springframework.jdbc..",
+                        "org.springframework.data.jpa..",
+                        "org.springframework.data.redis..",
+                        "jakarta.persistence..")
+                .because("services orchestrate use cases through repositories or explicit ports")
+                .allowEmptyShould(true)
+                .check(productionClasses);
+    }
+
+    @Test
+    void entitiesDoNotDependOnUpperLayers() {
+        noClasses()
+                .that()
+                .resideInAPackage("com.mylog..entity..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage(
+                        "com.mylog..controller..",
+                        "com.mylog..dto..",
+                        "com.mylog..service..",
+                        "com.mylog..repository..",
+                        "com.mylog..messaging..")
+                .because("entities contain state and invariants, not orchestration or transport concerns")
                 .allowEmptyShould(true)
                 .check(productionClasses);
     }
