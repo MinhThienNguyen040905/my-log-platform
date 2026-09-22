@@ -1,4 +1,4 @@
-package com.mylog.analysis.provider;
+package com.mylog.analysis.port;
 
 import java.util.UUID;
 

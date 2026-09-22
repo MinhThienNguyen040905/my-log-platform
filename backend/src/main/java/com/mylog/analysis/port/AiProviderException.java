@@ -1,4 +1,4 @@
-package com.mylog.analysis.provider;
+package com.mylog.analysis.port;
 
 public class AiProviderException extends RuntimeException {
 
@@ -17,6 +17,11 @@ public class AiProviderException extends RuntimeException {
         this.retryable = retryable;
     }
 
-    public String code() { return code; }
-    public boolean retryable() { return retryable; }
+    public String code() {
+        return code;
+    }
+
+    public boolean retryable() {
+        return retryable;
+    }
 }

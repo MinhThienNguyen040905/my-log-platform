@@ -92,6 +92,19 @@ class ModuleArchitectureTest {
     }
 
     @Test
+    void messagingAdaptersDoNotDependOnRepositories() {
+        noClasses()
+                .that()
+                .resideInAPackage("com.mylog..messaging..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage("com.mylog..repository..")
+                .because("message consumers must call application services instead of repositories")
+                .allowEmptyShould(true)
+                .check(productionClasses);
+    }
+
+    @Test
     void repositoriesDoNotDependOnUpperLayers() {
         noClasses()
                 .that()

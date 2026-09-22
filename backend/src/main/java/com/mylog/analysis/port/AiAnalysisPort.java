@@ -1,4 +1,4 @@
-package com.mylog.analysis.provider;
+package com.mylog.analysis.port;
 
 public interface AiAnalysisPort {
 

@@ -3,9 +3,11 @@ package com.mylog.insight.service;
 import com.mylog.common.api.ApiErrorCodes;
 import com.mylog.common.exception.ResourceNotFoundException;
 import com.mylog.insight.config.InsightProperties;
+import com.mylog.insight.repository.InsightCandidateRepository;
+import com.mylog.insight.repository.InsightCandidateRepository.TopicMoodCandidate;
+import com.mylog.insight.repository.InsightReadRepository;
+import com.mylog.insight.repository.InsightReadRepository.InsightRow;
 import com.mylog.insight.repository.InsightRepository;
-import com.mylog.insight.repository.InsightRepository.InsightRow;
-import com.mylog.insight.repository.InsightRepository.TopicMoodCandidate;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.DateTimeException;
@@ -25,14 +27,19 @@ public class InsightService {
     private static final BigDecimal MINIMUM_MOOD_DELTA = new BigDecimal("0.50");
 
     private final InsightRepository repository;
+    private final InsightCandidateRepository candidates;
+    private final InsightReadRepository reads;
     private final InsightConfidencePolicy confidencePolicy;
     private final InsightProperties properties;
     private final Clock clock;
 
     public InsightService(
-            InsightRepository repository, InsightConfidencePolicy confidencePolicy,
+            InsightRepository repository, InsightCandidateRepository candidates, InsightReadRepository reads,
+            InsightConfidencePolicy confidencePolicy,
             InsightProperties properties, Clock clock) {
         this.repository = repository;
+        this.candidates = candidates;
+        this.reads = reads;
         this.confidencePolicy = confidencePolicy;
         this.properties = properties;
         this.clock = clock;
@@ -40,25 +47,25 @@ public class InsightService {
 
     @Transactional
     public void refresh(UUID userId) {
-        var locale = repository.findUserLocale(userId);
+        var locale = candidates.findUserLocale(userId);
         ZoneId zone = validZone(locale.timezone());
         LocalDate to = LocalDate.now(clock.withZone(zone));
         LocalDate from = to.minusDays(properties.lookbackDays() - 1L);
         Instant now = clock.instant();
         repository.advanceLifecycle(userId, now);
-        for (TopicMoodCandidate candidate : repository.topicMoodCandidates(userId, from, to, zone.getId())) {
+        for (TopicMoodCandidate candidate : candidates.topicMoodCandidates(userId, from, to, zone.getId())) {
             createOrUpdate(userId, candidate, from, to, now, locale.language());
         }
     }
 
     @Transactional(readOnly = true)
     public List<InsightView> list(UUID userId) {
-        return repository.findVisible(userId).stream().map(this::view).toList();
+        return reads.findVisible(userId).stream().map(this::view).toList();
     }
 
     @Transactional(readOnly = true)
     public InsightView get(UUID userId, UUID insightId) {
-        return repository.findOwned(userId, insightId)
+        return reads.findOwned(userId, insightId)
                 .map(this::view)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         ApiErrorCodes.INSIGHT_NOT_FOUND, "Insight does not exist"));
@@ -99,11 +106,11 @@ public class InsightService {
         return new InsightView(
                 row.id(), row.type(), row.title(), row.description(), row.confidence(), row.status(),
                 row.periodStart(), row.periodEnd(), row.createdAt(), row.updatedAt(),
-                repository.findEvidence(row.id()).stream().map(item -> new InsightView.Evidence(
+                reads.findEvidence(row.id()).stream().map(item -> new InsightView.Evidence(
                         item.id(), item.type(), item.sampleSize(), item.matchingCount(), item.metric(),
-                        item.numericValue(), item.unit(), repository.parseDetails(item.detailsJson()),
+                        item.numericValue(), item.unit(), reads.parseDetails(item.detailsJson()),
                         item.calculationVersion())).toList(),
-                repository.findActions(row.id()).stream().map(item -> new InsightView.Action(
+                reads.findActions(row.id()).stream().map(item -> new InsightView.Action(
                         item.id(), item.description(), item.status(), item.createdAt(), item.respondedAt())).toList());
     }
 

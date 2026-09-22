@@ -1,10 +1,10 @@
 package com.mylog.analysis.provider;
 
-import com.mylog.analysis.provider.AiAnalysisInput;
-import com.mylog.analysis.provider.AiAnalysisOutput;
-import com.mylog.analysis.provider.AiAnalysisPort;
-import com.mylog.analysis.provider.AiProviderException;
 import com.mylog.analysis.config.AiProperties;
+import com.mylog.analysis.port.AiAnalysisInput;
+import com.mylog.analysis.port.AiAnalysisOutput;
+import com.mylog.analysis.port.AiAnalysisPort;
+import com.mylog.analysis.port.AiProviderException;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;

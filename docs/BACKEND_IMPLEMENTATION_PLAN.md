@@ -112,12 +112,12 @@ Tài liệu liên quan:
 
 ## 4. Nguyên tắc triển khai
 
-1. Mỗi module dùng cấu trúc rõ ràng `controller`, `dto`, `service`, `entity`, `repository`; thêm `provider`, `messaging`, `security`, `config` khi thực sự cần.
-2. Luồng mặc định là `controller/messaging → service → repository/provider`.
-3. Controller không truy cập repository trực tiếp; service không phụ thuộc controller hoặc HTTP DTO.
+1. Mỗi module dùng cấu trúc rõ ràng `controller`, `dto`, `service`, `entity`, `repository`; thêm `port`, `provider`, `messaging`, `security`, `config` khi thực sự cần.
+2. Luồng mặc định là `controller/messaging → service → repository/port → provider`.
+3. Controller và messaging consumer không truy cập repository trực tiếp; service không phụ thuộc controller hoặc HTTP DTO.
 4. Entity không phụ thuộc controller, DTO, service, repository hoặc transport. JPA annotation được chấp nhận cho MVP để tránh duplicate persistence model.
 5. Chỉ tạo port/interface cho boundary có khả năng thay đổi như AI provider, messaging, storage và external API.
-6. Mọi query theo user phải chứa ownership condition ngay tại repository/query service.
+6. Mọi query theo user phải chứa ownership condition ngay tại repository/query service. Read-model và ownership lookup được phép đọc bảng module khác nhưng không được ghi chéo module.
 7. Journal commit không phụ thuộc AI provider hoặc RabbitMQ availability.
 8. Event được ghi cùng transaction với dữ liệu nghiệp vụ bằng outbox.
 9. Consumer phải idempotent; message delivery được xem là at-least-once.
@@ -362,7 +362,7 @@ statistics.updated
 
 #### Provider abstraction
 
-- [x] `AiAnalysisPort` trong `analysis/provider` boundary.
+- [x] `AiAnalysisPort` trong `analysis/port`; implementation nằm trong `analysis/provider`.
 - [x] Mock adapter deterministic cho local/test.
 - [x] Một production adapter duy nhất cho MVP.
 - [x] Connect timeout, response timeout và circuit breaker.

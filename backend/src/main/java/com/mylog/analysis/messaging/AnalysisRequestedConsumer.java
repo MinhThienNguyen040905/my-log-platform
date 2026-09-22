@@ -1,7 +1,7 @@
 package com.mylog.analysis.messaging;
 
 import com.mylog.analysis.config.AiProperties;
-import com.mylog.analysis.repository.AnalysisJobRepository;
+import com.mylog.analysis.service.AnalysisCommandService;
 import com.mylog.common.messaging.IdempotentMessageConsumer;
 import com.mylog.common.messaging.MessagingTopology;
 import com.mylog.common.outbox.MessageEnvelope;
@@ -20,13 +20,13 @@ public class AnalysisRequestedConsumer {
 
     private final ObjectMapper objectMapper;
     private final IdempotentMessageConsumer consumer;
-    private final AnalysisJobRepository jobs;
+    private final AnalysisCommandService commands;
 
     public AnalysisRequestedConsumer(
-            ObjectMapper objectMapper, IdempotentMessageConsumer consumer, AnalysisJobRepository jobs) {
+            ObjectMapper objectMapper, IdempotentMessageConsumer consumer, AnalysisCommandService commands) {
         this.objectMapper = objectMapper;
         this.consumer = consumer;
-        this.jobs = jobs;
+        this.commands = commands;
     }
 
     @RabbitListener(
@@ -41,6 +41,6 @@ public class AnalysisRequestedConsumer {
         UUID journalId = UUID.fromString(String.valueOf(envelope.payload().get("journalId")));
         UUID userId = UUID.fromString(String.valueOf(envelope.payload().get("userId")));
         long version = Long.parseLong(String.valueOf(envelope.payload().get("journalVersion")));
-        jobs.enqueue(userId, journalId, version, "ANALYSIS");
+        commands.enqueueRequestedAnalysis(userId, journalId, version);
     }
 }

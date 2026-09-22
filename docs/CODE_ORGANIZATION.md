@@ -20,7 +20,8 @@ feature/
 ├── service/      use case, command/result nội bộ và transaction
 ├── entity/       persistent entity, enum và invariant
 ├── repository/   JPA/JDBC persistence
-├── provider/     external provider boundary và adapter, nếu có
+├── port/         application-owned contract cho external boundary, nếu có
+├── provider/     adapter triển khai external port, nếu có
 ├── messaging/    RabbitMQ inbound/outbound adapter, nếu có
 ├── security/     feature-specific security adapter, nếu có
 └── config/       typed properties và wiring, nếu có
@@ -33,18 +34,21 @@ Chỉ tạo folder khi có code thật. Feature tương lai không được bi�
 ```text
 controller ─┐
 messaging  ─┴─→ service → repository → PostgreSQL/Redis
-                         → provider   → external API
+                         → port → provider → external API
 ```
 
 1. Controller chỉ validate/map HTTP DTO và gọi service.
-2. Controller không gọi repository.
-3. Service không import controller hoặc DTO.
-4. Service không truy cập JPA/JDBC/Redis trực tiếp; dùng repository hoặc explicit port.
-5. Repository không chứa HTTP concern và không phụ thuộc service.
-6. Entity không phụ thuộc controller, DTO, service, repository hoặc messaging.
-7. Feature không import repository/service/entity nội bộ của feature khác.
-8. `common` không phụ thuộc feature.
-9. Business event không chứa journal content hoặc secret.
+2. Messaging consumer chỉ parse/ack transport message và gọi service.
+3. Controller và messaging consumer không gọi repository.
+4. Service không import controller hoặc DTO.
+5. Service không truy cập JPA/JDBC/Redis trực tiếp; dùng repository hoặc explicit port.
+6. Repository không chứa HTTP concern và không phụ thuộc service.
+7. Entity không phụ thuộc controller, DTO, service, repository hoặc messaging.
+8. Feature không import repository/service/entity nội bộ của feature khác.
+9. `common` không phụ thuộc feature.
+10. Business event không chứa journal content hoặc secret.
+
+Các module read-model (`statistics`, `insight`) và ownership lookup của `feedback` được phép đọc bảng do module khác sở hữu trong cùng PostgreSQL. Đây là ngoại lệ có chủ đích của modular monolith: không được ghi vào bảng của module khác, và mọi cross-module query phải nằm trong repository, có user scope rõ ràng. ArchUnit chỉ kiểm tra dependency Java nên ngoại lệ SQL này phải được review khi thay đổi schema.
 
 ArchUnit kiểm tra tự động các rule có thể kiểm tra tĩnh.
 
@@ -60,7 +64,7 @@ ArchUnit kiểm tra tự động các rule có thể kiểm tra tĩnh.
 | Internal output | `*Result`, `*View` | `AnalysisView` |
 | Entity | danh từ nghiệp vụ | `JournalEntry` |
 | Repository | `*Repository` | `UserRepository` |
-| External boundary | `*Port` | `AiAnalysisPort` |
+| External boundary | `*Port` trong `feature/port` | `AiAnalysisPort` |
 | Provider adapter | `*Adapter` | `OpenAiAnalysisAdapter` |
 | Message consumer | `*Consumer` | `AnalysisRequestedConsumer` |
 
@@ -80,7 +84,7 @@ Không truyền `CorrectionRequest` vào service. Điều này giúp service đ�
 ### Identity
 
 Authentication, refresh-token rotation, user profile, preferences và account status.
-Redis rate limit được đặt sau `RateLimitStore`; adapter cụ thể nằm tại `identity/security`.
+Redis rate limit được đặt sau `RateLimitStore`; adapter cụ thể nằm tại `identity/security`. Password encoder được wire bởi `PasswordEncodingConfiguration`.
 
 ### Journal
 
@@ -88,7 +92,7 @@ Journal CRUD, ownership, optimistic locking, idempotency và phát outbox event.
 
 ### Analysis
 
-AI provider, job worker, safety, correction và reflection. Safety/reflection là capability bên trong Analysis ở MVP vì dùng chung version, transaction và provider lifecycle.
+AI provider, job worker, safety, correction và reflection. Contract AI nằm tại `analysis/port`; gateway và adapter nằm tại `analysis/provider`. Safety/reflection là capability bên trong Analysis ở MVP vì dùng chung version, transaction và provider lifecycle.
 
 ### Statistics
 

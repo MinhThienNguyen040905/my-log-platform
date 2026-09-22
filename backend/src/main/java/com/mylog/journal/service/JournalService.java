@@ -1,6 +1,5 @@
 package com.mylog.journal.service;
 
-import com.mylog.journal.entity.ContentFormat;
 import com.mylog.journal.entity.JournalEntry;
 import com.mylog.journal.repository.JournalEntryRepository;
 import com.mylog.common.api.ApiErrorCodes;
@@ -8,13 +7,10 @@ import com.mylog.common.exception.BadRequestException;
 import com.mylog.common.exception.ConflictException;
 import com.mylog.common.exception.ResourceNotFoundException;
 import com.mylog.common.messaging.MessagingTopology;
-import com.mylog.common.outbox.OutboxWriter;
 import java.time.Clock;
-import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,7 +30,8 @@ public class JournalService {
     private final JournalCursorCodec cursorCodec;
     private final JournalIdempotencyService idempotencyService;
     private final JournalRequestHasher requestHasher;
-    private final OutboxWriter outboxWriter;
+    private final JournalEntryValidator validator;
+    private final JournalEventPublisher events;
     private final Clock clock;
 
     public JournalService(
@@ -42,13 +39,15 @@ public class JournalService {
             JournalCursorCodec cursorCodec,
             JournalIdempotencyService idempotencyService,
             JournalRequestHasher requestHasher,
-            OutboxWriter outboxWriter,
+            JournalEntryValidator validator,
+            JournalEventPublisher events,
             Clock clock) {
         this.repository = repository;
         this.cursorCodec = cursorCodec;
         this.idempotencyService = idempotencyService;
         this.requestHasher = requestHasher;
-        this.outboxWriter = outboxWriter;
+        this.validator = validator;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -62,15 +61,15 @@ public class JournalService {
         }
 
         Instant occurredAt = command.occurredAt() == null ? now : command.occurredAt();
-        ZoneId zone = validZone(command.timezoneAtEntry());
-        validateContent(command.contentText(), command.contentJson(), command.contentFormat());
+        ZoneId zone = validator.validZone(command.timezoneAtEntry());
+        validator.validateContent(command.contentText(), command.contentJson(), command.contentFormat());
 
         JournalEntry entry = new JournalEntry(
                 UUID.randomUUID(),
                 userId,
-                normalizeTitle(command.title()),
+                validator.normalizeTitle(command.title()),
                 command.contentText(),
-                copyJson(command.contentJson()),
+                validator.copyJson(command.contentJson()),
                 command.contentFormat(),
                 (short) command.moodScore(),
                 toShort(command.stressScore()),
@@ -81,8 +80,8 @@ public class JournalService {
                 command.favorite(),
                 now);
         repository.saveAndFlush(entry);
-        appendJournalEvent(entry, MessagingTopology.JOURNAL_CREATED);
-        appendAnalysisRequested(entry);
+        events.journalChanged(entry, MessagingTopology.JOURNAL_CREATED);
+        events.analysisRequested(entry);
         idempotencyService.complete(claim.recordId(), entry.getId(), now);
         return entry;
     }
@@ -129,21 +128,21 @@ public class JournalService {
         }
 
         String title = command.title().supplied()
-                ? normalizeTitle(command.title().value())
+                ? validator.normalizeTitle(command.title().value())
                 : entry.getTitle();
-        String contentText = requiredMutation(
+        String contentText = validator.requiredMutation(
                 command.contentText(), entry.getContentText(), "contentText");
-        ContentFormat contentFormat = requiredMutation(
+        var contentFormat = validator.requiredMutation(
                 command.contentFormat(), entry.getContentFormat(), "contentFormat");
-        Integer moodScore = requiredMutation(
+        Integer moodScore = validator.requiredMutation(
                 command.moodScore(), (int) entry.getMoodScore(), "moodScore");
-        Instant occurredAt = requiredMutation(
+        Instant occurredAt = validator.requiredMutation(
                 command.occurredAt(), entry.getOccurredAt(), "occurredAt");
-        String timezone = requiredMutation(
+        String timezone = validator.requiredMutation(
                 command.timezoneAtEntry(), entry.getTimezoneAtEntry(), "timezoneAtEntry");
-        ZoneId zone = validZone(timezone);
+        ZoneId zone = validator.validZone(timezone);
         Map<String, Object> contentJson = command.contentJson().supplied()
-                ? copyJson(command.contentJson().value())
+                ? validator.copyJson(command.contentJson().value())
                 : entry.getContentJson();
         Integer stressScore = command.stressScore().supplied()
                 ? command.stressScore().value()
@@ -152,13 +151,13 @@ public class JournalService {
                 ? command.energyScore().value()
                 : toInteger(entry.getEnergyScore());
         boolean favorite = command.favorite().supplied()
-                ? requiredMutation(command.favorite(), entry.isFavorite(), "favorite")
+                ? validator.requiredMutation(command.favorite(), entry.isFavorite(), "favorite")
                 : entry.isFavorite();
 
-        validateContent(contentText, contentJson, contentFormat);
-        validateScore(moodScore, "moodScore");
-        validateNullableScore(stressScore, "stressScore");
-        validateNullableScore(energyScore, "energyScore");
+        validator.validateContent(contentText, contentJson, contentFormat);
+        validator.validateScore(moodScore, "moodScore");
+        validator.validateNullableScore(stressScore, "stressScore");
+        validator.validateNullableScore(energyScore, "energyScore");
 
         boolean analysisInputChanged = entry.update(
                 title,
@@ -174,9 +173,9 @@ public class JournalService {
                 favorite,
                 clock.instant());
         JournalEntry saved = repository.saveAndFlush(entry);
-        appendJournalEvent(saved, MessagingTopology.JOURNAL_UPDATED);
+        events.journalChanged(saved, MessagingTopology.JOURNAL_UPDATED);
         if (analysisInputChanged) {
-            appendAnalysisRequested(saved);
+            events.analysisRequested(saved);
         }
         return saved;
     }
@@ -186,74 +185,13 @@ public class JournalService {
         JournalEntry entry = owned(userId, journalId);
         entry.softDelete(clock.instant());
         repository.saveAndFlush(entry);
-        appendJournalEvent(entry, MessagingTopology.JOURNAL_DELETED);
+        events.journalChanged(entry, MessagingTopology.JOURNAL_DELETED);
     }
 
     private JournalEntry owned(UUID userId, UUID journalId) {
         return repository.findByIdAndUserIdAndDeletedAtIsNull(journalId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         ApiErrorCodes.JOURNAL_NOT_FOUND, "Journal entry does not exist"));
-    }
-
-    private ZoneId validZone(String timezone) {
-        try {
-            if (timezone == null || timezone.isBlank()) {
-                throw new DateTimeException("Timezone is blank");
-            }
-            return ZoneId.of(timezone);
-        } catch (DateTimeException exception) {
-            throw new BadRequestException(ApiErrorCodes.INVALID_REQUEST, "timezoneAtEntry is invalid");
-        }
-    }
-
-    private void validateContent(
-            String contentText,
-            Map<String, Object> contentJson,
-            ContentFormat contentFormat) {
-        if (contentText == null || contentText.isBlank()) {
-            throw new BadRequestException(
-                    ApiErrorCodes.INVALID_REQUEST, "Journal content must contain meaningful text");
-        }
-        if (contentFormat == null) {
-            throw new BadRequestException(ApiErrorCodes.INVALID_REQUEST, "contentFormat is required");
-        }
-        if (contentFormat == ContentFormat.TIPTAP_JSON && contentJson == null) {
-            throw new BadRequestException(
-                    ApiErrorCodes.INVALID_REQUEST, "contentJson is required for TIPTAP_JSON content");
-        }
-    }
-
-    private void validateScore(Integer score, String field) {
-        if (score == null || score < 1 || score > 10) {
-            throw new BadRequestException(ApiErrorCodes.INVALID_REQUEST, field + " must be between 1 and 10");
-        }
-    }
-
-    private void validateNullableScore(Integer score, String field) {
-        if (score != null) {
-            validateScore(score, field);
-        }
-    }
-
-    private <T> T requiredMutation(UpdateJournalCommand.Value<T> value, T current, String field) {
-        if (!value.supplied()) {
-            return current;
-        }
-        if (value.value() == null) {
-            throw new BadRequestException(ApiErrorCodes.INVALID_REQUEST, field + " must not be null");
-        }
-        return value.value();
-    }
-
-    private String normalizeTitle(String title) {
-        if (title == null || title.isBlank()) {
-            return null;
-        }
-        return title.trim();
-    }
-
-    private Map<String, Object> copyJson(Map<String, Object> value) {
-        return value == null ? null : new LinkedHashMap<>(value);
     }
 
     private Short toShort(Integer value) {
@@ -270,28 +208,4 @@ public class JournalService {
                 "Journal entry was modified by another request");
     }
 
-    private void appendJournalEvent(JournalEntry entry, String eventType) {
-        outboxWriter.append(
-                "JOURNAL",
-                entry.getId(),
-                eventType,
-                1,
-                eventPayload(entry));
-    }
-
-    private void appendAnalysisRequested(JournalEntry entry) {
-        outboxWriter.append(
-                "JOURNAL",
-                entry.getId(),
-                MessagingTopology.JOURNAL_ANALYSIS_REQUESTED,
-                1,
-                eventPayload(entry));
-    }
-
-    private Map<String, Object> eventPayload(JournalEntry entry) {
-        return Map.of(
-                "journalId", entry.getId().toString(),
-                "userId", entry.getUserId().toString(),
-                "journalVersion", entry.getJournalVersion());
-    }
 }

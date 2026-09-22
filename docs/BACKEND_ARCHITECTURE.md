@@ -168,11 +168,12 @@ Worker runtime chịu trách nhiệm:
 
 - Entity package không được import Spring MVC, RabbitMQ hoặc provider SDK.
 - Controller không truy cập repository trực tiếp.
+- Messaging consumer không truy cập repository trực tiếp; consumer parse transport message rồi gọi service.
 - Service không truy cập JPA/JDBC/Redis trực tiếp; dùng repository hoặc explicit port.
 - Repository không phụ thuộc controller, DTO hoặc service.
 - Module khác không được truy cập repository/service/entity nội bộ.
 - Cross-module write sử dụng public service contract hoặc event.
-- Cross-module read có thể sử dụng public query interface.
+- Cross-module read ưu tiên public query interface. Các read-model `statistics`/`insight` và ownership lookup `feedback` được phép đọc trực tiếp bảng module khác trong cùng database, nhưng không được ghi chéo module.
 - AI client SDK chỉ xuất hiện trong provider adapter.
 - Redis không được dùng để đảm bảo duy nhất tính đúng của dữ liệu nghiệp vụ.
 
@@ -210,6 +211,7 @@ backend/
 │   │   ├── service/
 │   │   ├── entity/
 │   │   ├── repository/
+│   │   ├── port/
 │   │   ├── provider/
 │   │   ├── messaging/
 │   │   └── config/
@@ -258,8 +260,8 @@ backend/
 │
 └── src/test/java/com/mylog/
     ├── architecture/
-    ├── integration/
-    └── fixtures/
+    ├── integration/analytics/
+    └── support/
 ```
 
 ### 6.1. Cấu trúc module nội bộ
@@ -286,19 +288,23 @@ journal/
 Đây là **package-by-feature kết hợp layered architecture thực dụng**. Luồng mặc định:
 
 ```text
-HTTP/RabbitMQ → controller|messaging → service → repository|provider → external system
+HTTP/RabbitMQ → controller|messaging → service → repository|port → provider/external system
 ```
 
 Quy tắc bắt buộc:
 
 - `controller` nhận request, map DTO và gọi `service`; không gọi `repository`.
+- `messaging` parse/ack transport message và gọi `service`; không gọi `repository`.
 - `dto` chỉ là contract HTTP, không được đi vào service layer.
 - `service` điều phối use case, validation nghiệp vụ và transaction.
 - `entity` giữ state/invariant; không phụ thuộc controller, DTO, service hoặc messaging.
 - `repository` đóng gói JPA/JDBC persistence; service không truy cập persistence framework trực tiếp.
-- `provider` là boundary cho dịch vụ ngoài có khả năng thay đổi, hiện tại là AI.
+- `port` là contract do application sở hữu cho dịch vụ ngoài có khả năng thay đổi.
+- `provider` chứa gateway và adapter triển khai port, hiện tại là AI.
 - `common` chỉ chứa kỹ thuật dùng chung và không phụ thuộc feature.
 - Không tạo package/module rỗng cho milestone chưa triển khai.
+
+PostgreSQL vẫn là database dùng chung. `statistics` và `insight` là read-model nên được đọc bảng journal/analysis/identity; `feedback` được đọc bảng target để kiểm tra ownership. Đây là ngoại lệ SQL có chủ đích, chỉ giới hạn ở repository và không cho phép cross-module write.
 
 Chi tiết naming và dependency rule xem [Code Organization](CODE_ORGANIZATION.md).
 
@@ -1168,11 +1174,16 @@ public interface AiAnalysisProvider {
 ### 16.2. Adapter layout
 
 ```text
-analysis/provider/
-├── AiAnalysisPort.java
-├── AiGateway.java
-├── OpenAiAnalysisAdapter.java
-└── MockAiAnalysisAdapter.java
+analysis/
+├── port/
+│   ├── AiAnalysisPort.java
+│   ├── AiAnalysisInput.java
+│   ├── AiAnalysisOutput.java
+│   └── AiProviderException.java
+└── provider/
+    ├── AiGateway.java
+    ├── OpenAiAnalysisAdapter.java
+    └── MockAiAnalysisAdapter.java
 ```
 
 MVP có một provider production và một deterministic mock provider.
@@ -1693,6 +1704,7 @@ Minimum E2E scenarios:
 Architecture test phải phát hiện:
 
 - Controller gọi repository trực tiếp.
+- Messaging consumer gọi repository trực tiếp.
 - Service import controller hoặc HTTP DTO.
 - Service truy cập JPA/JDBC/Redis trực tiếp thay vì repository hoặc port.
 - Repository phụ thuộc controller, DTO hoặc service.

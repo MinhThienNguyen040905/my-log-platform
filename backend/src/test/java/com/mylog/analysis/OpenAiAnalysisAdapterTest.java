@@ -3,11 +3,11 @@ package com.mylog.analysis;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.mylog.analysis.provider.AiAnalysisInput;
-import com.mylog.analysis.provider.AiAnalysisOutput;
-import com.mylog.analysis.provider.AiProviderException;
 import com.mylog.analysis.config.AiProperties;
 import com.mylog.analysis.provider.OpenAiAnalysisAdapter;
+import com.mylog.analysis.port.AiAnalysisInput;
+import com.mylog.analysis.port.AiAnalysisOutput;
+import com.mylog.analysis.port.AiProviderException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;

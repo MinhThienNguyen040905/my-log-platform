@@ -10,11 +10,14 @@ Backend dùng package-by-feature với layered architecture thực dụng:
 com.mylog
 ├── identity/{controller,dto,service,entity,repository,security,config}
 ├── journal/{controller,dto,service,entity,repository}
-├── analysis/{controller,dto,service,entity,repository,provider,messaging,config}
+├── analysis/{controller,dto,service,entity,repository,port,provider,messaging,config}
+├── statistics/{controller,dto,service,repository,provider,messaging}
+├── insight/{controller,dto,service,repository,messaging,config}
+├── feedback/{controller,dto,service,repository}
 └── common/{api,controller,config,exception,logging,messaging,outbox,security,web}
 ```
 
-Luồng mặc định là `controller/messaging → service → repository/provider`. Controller không gọi repository; service không dùng HTTP DTO hoặc persistence framework trực tiếp; repository không phụ thuộc service; `common` không phụ thuộc feature. Các quy tắc này được khóa bằng ArchUnit. Không tạo package rỗng cho feature chưa triển khai. Xem [Code Organization](../docs/CODE_ORGANIZATION.md).
+Luồng mặc định là `controller/messaging → service → repository/port → provider`. Controller và messaging consumer không gọi repository; service không dùng HTTP DTO hoặc persistence framework trực tiếp; repository không phụ thuộc service; `common` không phụ thuộc feature. Các quy tắc này được khóa bằng ArchUnit. Các read-model `statistics`/`insight` và ownership lookup của `feedback` được phép đọc bảng của module khác nhưng không ghi chéo module. Xem [Code Organization](../docs/CODE_ORGANIZATION.md).
 
 ## Yêu cầu
 

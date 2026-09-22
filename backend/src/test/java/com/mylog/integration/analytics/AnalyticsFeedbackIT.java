@@ -1,4 +1,4 @@
-package com.mylog.analytics;
+package com.mylog.integration.analytics;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

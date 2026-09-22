@@ -3,13 +3,14 @@ package com.mylog.analysis.service;
 import com.mylog.analysis.config.AiProperties;
 import com.mylog.analysis.entity.AnalysisJob;
 import com.mylog.analysis.entity.SafetyDecision;
-import com.mylog.analysis.provider.AiAnalysisInput;
-import com.mylog.analysis.provider.AiAnalysisOutput;
 import com.mylog.analysis.provider.AiGateway;
-import com.mylog.analysis.provider.AiProviderException;
 import com.mylog.analysis.repository.AnalysisJobRepository;
 import com.mylog.analysis.repository.AnalysisJobRepository.JournalInput;
 import com.mylog.analysis.repository.AnalysisResultRepository;
+import com.mylog.analysis.repository.AiUsageRepository;
+import com.mylog.analysis.port.AiAnalysisInput;
+import com.mylog.analysis.port.AiAnalysisOutput;
+import com.mylog.analysis.port.AiProviderException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,6 +24,7 @@ public class AnalysisWorker {
     private final AiGateway gateway;
     private final AiOutputValidator validator;
     private final AnalysisResultRepository resultStore;
+    private final AiUsageRepository usage;
     private final AiProperties properties;
     private final MeterRegistry metrics;
 
@@ -32,6 +34,7 @@ public class AnalysisWorker {
             AiGateway gateway,
             AiOutputValidator validator,
             AnalysisResultRepository resultStore,
+            AiUsageRepository usage,
             AiProperties properties,
             MeterRegistry metrics) {
         this.jobs = jobs;
@@ -39,6 +42,7 @@ public class AnalysisWorker {
         this.gateway = gateway;
         this.validator = validator;
         this.resultStore = resultStore;
+        this.usage = usage;
         this.properties = properties;
         this.metrics = metrics;
     }
@@ -85,7 +89,7 @@ public class AnalysisWorker {
             }
         } catch (AiProviderException exception) {
             long latency = (System.nanoTime() - started) / 1_000_000;
-            resultStore.recordFailure(job, exception.code(), latency);
+            usage.recordFailure(job, exception.code(), latency);
             jobs.markFailure(job, exception.code(), exception.retryable());
             metrics.counter("analysis.jobs", "outcome", exception.retryable() ? "retry" : "failed", "type", job.jobType()).increment();
         }

@@ -1,9 +1,9 @@
 package com.mylog.analysis.provider;
 
-import com.mylog.analysis.provider.AiAnalysisInput;
-import com.mylog.analysis.provider.AiAnalysisOutput;
-import com.mylog.analysis.provider.AiAnalysisPort;
 import com.mylog.analysis.config.AiProperties;
+import com.mylog.analysis.port.AiAnalysisInput;
+import com.mylog.analysis.port.AiAnalysisOutput;
+import com.mylog.analysis.port.AiAnalysisPort;
 import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

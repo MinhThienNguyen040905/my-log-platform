@@ -1,6 +1,10 @@
 package com.mylog.analysis.provider;
 
 import com.mylog.analysis.config.AiProperties;
+import com.mylog.analysis.port.AiAnalysisInput;
+import com.mylog.analysis.port.AiAnalysisOutput;
+import com.mylog.analysis.port.AiAnalysisPort;
+import com.mylog.analysis.port.AiProviderException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.Instant;

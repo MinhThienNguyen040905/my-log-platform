@@ -2,7 +2,7 @@ package com.mylog.analysis.repository;
 
 import com.mylog.analysis.entity.AnalysisJob;
 import com.mylog.analysis.entity.SafetyDecision;
-import com.mylog.analysis.provider.AiAnalysisOutput;
+import com.mylog.analysis.port.AiAnalysisOutput;
 import com.mylog.common.messaging.MessagingTopology;
 import com.mylog.common.outbox.OutboxWriter;
 import java.sql.Timestamp;
@@ -22,11 +22,17 @@ public class AnalysisResultRepository {
 
     private final JdbcTemplate jdbc;
     private final OutboxWriter outboxWriter;
+    private final AiUsageRepository usage;
+    private final ReflectionResultRepository reflections;
     private final Clock clock;
 
-    public AnalysisResultRepository(JdbcTemplate jdbc, OutboxWriter outboxWriter, Clock clock) {
+    public AnalysisResultRepository(
+            JdbcTemplate jdbc, OutboxWriter outboxWriter, AiUsageRepository usage,
+            ReflectionResultRepository reflections, Clock clock) {
         this.jdbc = jdbc;
         this.outboxWriter = outboxWriter;
+        this.usage = usage;
+        this.reflections = reflections;
         this.clock = clock;
     }
 
@@ -75,7 +81,7 @@ public class AnalysisResultRepository {
                     SET confidence = EXCLUDED.confidence, is_active = TRUE, updated_at = EXCLUDED.updated_at
                     """, job.journalId(), topicId, topic.confidence(), Timestamp.from(now), Timestamp.from(now));
         }
-        saveReflections(job, output, now);
+        reflections.replaceWith(job, output, now);
         String risk = effectiveRisk(safety.riskLevel(), output.riskLevel());
         if (!"NORMAL".equals(risk)) {
             String actionTaken = safety.actionTaken();
@@ -96,7 +102,7 @@ public class AnalysisResultRepository {
                     Timestamp.from(now));
         }
         if (providerCalled) {
-            saveUsage(job, output, true, null, now);
+            usage.recordSuccess(job, output, now);
         }
         jdbc.update("""
                 UPDATE analysis_jobs SET status = 'COMPLETED', completed_at = ?, updated_at = ? WHERE id = ?
@@ -117,51 +123,11 @@ public class AnalysisResultRepository {
             markObsolete(job.id(), now);
             return false;
         }
-        saveReflections(job, output, now);
-        saveUsage(job, output, true, null, now);
+        reflections.replaceWith(job, output, now);
+        usage.recordSuccess(job, output, now);
         jdbc.update("UPDATE analysis_jobs SET status = 'COMPLETED', completed_at = ?, updated_at = ? WHERE id = ?",
                 Timestamp.from(now), Timestamp.from(now), job.id());
         return true;
-    }
-
-    @Transactional
-    public void recordFailure(AnalysisJob job, String code, long latencyMs) {
-        Instant now = clock.instant();
-        jdbc.update("""
-                INSERT INTO ai_usage_records (
-                    id, user_id, journal_entry_id, job_id, provider, model, operation,
-                    latency_ms, success, error_code, created_at)
-                VALUES (?, ?, ?, ?, 'configured', 'configured', ?, ?, FALSE, ?, ?)
-                """, UUID.randomUUID(), job.userId(), job.journalId(), job.id(), job.jobType(),
-                Math.max(0, latencyMs), code, Timestamp.from(now));
-    }
-
-    private void saveReflections(AnalysisJob job, AiAnalysisOutput output, Instant now) {
-        if (output.reflections().isEmpty()) {
-            return;
-        }
-        UUID batchId = UUID.randomUUID();
-        short position = 1;
-        for (String question : output.reflections()) {
-            jdbc.update("""
-                    INSERT INTO reflection_questions (
-                        id, user_id, journal_entry_id, journal_version, generation_batch_id,
-                        position, question, provider, model, prompt_version, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, UUID.randomUUID(), job.userId(), job.journalId(), job.journalVersion(), batchId,
-                    position++, question, output.provider(), output.model(), output.promptVersion(), Timestamp.from(now));
-        }
-    }
-
-    private void saveUsage(AnalysisJob job, AiAnalysisOutput output, boolean success, String error, Instant now) {
-        jdbc.update("""
-                INSERT INTO ai_usage_records (
-                    id, user_id, journal_entry_id, job_id, provider, model, operation,
-                    input_token_count, output_token_count, latency_ms, success, error_code, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, UUID.randomUUID(), job.userId(), job.journalId(), job.id(), output.provider(), output.model(),
-                job.jobType(), output.inputTokens(), output.outputTokens(), output.latencyMs(), success, error,
-                Timestamp.from(now));
     }
 
     private UUID upsertTopic(String displayName, Instant now) {

@@ -1,8 +1,8 @@
 package com.mylog.analysis.service;
 
 import com.mylog.analysis.config.AiProperties;
-import com.mylog.analysis.provider.AiAnalysisOutput;
-import com.mylog.analysis.provider.AiProviderException;
+import com.mylog.analysis.port.AiAnalysisOutput;
+import com.mylog.analysis.port.AiProviderException;
 import java.util.Locale;
 import java.util.Set;
 import java.text.Normalizer;

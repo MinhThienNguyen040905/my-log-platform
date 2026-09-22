@@ -17,6 +17,10 @@ public class AnalysisCommandService {
         this.jobs = jobs;
     }
 
+    public void enqueueRequestedAnalysis(UUID userId, UUID journalId, long journalVersion) {
+        jobs.enqueue(userId, journalId, journalVersion, "ANALYSIS");
+    }
+
     public void retryAnalysis(UUID userId, UUID journalId) {
         AnalysisQueryService.JournalState journal = query.ownedJournal(userId, journalId);
         if (!"ANALYSIS_FAILED".equals(journal.status())) {
