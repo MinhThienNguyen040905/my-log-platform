@@ -434,22 +434,22 @@ POST  /api/v1/journals/{journalId}/reflections/regenerate
 
 #### Statistics
 
-- [ ] Daily mood average theo timezone.
-- [ ] Emotion distribution dùng effective value.
-- [ ] Topic frequency dùng effective value.
-- [ ] Day-of-week pattern.
-- [ ] Trend direction và basic period comparison.
-- [ ] Topic–mood association dưới dạng evidence, không tuyên bố causation.
-- [ ] Calculation version cho mọi derived result.
+- [x] Daily mood average theo timezone.
+- [x] Emotion distribution dùng effective value.
+- [x] Topic frequency dùng effective value.
+- [x] Day-of-week pattern.
+- [x] Trend direction và basic period comparison.
+- [x] Topic–mood association dưới dạng evidence, không tuyên bố causation.
+- [x] Calculation version cho mọi derived result.
 
 #### Insight
 
-- [ ] Minimum evidence threshold.
-- [ ] Confidence category: low/medium/high theo rule đã chốt.
-- [ ] Evidence rows truy ngược được về aggregate/query basis.
-- [ ] Lifecycle: active, fading, expired.
-- [ ] Suggested action nhỏ, cụ thể và tối đa theo product rule.
-- [ ] Feedback upsert idempotent theo user/target.
+- [x] Minimum evidence threshold.
+- [x] Confidence category: weak/moderate/strong theo rule đã chốt.
+- [x] Evidence rows truy ngược được về aggregate/query basis.
+- [x] Lifecycle: active, fading, expired.
+- [x] Suggested action nhỏ, cụ thể và tối đa theo product rule.
+- [x] Feedback upsert idempotent theo user/target.
 
 #### API
 
@@ -465,26 +465,28 @@ PUT /api/v1/feedback/{targetType}/{targetId}
 
 #### Redis
 
-- [ ] Cache dashboard/statistics theo user + range + timezone + calculation version.
-- [ ] Invalidate cache khi journal/analysis/correction thay đổi.
-- [ ] Redis failure fallback về PostgreSQL cho read API.
-- [ ] Không cache raw journal content nếu không cần thiết.
+- [x] Cache dashboard/statistics theo user + range + timezone + calculation version.
+- [x] Invalidate cache khi journal/analysis/correction thay đổi.
+- [x] Redis failure fallback về PostgreSQL cho read API.
+- [x] Không cache raw journal content nếu không cần thiết.
 
 #### Tests
 
-- [ ] Timezone và day boundary.
-- [ ] NULL stress/energy không biến thành 0.
-- [ ] Correction ảnh hưởng statistics đúng cách.
-- [ ] Threshold thiếu data không sinh insight giả.
-- [ ] Cache hit/miss/invalidation.
-- [ ] Redis down vẫn trả kết quả core.
-- [ ] Feedback PUT idempotent.
+- [x] Timezone và day boundary.
+- [x] NULL stress/energy không biến thành 0.
+- [x] Correction ảnh hưởng statistics đúng cách.
+- [x] Threshold thiếu data không sinh insight giả.
+- [x] Cache hit/miss/invalidation.
+- [x] Redis down vẫn trả kết quả core.
+- [x] Feedback PUT idempotent.
 
 #### Acceptance criteria
 
 - Dashboard 7 ngày trả đủ mood trend, emotion distribution, mood calendar và topic frequency.
 - Mọi insight có evidence và confidence.
 - API không đưa ra causal claim từ correlation.
+
+**Trạng thái:** Hoàn thành trong code. Integration test dùng PostgreSQL/Redis/RabbitMQ Testcontainers và tự skip khi Docker không khả dụng.
 
 ---
 

@@ -307,6 +307,9 @@ my-log-platform/
     │   │   │   │   └── {controller,dto,service,entity,repository}/
     │   │   │   ├── analysis/      # AI, safety, correction, reflection
     │   │   │   │   └── {controller,dto,service,entity,repository,provider,messaging,config}/
+    │   │   │   ├── statistics/    # Dashboard và deterministic aggregates
+    │   │   │   ├── insight/       # Evidence, confidence, lifecycle, action
+    │   │   │   ├── feedback/      # Idempotent user feedback
     │   │   │   └── common/        # Hạ tầng dùng chung, không chứa nghiệp vụ
     │   │   │       └── {api,controller,config,exception,logging,messaging,outbox,security,web}/
     │   │   └── resources/

@@ -159,6 +159,22 @@ GET   /api/v1/journals/{journalId}/reflections
 POST  /api/v1/journals/{journalId}/reflections/regenerate
 ```
 
+## Statistics, dashboard, insight và feedback
+
+M5 dùng query deterministic trên PostgreSQL và chỉ dùng effective emotion/topic sau correction. Kết quả dashboard/statistics được cache theo user, range, timezone và calculation version; Redis lỗi sẽ fallback về PostgreSQL. Journal/analysis/correction event invalid cache rồi phát `statistics.updated` để Insight worker refresh evidence.
+
+```text
+GET /api/v1/dashboard?from=&to=&timezone=
+GET /api/v1/statistics/mood?from=&to=&timezone=
+GET /api/v1/statistics/emotions?from=&to=&timezone=
+GET /api/v1/statistics/topics?from=&to=&timezone=
+GET /api/v1/insights
+GET /api/v1/insights/{insightId}
+PUT /api/v1/feedback/{targetType}/{targetId}
+```
+
+Insight cần ít nhất ba ngày bằng chứng, lưu `calculationVersion`, phân loại `WEAK/MODERATE/STRONG` và luôn mô tả association thay vì causation. HIGH/CRITICAL evidence window không sinh suggested action.
+
 ## Xác minh
 
 ```powershell

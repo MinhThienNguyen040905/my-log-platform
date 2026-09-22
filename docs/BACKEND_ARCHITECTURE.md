@@ -213,6 +213,25 @@ backend/
 │   │   ├── provider/
 │   │   ├── messaging/
 │   │   └── config/
+│   ├── statistics/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── service/
+│   │   ├── repository/
+│   │   ├── provider/
+│   │   └── messaging/
+│   ├── insight/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── service/
+│   │   ├── repository/
+│   │   ├── messaging/
+│   │   └── config/
+│   ├── feedback/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── service/
+│   │   └── repository/
 │   └── common/
 │       ├── api/
 │       ├── controller/
@@ -231,9 +250,10 @@ backend/
 │   ├── application-api.yml
 │   ├── application-worker.yml
 │   └── db/migration/
-│       ├── V001__create_identity_tables.sql
-│       ├── V002__create_journal_tables.sql
-│       ├── V003__create_analysis_tables.sql
+│       ├── V001__initialize_core_schema.sql
+│       ├── V005__create_analysis_schema.sql
+│       ├── V007__create_statistics_and_insight_schema.sql
+│       ├── V008__add_statistics_and_insight_indexes.sql
 │       └── ...
 │
 └── src/test/java/com/mylog/

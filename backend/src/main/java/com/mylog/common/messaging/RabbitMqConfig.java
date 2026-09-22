@@ -94,6 +94,27 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    Binding statisticsCreatedBinding(Queue statisticsQueue, TopicExchange myLogEventsExchange) {
+        return BindingBuilder.bind(statisticsQueue)
+                .to(myLogEventsExchange)
+                .with(MessagingTopology.JOURNAL_CREATED);
+    }
+
+    @Bean
+    Binding statisticsUpdatedBinding(Queue statisticsQueue, TopicExchange myLogEventsExchange) {
+        return BindingBuilder.bind(statisticsQueue)
+                .to(myLogEventsExchange)
+                .with(MessagingTopology.JOURNAL_UPDATED);
+    }
+
+    @Bean
+    Binding statisticsDeletedBinding(Queue statisticsQueue, TopicExchange myLogEventsExchange) {
+        return BindingBuilder.bind(statisticsQueue)
+                .to(myLogEventsExchange)
+                .with(MessagingTopology.JOURNAL_DELETED);
+    }
+
+    @Bean
     Binding statisticsCorrectionBinding(Queue statisticsQueue, TopicExchange myLogEventsExchange) {
         return BindingBuilder.bind(statisticsQueue)
                 .to(myLogEventsExchange)

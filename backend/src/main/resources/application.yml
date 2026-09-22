@@ -87,6 +87,11 @@ springdoc:
     tags-sorter: alpha
 
 mylog:
+  statistics:
+    consumer-enabled: ${STATISTICS_CONSUMER_ENABLED:true}
+  insight:
+    consumer-enabled: ${INSIGHT_CONSUMER_ENABLED:true}
+    lookback-days: ${INSIGHT_LOOKBACK_DAYS:30}
   ai:
     provider: ${AI_PROVIDER:mock}
     api-key: ${AI_API_KEY:}

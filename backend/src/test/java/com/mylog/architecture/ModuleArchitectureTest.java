@@ -14,8 +14,11 @@ class ModuleArchitectureTest {
 
     private static final List<String> FEATURE_MODULES = List.of(
             "analysis",
+            "feedback",
             "identity",
-            "journal");
+            "insight",
+            "journal",
+            "statistics");
 
     private final JavaClasses productionClasses = new ClassFileImporter()
             .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)

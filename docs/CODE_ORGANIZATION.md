@@ -90,10 +90,22 @@ Journal CRUD, ownership, optimistic locking, idempotency và phát outbox event.
 
 AI provider, job worker, safety, correction và reflection. Safety/reflection là capability bên trong Analysis ở MVP vì dùng chung version, transaction và provider lifecycle.
 
+### Statistics
+
+Dashboard read model, mood/emotion/topic aggregation, period comparison và Redis cache. Cache chỉ lưu derived result; PostgreSQL vẫn là source of truth.
+
+### Insight
+
+Deterministic topic–mood evidence, confidence threshold, lifecycle và suggested action. Module nhận `statistics.updated` qua RabbitMQ thay vì import Statistics.
+
+### Feedback
+
+Ownership validation và idempotent upsert cho reflection, action và insight feedback.
+
 ### Common
 
 API error, exception handling, security framework, messaging topology, transactional outbox, logging và web filter. Không chứa business rule của feature.
 
-## 7. Khi thêm M5
+## 7. Khi thêm module mới
 
-Chỉ tạo `statistics` và `insight` khi bắt đầu implementation. Mỗi module mới phải theo cùng cấu trúc và vượt qua architecture tests trước khi merge.
+Chỉ tạo package khi bắt đầu implementation. Mỗi module mới phải theo cùng cấu trúc, không import nội bộ module khác và vượt qua architecture tests trước khi merge.

@@ -998,9 +998,9 @@ LIMIT :batch_size;
 
 ---
 
-## 19. Optional Read Projections
+## 19. Read Projections
 
-Không cần tạo ở MVP nếu query trực tiếp và Redis cache đáp ứng latency. Khi dữ liệu tăng, có thể thêm:
+Schema projection được tạo từ M5 để sẵn sàng cho background rebuild. API MVP hiện query source tables trực tiếp và dùng Redis cache; khi volume tăng, worker có thể materialize các bảng sau mà không đổi API contract:
 
 ### 19.1. `daily_user_statistics`
 
@@ -1523,18 +1523,17 @@ Các tables P1 như report, media, privacy request và operational audit nên n�
 ## 21. Flyway Migration Plan
 
 ```text
-V001__create_identity_tables.sql
-V002__create_journal_tables.sql
-V003__create_analysis_tables.sql
-V004__create_reflection_tables.sql
-V005__create_insight_and_feedback_tables.sql
-V006__create_safety_tables.sql
-V007__create_async_operational_tables.sql
-V008__create_core_indexes.sql
-V009__create_report_tables.sql
-V010__create_media_tables.sql
-V011__create_privacy_tables.sql
+V001__initialize_core_schema.sql
+V002__secure_supabase_data_api.sql
+V003__complete_identity_schema.sql
+V004__harden_public_schema_privileges.sql
+V005__create_analysis_schema.sql
+V006__create_reflection_and_safety_schema.sql
+V007__create_statistics_and_insight_schema.sql
+V008__add_statistics_and_insight_indexes.sql
 ```
+
+Các migration report, media và privacy sẽ được thêm ở milestone tương ứng; không giữ số version giả định trước khi có DDL thật.
 
 Rules:
 

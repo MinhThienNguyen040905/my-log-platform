@@ -15,6 +15,11 @@ spring:
         enabled: false
 
 mylog:
+  statistics:
+    consumer-enabled: false
+  insight:
+    consumer-enabled: false
+    lookback-days: 30
   ai:
     provider: mock
     consumer-enabled: false
