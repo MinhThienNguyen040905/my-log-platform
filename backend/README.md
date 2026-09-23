@@ -191,6 +191,7 @@ Insight cần ít nhất ba ngày bằng chứng, lưu `calculationVersion`, ph�
 
 - [Backend Implementation Plan](../docs/BACKEND_IMPLEMENTATION_PLAN.md)
 - [Backend Architecture](../docs/BACKEND_ARCHITECTURE.md)
+- [Database Overview](../docs/DATABASE_OVERVIEW.md)
 - [Database Design](../docs/DATABASE_DESIGN.md)
 - [AI Operations Runbook](../docs/AI_OPERATIONS_RUNBOOK.md)
 - [Software Requirements](../docs/SOFTWARE_REQUIREMENTS_SPECIFICATION.md)

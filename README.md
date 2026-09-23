@@ -319,7 +319,7 @@ my-log-platform/
     └── pom.xml                    # Maven Configuration
 ```
 
-Quy tắc package, chiều phụ thuộc và cách thêm module mới được mô tả tại [Code Organization](docs/CODE_ORGANIZATION.md). Thiết kế tổng thể backend nằm tại [Backend Architecture](docs/BACKEND_ARCHITECTURE.md).
+Quy tắc package, chiều phụ thuộc và cách thêm module mới được mô tả tại [Code Organization](docs/CODE_ORGANIZATION.md). Thiết kế tổng thể backend nằm tại [Backend Architecture](docs/BACKEND_ARCHITECTURE.md); schema PostgreSQL đang triển khai được trình bày tại [Database Overview](docs/DATABASE_OVERVIEW.md).
 
 ---
 
