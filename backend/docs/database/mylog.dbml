@@ -167,6 +167,8 @@ Table journal_tags {
   user_id uuid [not null, ref: > users.id]
   name_lookup_hash bytea [not null]
   encrypted_name bytea [not null]
+  name_iv bytea [not null]
+  name_wrapped_key bytea [not null]
   name_key_version varchar(32) [not null]
   color varchar(9)
   created_at timestamptz [not null]
@@ -202,6 +204,8 @@ Table journal_assets {
   sha256 bytea [not null]
   status varchar(24) [not null]
   encrypted_caption bytea
+  caption_iv bytea
+  caption_wrapped_key bytea
   caption_key_version varchar(32)
   created_at timestamptz [not null]
   deleted_at timestamptz
@@ -218,6 +222,8 @@ Table daily_checkins {
   energy_score numeric(3,1)
   sleep_minutes smallint
   encrypted_note bytea
+  note_iv bytea
+  note_wrapped_key bytea
   note_key_version varchar(32)
   source varchar(24) [not null]
   created_at timestamptz [not null]
@@ -226,6 +232,19 @@ Table daily_checkins {
 
   indexes {
     (user_id, local_date) [unique]
+  }
+}
+
+Table checkin_activities {
+  id uuid [pk]
+  checkin_id uuid [not null, ref: > daily_checkins.id]
+  activity_code varchar(40) [not null]
+  duration_minutes smallint
+  intensity varchar(16)
+  created_at timestamptz [not null]
+
+  indexes {
+    (checkin_id, activity_code) [unique]
   }
 }
 
@@ -294,6 +313,34 @@ Table safety_events {
   confidence numeric(6,5)
   resource_set_version varchar(40)
   created_at timestamptz [not null]
+}
+
+Table safety_policy_versions {
+  id uuid [pk]
+  version varchar(40) [not null, unique]
+  status varchar(24) [not null]
+  config jsonb [not null]
+  approved_by uuid [ref: > users.id]
+  approved_at timestamptz
+  effective_from timestamptz
+  effective_to timestamptz
+  created_at timestamptz [not null]
+}
+
+Table safety_resources {
+  id uuid [pk]
+  locale varchar(10) [not null]
+  country_code varchar(2) [not null, note: 'Exactly two characters; checked in V7']
+  resource_type varchar(32) [not null]
+  name varchar(200) [not null]
+  contact_value varchar(300)
+  description text
+  source_url text
+  verified_at timestamptz
+  status varchar(24) [not null]
+  version integer [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
 }
 
 Table ai_jobs {
@@ -499,6 +546,24 @@ Table outbox_events {
   locked_by varchar(120)
   created_at timestamptz [not null]
   published_at timestamptz
+}
+
+Table idempotency_keys {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  operation varchar(80) [not null]
+  idempotency_key varchar(160) [not null]
+  request_hash bytea [not null]
+  response_status integer
+  response_reference uuid
+  state varchar(24) [not null]
+  expires_at timestamptz [not null]
+  created_at timestamptz [not null]
+  completed_at timestamptz
+
+  indexes {
+    (user_id, operation, idempotency_key) [unique]
+  }
 }
 
 Table audit_logs {

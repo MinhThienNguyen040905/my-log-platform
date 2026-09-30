@@ -279,28 +279,28 @@ POST  /api/v1/me/onboarding:complete
 
 ### Database
 
-- [ ] `V5__journal_and_checkin.sql`.
-- [ ] `V6__platform_outbox_idempotency_audit.sql` phần cần cho journal.
-- [ ] `V7__safety.sql`.
-- [ ] Constraint/range/index đúng database blueprint.
+- [x] `V5__journal_and_checkin.sql`.
+- [x] `V6__platform_outbox_idempotency_audit.sql` phần cần cho journal.
+- [x] `V7__safety.sql`.
+- [x] Constraint/range/index cho các bảng M2; đã validate trên PostgreSQL 17 và Supabase.
 
 ### JRN-001 — Encryption adapter (P0, L)
 
-- [ ] `JournalContentCipher` port.
-- [ ] AES-GCM adapter với nonce duy nhất và AAD.
-- [ ] Local key provider chỉ dùng development.
-- [ ] Key version trong mỗi payload.
-- [ ] Decrypt failure trả lỗi an toàn, không log ciphertext/key.
-- [ ] Test tampering, wrong owner/AAD và rotation path.
+- [x] `JournalContentCipher` port.
+- [x] AES-GCM adapter với nonce duy nhất và AAD.
+- [x] Local key provider chỉ dùng development.
+- [x] Key version trong mỗi payload.
+- [x] Decrypt failure trả lỗi an toàn, không log ciphertext/key.
+- [x] Test tampering, wrong owner/AAD và rotation path qua shared cipher và journal integration.
 
 ### JRN-002 — Create/read journal (P0, L)
 
-- [ ] Validate TipTap JSON allowlist và giới hạn size/depth.
-- [ ] Server tự sinh plain text đã sanitize.
-- [ ] Normalize mood/stress/energy/sleep.
-- [ ] Lưu `occurred_at`, timezone snapshot và `local_date`.
-- [ ] Idempotency-Key cho create.
-- [ ] Ownership query bắt buộc `entryId + currentUserId`.
+- [x] Validate TipTap JSON allowlist và giới hạn size/depth.
+- [x] Server tự sinh plain text đã sanitize.
+- [x] Validate mood/stress/energy/sleep theo range và precision.
+- [x] Lưu `occurred_at`, timezone snapshot và `local_date`.
+- [x] Idempotency-Key cho create.
+- [x] Ownership query bắt buộc `entryId + currentUserId`.
 
 ```text
 POST /api/v1/journal-entries
@@ -310,16 +310,16 @@ GET  /api/v1/journal-entries?cursor=&from=&to=&tag=&favorite=
 
 ### JRN-003 — Update/delete/favorite (P0, M)
 
-- [ ] `If-Match` hoặc row version chống lost update.
-- [ ] Tăng content version khi field ảnh hưởng analysis thay đổi.
-- [ ] Soft delete + purge workflow.
-- [ ] Favorite endpoints idempotent.
-- [ ] Entry đã xóa không xuất hiện trong list/dashboard.
+- [x] `If-Match` hoặc row version chống lost update.
+- [x] Tăng content version khi update nội dung hoặc metadata ảnh hưởng analysis.
+- [x] Soft delete + purge sau 30 ngày; chặn purge nếu còn asset chưa xóa.
+- [x] Favorite endpoints idempotent.
+- [x] Entry đã xóa không xuất hiện trong list journal.
 
 ### JRN-004 — Tags/assets (P1, L)
 
-- [ ] Tag encrypted + HMAC lookup.
-- [ ] Giới hạn số tag/entry và độ dài.
+- [x] Tag encrypted + HMAC lookup theo user.
+- [x] Giới hạn 20 tag/entry và tên 40 code point.
 - [ ] Asset upload dùng Cloudinary signed workflow, delivery type private/authenticated.
 - [ ] MIME/size/checksum/malware state.
 - [ ] Không chấp nhận remote URL tùy ý làm storage source.
@@ -328,26 +328,26 @@ Asset có thể chuyển P2 nếu demo MVP không cần upload ảnh thật.
 
 ### CHK-001 — Daily check-in (P0, M)
 
-- [ ] Upsert một check-in/user/local date.
-- [ ] Validate timezone và metric range.
-- [ ] Activity structured codes.
+- [x] Upsert một check-in/user/local date.
+- [x] Validate timezone và metric range.
+- [x] Activity structured codes.
 - [ ] Quy tắc dashboard ưu tiên daily check-in, journal observation chỉ fallback.
 
 ### SAF-001 — Rule-based screening (P0, L)
 
 - [ ] Versioned curated rules cho tiếng Việt/Anh.
 - [ ] `NORMAL/LOW/MODERATE/HIGH/CRITICAL`.
-- [ ] Fail-safe nếu classifier unavailable.
+- [x] Fail-safe nếu classifier unavailable.
 - [ ] Safety response/resource duyệt trước theo locale.
-- [ ] Chỉ lưu event tối thiểu, không lưu matched raw text.
-- [ ] HIGH/CRITICAL không phát event analysis thông thường.
+- [x] Chỉ lưu event tối thiểu, không lưu matched raw text.
+- [x] HIGH/CRITICAL không phát event analysis thông thường.
 
 ### SAF-002 — Safety regression corpus (P0, L)
 
-- [ ] Synthetic cases: trực tiếp, phủ định, trích dẫn, tiếng lóng, mỉa mai.
-- [ ] Theo dõi false positive/false negative.
-- [ ] Không commit dữ liệu người dùng thật.
-- [ ] Báo cáo eval có rule/classifier version.
+- [x] Synthetic cases: trực tiếp, phủ định, trích dẫn, tiếng lóng, mỉa mai.
+- [ ] Theo dõi false positive/false negative trên bộ nhãn được duyệt.
+- [x] Không commit dữ liệu người dùng thật.
+- [ ] Báo cáo eval có rule/classifier version và ngưỡng chấp nhận.
 
 ### Exit criteria M2
 
@@ -356,6 +356,13 @@ Asset có thể chuyển P2 nếu demo MVP không cần upload ảnh thật.
 - Nội dung mã hóa trong DB; repository/admin không trả plaintext ngoài user flow.
 - Test horizontal authorization pass cho mọi journal endpoint.
 - High-risk case đi đúng safety flow.
+
+### Ghi nhận triển khai M2 ngày 2026-09-30
+
+- Backend đã có journal CRUD/list/favorite/tag, daily check-in, encryption, idempotency, outbox và safety event trong cùng transaction. Flyway V5–V7 đã áp dụng lên Supabase PostgreSQL (schema version 7); ứng dụng khởi động và Hibernate validate thành công với schema này. `mvn verify` qua PostgreSQL Testcontainers.
+- Classifier mặc định trả `unavailable`: journal vẫn lưu; ordinary analysis bị chặn và tạo `SafetyRescreenRequested`. Kể cả khi cắm classifier, policy gate chỉ cho ordinary analysis nếu có policy `APPROVED` đang hiệu lực và khớp rule/provider/version/confidence. Rule tiếng Việt/Anh hiện là **draft**, không được coi là policy đã duyệt. Corpus synthetic ghi nhận false positive dự kiến ở câu phủ định/trích dẫn; chưa có đánh giá false negative đáng tin cậy. API safety resources công khai chỉ trả nguồn đã duyệt, xác minh và có nguồn HTTPS; safety modal gọi API nhưng chưa có hotline hoặc nguồn hỗ trợ thật nào được duyệt trong DB.
+- Frontend hiện còn auth mock và journal trong `localStorage`; chưa đạt exit criteria tích hợp API. Frontend safety modal đã bỏ số điện thoại chưa xác minh. Cần nối auth M1 trước khi thay luồng journal/check-in bằng API có token, rồi kiểm tra high-risk end-to-end.
+- Asset upload Cloudinary signed workflow vẫn mở và có thể chuyển P2 theo quy định ở trên. Dashboard ưu tiên check-in là quy tắc cho M4, chưa có dashboard query thực tế để xác nhận.
 
 ## 9. M3 — Outbox, jobs và AI analysis
 

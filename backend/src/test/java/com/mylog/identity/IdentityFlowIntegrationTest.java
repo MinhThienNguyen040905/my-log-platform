@@ -55,6 +55,9 @@ class IdentityFlowIntegrationTest {
         var paths = mapper.readTree(contract).get("paths");
         org.junit.jupiter.api.Assertions.assertFalse(paths.get("/api/v1/auth/register").get("post").has("security"));
         org.junit.jupiter.api.Assertions.assertTrue(paths.get("/api/v1/me").get("get").has("security"));
+        org.junit.jupiter.api.Assertions.assertTrue(paths.get("/api/v1/journal-entries").get("post").has("security"));
+        org.junit.jupiter.api.Assertions.assertTrue(paths.get("/api/v1/check-ins/{localDate}").get("put").has("security"));
+        org.junit.jupiter.api.Assertions.assertFalse(paths.get("/api/v1/safety/resources").get("get").has("security"));
         Path target = Path.of("target", "openapi");
         Files.createDirectories(target);
         Files.writeString(target.resolve("mylog-v1.json"), contract);
@@ -70,7 +73,7 @@ class IdentityFlowIntegrationTest {
             jdbc.update("INSERT INTO " + schema + ".auth_refresh_history(token_hash,session_id,used_at) VALUES (?,?,now())",
                     hash, UUID.randomUUID());
             Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
-                    .locations("classpath:db/migration").baselineOnMigrate(true).baselineVersion("3")
+                    .locations("classpath:db/migration").baselineOnMigrate(true).baselineVersion("3").target("4")
                     .load().migrate();
             UUID backfilledId = jdbc.queryForObject("SELECT id FROM " + schema + ".auth_refresh_history WHERE token_hash=?",
                     UUID.class, hash);

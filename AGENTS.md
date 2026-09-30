@@ -24,8 +24,8 @@ Nếu tài liệu, code và migration không khớp, chỉ rõ sự khác biệt
 
 ## 3. Tiến độ: luôn xác minh trước khi triển khai
 
-- `BACKEND_DEVELOPMENT_PLAN.md` ghi M0 foundation đã hoàn thành. M1 backend đã có identity/profile/consent API, V2–V4 và integration tests; mục tích hợp frontend và kiểm tra consent tại lúc AI worker chạy còn mở. Các milestone M2+ chưa triển khai.
-- `platform` có security baseline, error contract, request ID, configuration, UUIDv7, OpenAPI, log redaction và Cloudinary configuration. Identity/user đã có use case và JPA adapter; các feature khác chủ yếu vẫn là package skeleton. Flyway có V1–V4.
+- `BACKEND_DEVELOPMENT_PLAN.md` ghi M0 foundation đã hoàn thành. M1 backend đã có identity/profile/consent API, V2–V4 và integration tests; mục tích hợp frontend và kiểm tra consent tại lúc AI worker chạy còn mở. M2 backend đã có journal/check-in/tag/safety ingress, V5–V7 và PostgreSQL integration tests; classifier, safety content được duyệt, asset upload và frontend API integration còn mở. M3+ chưa triển khai.
+- `platform` có security baseline, error contract, request ID, configuration, UUIDv7, OpenAPI, log redaction, Cloudinary configuration, idempotency và outbox. Identity/user/journal/checkin/safety đã có use case và JPA adapter; các feature M3+ chủ yếu vẫn là package skeleton. Flyway có V1–V7; V5–V7 đã áp dụng trên Supabase và không được sửa trực tiếp.
 - Không giả định các class trong cây ví dụ của tài liệu (như `JournalCommandService`) đã tồn tại. Mỗi phiên cần kiểm tra file/migration/test và `git status` thực tế, nhất là khi người dùng có thay đổi chưa lưu trong IDE.
 - Thứ tự phụ thuộc mục tiêu: M0 foundation → M1 identity/profile → M2 journal/check-in/safety đầu vào → M3 outbox/AI → M4 insight/report; M5 self-care có thể theo sau M2; M6 knowledge/admin, M7 data rights, M8 hardening theo kế hoạch.
 
@@ -69,7 +69,7 @@ infrastructure/  JPA, Redis, crypto/provider adapter, external SDK
 - Security mặc định deny; endpoint mới phải có authorization rõ ràng và test cả allow lẫn deny. RBAC không thay thế owner check. Admin thông thường không đọc hoặc giải mã journal thô.
 - Mã hóa journal, email, profile, tag, AI narrative, goal/habit text theo encryption matrix. Email/tag equality lookup dùng HMAC có khóa, không dùng hash trần. Structured metrics có thể plaintext để aggregate nhưng luôn owner-scoped.
 - Không log request/response body mặc định; không log journal, prompt chứa nội dung user, token/password/key, raw AI request/response, email, location, signed URL. Audit chỉ chứa metadata đã allowlist.
-- Safety đầu vào: validate → curated rules → classifier → versioned policy. `HIGH/CRITICAL` dùng safety response đã duyệt và không enqueue reflection/recommendation thường. Classifier lỗi/timeout thì vẫn lưu journal nhưng chặn generative response cho đến khi screening thành công.
+- Safety đầu vào: validate → curated rules → classifier → versioned policy. `HIGH/CRITICAL` dùng safety response đã duyệt và không enqueue reflection/recommendation thường. Classifier lỗi/timeout thì vẫn lưu journal nhưng chặn generative response cho đến khi screening thành công. M2 có `SafetyPolicyGate`: kết quả classifier mức thấp cũng chỉ mở ordinary analysis khi policy `APPROVED` còn hiệu lực và khớp rule/provider/version/confidence. API công khai `/api/v1/safety/resources` chỉ đọc nguồn đã duyệt, xác minh và có HTTPS source; hiện chưa có nguồn thật được duyệt.
 - Output AI cũng phải qua validation/safety. LLM không được tự tạo hotline hoặc nguồn hỗ trợ khẩn cấp. Test safety bằng synthetic Vietnamese/English cases, không dùng nhật ký thật.
 - Kiểm tra consent tại thời điểm AI job thực thi, không chỉ khi enqueue. Provider không đáp ứng chính sách dữ liệu thì không gửi journal content.
 

@@ -100,6 +100,23 @@ M1 dùng BCrypt cost 12, mã hóa email/profile bằng AES-GCM envelope, HMAC c�
 
 Persistence M1 dùng JPA entity và `EntityManager` trong `identity`/`user` `infrastructure/persistence`. Flyway quản lý schema PostgreSQL; Hibernate chạy ở chế độ `validate`. Các thao tác PostgreSQL đặc thù có thể dùng native SQL qua JPA.
 
+## M2 Journal, check-in và safety đầu vào
+
+Sau khi đăng nhập, gửi `Authorization: Bearer <accessToken>` cho các endpoint sau:
+
+| Tài nguyên | Endpoint |
+|---|---|
+| Journal | `POST/GET /api/v1/journal-entries`, `GET/PATCH/DELETE /api/v1/journal-entries/{entryId}` |
+| Favorite | `PUT/DELETE /api/v1/journal-entries/{entryId}/favorite` |
+| Tag | `POST/GET /api/v1/journal-tags`, `PUT/DELETE /api/v1/journal-entries/{entryId}/tags/{tagId}` |
+| Check-in | `PUT/GET /api/v1/check-ins/{localDate}`, `GET /api/v1/check-ins?from=&to=` |
+
+`POST journal` cần `Idempotency-Key` dài 8–160 ký tự và `contentJson` là TipTap document đã allowlist. `PATCH/DELETE journal` cần `If-Match` bằng ETag trả từ GET/create; version xung đột trả `409`. Danh sách journal dùng cursor, `limit` 1–100, và lọc `from`, `to`, `tag`, `favorite`. Ngày được tính từ `occurredAt` với timezone IANA gửi trong request. Check-in dùng một bản ghi cho mỗi user/ngày; `PUT` thay cả metrics, note và activities của ngày đó. Note và journal payload được mã hóa trước khi ghi DB.
+
+Safety ingress luôn chạy lúc tạo/sửa journal. Rule HIGH/CRITICAL đặt `analysisStatus=BLOCKED_BY_SAFETY`; nếu classifier không khả dụng thì trạng thái cũng bị chặn và outbox chỉ có ID/version cho lần screen lại. Chưa có classifier hoặc bộ nội dung/nguồn hỗ trợ được duyệt; các bản ghi `safety_resources` không được tự điền hotline. Frontend hiện là prototype dùng auth mock và `localStorage`; chưa kết nối API M1/M2.
+
+`GET /api/v1/safety/resources?locale=vi-VN&country=VN` là API công khai, chỉ trả nguồn hỗ trợ đã được duyệt, có `verified_at` và nguồn HTTPS. Frontend safety modal dùng `NEXT_PUBLIC_BACKEND_URL` để đọc API này (mặc định `http://localhost:8080` khi phát triển local) và chỉ hiện liên hệ khi API trả dữ liệu đã xác minh. Classifier trả mức rủi ro thấp cũng không mở ordinary analysis nếu `safety_policy_versions` chưa có policy `APPROVED` đang hiệu lực với rule version, classifier provider/version và ngưỡng confidence khớp. Hiện chưa có policy được duyệt nên API nguồn hỗ trợ trả danh sách rỗng và journal vẫn ở chế độ fail-safe.
+
 ## Supabase PostgreSQL
 
 Project `mylog` dùng Supabase PostgreSQL 17 và kết nối qua IPv4 session pooler với SSL. Flyway vẫn là nguồn quản lý schema; không sửa schema production trực tiếp bằng Table Editor.

@@ -37,6 +37,7 @@ class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> {
                     authorize.requestMatchers("/actuator/health", "/actuator/health/**").permitAll();
+                    authorize.requestMatchers(HttpMethod.GET, "/api/v1/safety/resources").permitAll();
                     if (properties.openApi().enabled()) {
                         authorize.requestMatchers(
                                 "/internal/openapi", "/internal/openapi/**",
@@ -49,7 +50,10 @@ class SecurityConfiguration {
                                 "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
                                 "/api/v1/auth/email-verifications", "/api/v1/auth/email-verifications:confirm")
                                 .permitAll();
-                        authorize.requestMatchers("/api/v1/auth/logout", "/api/v1/me", "/api/v1/me/**")
+                        authorize.requestMatchers("/api/v1/auth/logout", "/api/v1/me", "/api/v1/me/**",
+                                        "/api/v1/journal-entries", "/api/v1/journal-entries/**",
+                                        "/api/v1/journal-tags", "/api/v1/journal-tags/**",
+                                        "/api/v1/check-ins", "/api/v1/check-ins/**")
                                 .authenticated();
                     }
                     authorize.anyRequest().denyAll();
