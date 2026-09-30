@@ -8,6 +8,7 @@ Tài liệu thiết kế:
 - [Database design](docs/DATABASE_OVERVIEW.md)
 - [Database DBML](docs/database/mylog.dbml)
 - [Backend development plan](docs/BACKEND_DEVELOPMENT_PLAN.md)
+- [Architecture decisions](docs/adr/README.md)
 
 ## Yêu cầu
 
@@ -45,6 +46,8 @@ MYLOG_SERVER_PORT
 MYLOG_DB_*
 MYLOG_REDIS_URL
 MYLOG_ALLOWED_ORIGINS
+MYLOG_OPENAPI_ENABLED
+MYLOG_SWAGGER_UI_ENABLED
 ```
 
 ## Chạy local
@@ -68,6 +71,15 @@ Kiểm tra:
 GET http://localhost:8080/actuator/health
 ```
 
+OpenAPI trong profile local:
+
+```text
+GET http://localhost:8080/internal/openapi
+GET http://localhost:8080/internal/swagger-ui
+```
+
+API docs mặc định bị tắt trong production.
+
 Tắt hạ tầng local nhưng giữ dữ liệu:
 
 ```powershell
@@ -87,6 +99,20 @@ Build artifact:
 ```powershell
 ./mvnw.cmd clean package
 ```
+
+Kiểm tra tên và thứ tự Flyway migration:
+
+```powershell
+./scripts/check-migrations.ps1
+```
+
+Chạy dependency vulnerability scan:
+
+```powershell
+./mvnw.cmd -Psecurity-checks verify
+```
+
+Report được tạo tại `target/dependency-check-report.html`. CI còn chạy Gitleaks, xuất OpenAPI JSON và build container trên mỗi pull request.
 
 Build container:
 

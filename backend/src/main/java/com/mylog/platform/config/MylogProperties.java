@@ -12,8 +12,12 @@ import java.util.List;
 @ConfigurationProperties(prefix = "mylog")
 public record MylogProperties(
         @NotBlank String appProfile,
-        @Valid Web web
+        @Valid Web web,
+        @Valid OpenApi openApi
 ) {
     public record Web(@NotEmpty List<@NotBlank String> allowedOrigins) {
+    }
+
+    public record OpenApi(boolean enabled) {
     }
 }

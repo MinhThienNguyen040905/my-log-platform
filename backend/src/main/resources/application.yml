@@ -42,10 +42,23 @@ mylog:
   app-profile: ${MYLOG_APP_PROFILE:all}
   web:
     allowed-origins: ${MYLOG_ALLOWED_ORIGINS:http://localhost:3000}
+  open-api:
+    enabled: ${MYLOG_OPENAPI_ENABLED:false}
+
+springdoc:
+  api-docs:
+    enabled: ${MYLOG_OPENAPI_ENABLED:false}
+    path: /internal/openapi
+  swagger-ui:
+    enabled: ${MYLOG_SWAGGER_UI_ENABLED:false}
+    path: /internal/swagger-ui
+  show-actuator: false
 
 logging:
   level:
     root: INFO
     com.mylog: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: OFF
   pattern:
     correlation: "[traceId=%X{traceId:-} requestId=%X{requestId:-}] "

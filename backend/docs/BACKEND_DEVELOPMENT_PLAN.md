@@ -110,51 +110,51 @@ Biến project skeleton thành nền tảng mà các module có thể phát tri�
 
 #### FND-001 — Chốt ADR nền tảng (P0, M)
 
-- [ ] ADR authentication: local credential + JWT hay external IdP.
-- [ ] ADR encryption: local key provider và production KMS contract.
-- [ ] ADR safety classifier/rule ownership.
-- [ ] ADR AI provider và data retention.
-- [ ] ADR object storage.
+- [x] ADR authentication: local credential + JWT hay external IdP.
+- [x] ADR encryption: local key provider và production KMS contract.
+- [x] ADR safety classifier/rule ownership.
+- [x] ADR AI provider và data retention.
+- [x] ADR object storage.
 
 Không cần chốt model AI cuối cùng để làm journal; cần chốt provider interface và data handling trước M3.
 
 #### FND-002 — Error contract (P0, M)
 
-- [ ] `ApiProblem` theo `application/problem+json`.
-- [ ] `GlobalExceptionHandler`.
-- [ ] Stable error codes: validation, unauthorized, forbidden, not found, conflict, rate limited, dependency unavailable.
-- [ ] Không trả stack trace, SQL hoặc provider response.
-- [ ] Controller test cho từng nhóm lỗi.
+- [x] `ApiProblem` theo `application/problem+json`.
+- [x] `GlobalExceptionHandler`.
+- [x] Stable error codes: validation, unauthorized, forbidden, not found, conflict, rate limited, dependency unavailable.
+- [x] Không trả stack trace, SQL hoặc provider response.
+- [x] Controller test cho từng nhóm lỗi.
 
 #### FND-003 — Request context và logging (P0, M)
 
-- [ ] Nhận hoặc tạo `X-Request-Id`.
-- [ ] Đưa request ID/trace ID vào MDC.
-- [ ] JSON logging cho staging/prod.
-- [ ] Redaction test cho Authorization, cookie, email và journal fields.
-- [ ] Không log request/response body mặc định.
+- [x] Nhận hoặc tạo `X-Request-Id`.
+- [x] Đưa request ID/trace ID vào MDC.
+- [x] JSON logging cho staging/prod.
+- [x] Redaction test cho Authorization, cookie, email và journal fields.
+- [x] Không log request/response body mặc định.
 
 #### FND-004 — Clock, UUID và current user ports (P0, S)
 
-- [ ] Inject `Clock` thay vì gọi thời gian trực tiếp.
-- [ ] `IdGenerator` sinh UUIDv7.
-- [ ] `CurrentUser` abstraction, chưa phụ thuộc controller.
-- [ ] Fixed test implementations.
+- [x] Inject `Clock` thay vì gọi thời gian trực tiếp.
+- [x] `IdGenerator` sinh UUIDv7.
+- [x] `CurrentUser` abstraction, chưa phụ thuộc controller.
+- [x] Fixed test implementations.
 
 #### FND-005 — CI baseline (P0, M)
 
-- [ ] Compile và unit/architecture test trên mỗi pull request.
-- [ ] Integration test khi Docker/Testcontainers khả dụng.
-- [ ] Dependency vulnerability scan.
-- [ ] Kiểm tra secret và migration naming.
-- [ ] Build container nhưng chưa push production registry.
+- [x] Compile và unit/architecture test trên mỗi pull request.
+- [x] Integration test khi Docker/Testcontainers khả dụng.
+- [x] Dependency vulnerability scan.
+- [x] Kiểm tra secret và migration naming.
+- [x] Build container nhưng chưa push production registry.
 
 #### FND-006 — OpenAPI baseline (P1, S)
 
-- [ ] Cấu hình API title/version/server.
-- [ ] Khai báo bearer authentication scheme.
-- [ ] Hide actuator/internal endpoints.
-- [ ] Export OpenAPI JSON làm contract artifact.
+- [x] Cấu hình API title/version/server.
+- [x] Khai báo bearer authentication scheme.
+- [x] Hide actuator/internal endpoints.
+- [x] Export OpenAPI JSON làm contract artifact.
 
 ### Exit criteria M0
 
@@ -163,6 +163,15 @@ Không cần chốt model AI cuối cùng để làm journal; cần chốt provi
 - Error response và request ID có contract test.
 - ADR P0 được merge.
 - Không có secret trong Git history mới.
+
+### Bằng chứng hoàn thành M0
+
+- ADR đã được chốt tại `docs/adr/` với trạng thái `Accepted`.
+- `mvn test` và `mvn verify` chạy contract, security, request-context, redaction, UUIDv7 và architecture tests.
+- Integration test dùng PostgreSQL/pgvector và Redis Testcontainers; tự chạy khi Docker khả dụng và được CI bắt buộc bằng Docker daemon.
+- CI kiểm tra Flyway naming, secret bằng Gitleaks, dependency bằng OWASP Dependency-Check, xuất OpenAPI artifact và build container.
+- OpenAPI chỉ bật theo cấu hình; profile production tắt API docs/Swagger UI và dùng structured JSON logging.
+- `.env` local được Git ignore; repository chỉ lưu `.env.example` không chứa secret thật.
 
 ## 7. M1 — Identity, RBAC và profile
 

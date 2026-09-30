@@ -19,14 +19,30 @@ import java.util.List;
 class SecurityConfiguration {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            MylogProperties properties,
+            ProblemAuthenticationEntryPoint authenticationEntryPoint,
+            ProblemAccessDeniedHandler accessDeniedHandler
+    ) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                        .anyRequest().denyAll())
+                .authorizeHttpRequests(authorize -> {
+                    authorize.requestMatchers("/actuator/health", "/actuator/health/**").permitAll();
+                    if (properties.openApi().enabled()) {
+                        authorize.requestMatchers(
+                                "/internal/openapi", "/internal/openapi/**",
+                                "/internal/swagger-ui", "/internal/swagger-ui/**",
+                                "/swagger-ui/**"
+                        ).permitAll();
+                    }
+                    authorize.anyRequest().denyAll();
+                })
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
                 .requestCache(cache -> cache.disable())
                 .build();
     }
