@@ -1,8 +1,15 @@
-# MyLog
+# mylog
 
-MyLog là ứng dụng web nhật ký cá nhân với giao diện Playful Neo-Brutalism và phong cách scrapbook.
+mylog là nền tảng nhật ký thông minh hỗ trợ self-reflection và theo dõi mental wellness bằng AI. Sản phẩm không phải công cụ chẩn đoán hoặc thay thế chuyên gia sức khỏe tâm thần.
 
-Repository hiện chỉ giữ phần frontend để chuẩn bị cho giai đoạn phát triển tiếp theo.
+Repository hiện có frontend prototype và blueprint kiến trúc backend cho giai đoạn phát triển tiếp theo.
+
+## Backend
+
+Backend được thiết kế theo modular monolith với Java/Spring Boot, PostgreSQL/pgvector, Redis và background jobs. Thiết kế ưu tiên privacy, safety, khả năng truy vết insight và khả năng mở rộng.
+
+- [Tổng quan backend](backend/README.md)
+- [Kiến trúc backend chi tiết](docs/BACKEND_ARCHITECTURE.md)
 
 ## Frontend
 
@@ -15,7 +22,7 @@ Frontend nằm tại `front-end/my-app` và sử dụng:
 - Motion
 - i18next
 
-## Chạy ứng dụng
+## Chạy frontend
 
 Yêu cầu Node.js 20 hoặc mới hơn.
 
@@ -32,6 +39,10 @@ Mở `http://localhost:3000` trong trình duyệt.
 ```text
 my-log-platform/
 ├── README.md
+├── backend/
+│   └── README.md
+├── docs/
+│   └── BACKEND_ARCHITECTURE.md
 └── front-end/
     └── my-app/
 ```
