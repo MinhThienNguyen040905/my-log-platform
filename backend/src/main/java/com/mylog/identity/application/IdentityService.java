@@ -14,7 +14,7 @@ import com.mylog.platform.web.ResourceNotFoundException;
 import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.user.application.UserProfileUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -76,7 +76,7 @@ public class IdentityService {
         var encrypted = cipher.encrypt("users.email", id, id, normalized);
         try {
             store.createAccount(new Account(id, emailHash, encrypted, passwords.encode(password), "PENDING", 0, null, 0), now);
-        } catch (DuplicateKeyException e) { throw new ConflictException("Email đã được đăng ký."); }
+        } catch (DataIntegrityViolationException e) { throw new ConflictException("Email đã được đăng ký."); }
         store.assignUserRole(id, now);
         profiles.createDefault(id, timezone, locale, termsVersion, privacyVersion, now);
         sendVerification(id, normalized, now);

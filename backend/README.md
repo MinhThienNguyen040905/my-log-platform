@@ -98,6 +98,8 @@ Các endpoint M1 được bật trong profile `local`, `staging`, `prod`; profil
 
 M1 dùng BCrypt cost 12, mã hóa email/profile bằng AES-GCM envelope, HMAC có khóa cho email lookup và token hash. Khóa AES dùng để mã hóa payload có thể rotate bằng `MYLOG_IDENTITY_PREVIOUS_KEYS`; `MYLOG_IDENTITY_LOOKUP_KEY` phải giữ ổn định. JWT có thể chuyển khóa ký bằng `MYLOG_JWT_PREVIOUS_PUBLIC_KEYS`. Local/test có khóa phát triển mặc định; staging/prod yêu cầu khóa và SMTP từ secret manager/environment, không có fallback.
 
+Persistence M1 dùng JPA entity và `EntityManager` trong `identity`/`user` `infrastructure/persistence`. Flyway quản lý schema PostgreSQL; Hibernate chạy ở chế độ `validate`. Các thao tác PostgreSQL đặc thù có thể dùng native SQL qua JPA.
+
 ## Supabase PostgreSQL
 
 Project `mylog` dùng Supabase PostgreSQL 17 và kết nối qua IPv4 session pooler với SSL. Flyway vẫn là nguồn quản lý schema; không sửa schema production trực tiếp bằng Table Editor.
