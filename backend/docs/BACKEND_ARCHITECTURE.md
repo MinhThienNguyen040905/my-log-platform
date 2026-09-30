@@ -55,7 +55,7 @@ api ───────► application ───────► domain
 
 ### 2.4 Nguồn dữ liệu
 
-- PostgreSQL là source of truth cho nghiệp vụ, job và audit.
+- PostgreSQL do Supabase quản lý là source of truth cho nghiệp vụ, job và audit ở môi trường triển khai; local/test vẫn dùng PostgreSQL container.
 - `pgvector` lưu embedding của knowledge base đã duyệt.
 - Redis chỉ dùng cache ngắn hạn, rate limit và distributed lock.
 - Transactional outbox bảo đảm event không mất sau commit.
@@ -66,9 +66,9 @@ api ───────► application ───────► domain
 Next.js user app ───────┐
                        ├── HTTPS ──► Spring Boot API
 Next.js admin app ──────┘                 │
-                                         ├── PostgreSQL + pgvector
+                                         ├── Supabase PostgreSQL + pgvector
                                          ├── Redis
-                                         ├── Private object storage
+                                         ├── Cloudinary private images
                                          └── AI provider
 
 Spring Boot worker ── claim outbox/jobs ──► AI / RAG / report / export
@@ -584,7 +584,7 @@ Không trả stack trace, SQL, provider response hay journal content. Request t�
 - Khóa dữ liệu không nằm trong DB; production dùng KMS/secret manager và `keyVersion` để rotate.
 - AAD gồm tối thiểu `userId + entryId + fieldName` để chống tráo ciphertext.
 - Không cache raw content lâu hơn request/job.
-- Object storage private, signed URL ngắn hạn, kiểm tra MIME/size/malware.
+- Ảnh journal lưu trên Cloudinary với signed delivery URL ngắn hạn; kiểm tra MIME/size/malware và không dùng unsigned upload preset.
 
 ### 10.3 Logging/audit
 
@@ -739,7 +739,11 @@ MYLOG_JWT_PRIVATE_KEY
 MYLOG_ENCRYPTION_MASTER_KEY_REF
 MYLOG_AI_PROVIDER
 MYLOG_AI_API_KEY
-MYLOG_OBJECT_STORAGE_BUCKET
+MYLOG_CLOUDINARY_ENABLED
+MYLOG_CLOUDINARY_CLOUD_NAME
+MYLOG_CLOUDINARY_API_KEY
+MYLOG_CLOUDINARY_API_SECRET
+MYLOG_CLOUDINARY_FOLDER
 MYLOG_ALLOWED_ORIGINS
 MYLOG_APP_PROFILE=api|worker|all
 ```
@@ -751,7 +755,7 @@ Môi trường:
 - `local`: Docker Compose, mail sink, optional stub AI.
 - `test`: Testcontainers, fixed clock, fake provider.
 - `staging`: synthetic data, topology giống production.
-- `prod`: managed secrets/KMS, backup, alert, least privilege.
+- `prod`: Supabase PostgreSQL, Cloudinary cho ảnh, managed secrets/KMS, backup, alert, least privilege.
 
 ## 17. Observability/vận hành
 

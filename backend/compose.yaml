@@ -4,9 +4,9 @@ services:
   postgres:
     image: pgvector/pgvector:pg17
     environment:
-      POSTGRES_DB: ${MYLOG_DB_NAME:-mylog}
-      POSTGRES_USER: ${MYLOG_DB_USERNAME:-mylog}
-      POSTGRES_PASSWORD: ${MYLOG_DB_PASSWORD:-mylog_local_only}
+      POSTGRES_DB: ${MYLOG_LOCAL_DB_NAME:-mylog}
+      POSTGRES_USER: ${MYLOG_LOCAL_DB_USERNAME:-mylog}
+      POSTGRES_PASSWORD: ${MYLOG_LOCAL_DB_PASSWORD:-mylog_local_only}
     ports:
       - "5432:5432"
     volumes:

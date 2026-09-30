@@ -308,7 +308,7 @@ GET  /api/v1/journal-entries?cursor=&from=&to=&tag=&favorite=
 
 - [ ] Tag encrypted + HMAC lookup.
 - [ ] Giới hạn số tag/entry và độ dài.
-- [ ] Asset upload dùng presigned workflow/private bucket.
+- [ ] Asset upload dùng Cloudinary signed workflow, delivery type private/authenticated.
 - [ ] MIME/size/checksum/malware state.
 - [ ] Không chấp nhận remote URL tùy ý làm storage source.
 
@@ -565,7 +565,7 @@ POST /api/v1/admin/ai-jobs/{jobId}:retry
 - [ ] Grace period/cancel.
 - [ ] Revoke session khi bắt đầu deletion.
 - [ ] Idempotent checkpoint worker.
-- [ ] Xóa DB, object storage, cache và provider artifacts.
+- [ ] Xóa DB, Cloudinary assets, cache và provider artifacts.
 - [ ] Audit tối thiểu/pseudonymous theo retention.
 - [ ] Test xác nhận không còn data user-owned.
 
@@ -587,7 +587,7 @@ POST /api/v1/admin/ai-jobs/{jobId}:retry
 
 ### Security (P0)
 
-- [ ] Threat model cho auth, journal, admin, AI provider và object storage.
+- [ ] Threat model cho auth, journal, admin, AI provider và Cloudinary.
 - [ ] Dependency/container scan không còn critical unresolved.
 - [ ] Authorization regression toàn endpoint.
 - [ ] Rate limit login, journal, analysis retry, export.

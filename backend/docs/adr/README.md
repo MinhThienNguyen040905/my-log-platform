@@ -8,7 +8,8 @@ Các quyết định nền tảng của backend **mylog** được ghi lại dư
 | [0002](0002-application-envelope-encryption.md) | Application-level envelope encryption | Accepted |
 | [0003](0003-layered-safety-screening.md) | Layered, fail-safe safety screening | Accepted |
 | [0004](0004-ai-provider-and-data-handling.md) | Provider-neutral AI và data minimization | Accepted |
-| [0005](0005-private-object-storage.md) | Private S3-compatible object storage | Accepted |
+| [0005](0005-private-object-storage.md) | Private S3-compatible object storage | Superseded by ADR-0006 |
+| [0006](0006-cloudinary-image-storage.md) | Cloudinary for journal image storage | Accepted |
 
 ## Quy ước
 

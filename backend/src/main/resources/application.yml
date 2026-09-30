@@ -44,6 +44,12 @@ mylog:
     allowed-origins: ${MYLOG_ALLOWED_ORIGINS:http://localhost:3000}
   open-api:
     enabled: ${MYLOG_OPENAPI_ENABLED:false}
+  cloudinary:
+    enabled: ${MYLOG_CLOUDINARY_ENABLED:false}
+    cloud-name: ${MYLOG_CLOUDINARY_CLOUD_NAME:}
+    api-key: ${MYLOG_CLOUDINARY_API_KEY:}
+    api-secret: ${MYLOG_CLOUDINARY_API_SECRET:}
+    folder: ${MYLOG_CLOUDINARY_FOLDER:mylog}
 
 springdoc:
   api-docs:

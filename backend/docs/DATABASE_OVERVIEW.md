@@ -276,13 +276,17 @@ Unique `(user_id, name_lookup_hash)`. `journal_entry_tags(entry_id, tag_id, crea
 
 ### 5.3 `journal_assets`
 
-Chỉ lưu metadata, binary nằm trong private object storage.
+Chỉ lưu metadata; binary ảnh nằm trên Cloudinary theo ADR-0006.
 
 ```text
 id UUID PK
 journal_entry_id UUID FK journal_entries CASCADE
 user_id UUID FK users CASCADE
-storage_key VARCHAR(512) UNIQUE NOT NULL
+provider_asset_id VARCHAR(255) UNIQUE NOT NULL
+public_id VARCHAR(512) UNIQUE NOT NULL
+provider_version BIGINT NOT NULL
+format VARCHAR(32) NOT NULL
+delivery_type VARCHAR(32) NOT NULL CHECK AUTHENTICATED/PRIVATE
 asset_type VARCHAR(24) CHECK IMAGE/ATTACHMENT
 mime_type VARCHAR(120)
 size_bytes BIGINT CHECK >= 0
@@ -294,7 +298,7 @@ caption_key_version VARCHAR(32) NULL
 created_at, deleted_at TIMESTAMPTZ
 ```
 
-Không lưu signed URL vì URL có thời hạn; sinh URL khi trả response.
+Không lưu signed URL vì URL có thời hạn; backend sinh URL Cloudinary đã ký khi trả response. `public_id` không chứa PII hoặc nội dung journal.
 
 ### 5.4 `daily_checkins`
 
@@ -818,7 +822,7 @@ PostgreSQL Row Level Security là defense-in-depth cho phase hardening. Chưa b�
 | Audit admin | giữ theo policy vận hành; không giữ sensitive content |
 | Backup | expiry riêng; deletion SLA phải tính cả backup lifecycle |
 
-Account deletion worker xóa theo batch/idempotent. Không dựa hoàn toàn vào cascade vì còn object storage, cache và provider-side artifacts.
+Account deletion worker xóa theo batch/idempotent. Không dựa hoàn toàn vào cascade vì còn Cloudinary assets, cache và provider-side artifacts.
 
 ## 17. Transaction boundaries
 
@@ -907,4 +911,4 @@ Quy tắc Flyway:
 - [ ] Job/outbox payload không chứa raw content.
 - [ ] Insight/report có sample size và evidence.
 - [ ] Migration chạy qua PostgreSQL/pgvector Testcontainers.
-- [ ] Account deletion test xác nhận không còn dữ liệu ở DB, cache và object storage.
+- [ ] Account deletion test xác nhận không còn dữ liệu ở DB, cache và Cloudinary.

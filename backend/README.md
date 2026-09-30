@@ -48,16 +48,21 @@ MYLOG_REDIS_URL
 MYLOG_ALLOWED_ORIGINS
 MYLOG_OPENAPI_ENABLED
 MYLOG_SWAGGER_UI_ENABLED
+MYLOG_CLOUDINARY_*
 ```
+
+Database local có thể dùng Docker Compose; môi trường được triển khai dùng PostgreSQL do Supabase quản lý qua `MYLOG_DB_URL`, `MYLOG_DB_USERNAME` và `MYLOG_DB_PASSWORD`. Ảnh nhật ký dùng Cloudinary; bật adapter bằng `MYLOG_CLOUDINARY_ENABLED=true` sau khi điền credential server-side.
 
 ## Chạy local
 
-Khởi động PostgreSQL/pgvector và Redis:
+`.env` hiện tại trỏ PostgreSQL tới Supabase. Vì vậy local chỉ cần khởi động Redis:
 
 ```powershell
 cd backend
-docker compose up -d
+docker compose up -d redis
 ```
+
+Nếu muốn phát triển hoàn toàn offline bằng PostgreSQL/pgvector local, đổi `MYLOG_DB_*` về giá trị trong `.env.example` rồi chạy `docker compose up -d`. Các biến `MYLOG_LOCAL_DB_*` của Compose được tách riêng để credential Supabase không bị dùng cho container local.
 
 Chạy ứng dụng:
 
@@ -79,6 +84,25 @@ GET http://localhost:8080/internal/swagger-ui
 ```
 
 API docs mặc định bị tắt trong production.
+
+## Supabase PostgreSQL
+
+Project `mylog` dùng Supabase PostgreSQL 17 và kết nối qua IPv4 session pooler với SSL. Flyway vẫn là nguồn quản lý schema; không sửa schema production trực tiếp bằng Table Editor.
+
+Credential nằm trong `.env` local hoặc secret manager khi deploy. Không đưa database password, service-role key hoặc connection string chứa password vào Git.
+
+## Cloudinary
+
+Cloudinary chỉ dùng cho ảnh journal. Backend đã có Cloudinary Java SDK và fail-fast validation khi `MYLOG_CLOUDINARY_ENABLED=true`. Cần cấu hình bốn biến server-side:
+
+```text
+MYLOG_CLOUDINARY_CLOUD_NAME
+MYLOG_CLOUDINARY_API_KEY
+MYLOG_CLOUDINARY_API_SECRET
+MYLOG_CLOUDINARY_FOLDER=mylog
+```
+
+Không gửi `MYLOG_CLOUDINARY_API_SECRET` xuống frontend. Quy tắc signed delivery, metadata và deletion được chốt trong [ADR-0006](docs/adr/0006-cloudinary-image-storage.md).
 
 Tắt hạ tầng local nhưng giữ dữ liệu:
 

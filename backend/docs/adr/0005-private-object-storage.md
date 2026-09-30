@@ -1,6 +1,6 @@
 # ADR-0005: S3-compatible private object storage
 
-- Status: Accepted
+- Status: Superseded by ADR-0006
 - Date: 2026-09-30
 - Owners: backend/operations team
 

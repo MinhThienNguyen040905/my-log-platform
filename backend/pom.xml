@@ -31,6 +31,7 @@
 		<archunit.version>1.5.1</archunit.version>
 		<springdoc.version>3.1.1</springdoc.version>
 		<dependency-check.version>13.0.0</dependency-check.version>
+		<cloudinary.version>2.5.0</cloudinary.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -73,6 +74,11 @@
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.cloudinary</groupId>
+			<artifactId>cloudinary-http5</artifactId>
+			<version>${cloudinary.version}</version>
 		</dependency>
 
 		<dependency>
