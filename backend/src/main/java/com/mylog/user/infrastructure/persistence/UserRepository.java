@@ -19,26 +19,26 @@ class UserRepository implements UserStore {
     UserRepository(EntityManager entityManager) { this.entityManager = entityManager; }
 
     @Override public void create(Profile profile, Instant now) {
-        UserProfileEntity entity = new UserProfileEntity();
-        entity.userId = profile.userId();
-        entity.encryptedProfile = profile.payload().ciphertext();
-        entity.profileIv = profile.payload().iv();
-        entity.profileWrappedKey = profile.payload().wrappedKey();
-        entity.profileKeyVersion = profile.payload().keyVersion();
-        entity.timezone = profile.timezone();
-        entity.locale = profile.locale();
-        entity.createdAt = now;
-        entity.updatedAt = now;
-        entityManager.persist(entity);
+        UserProfile userProfile = new UserProfile();
+        userProfile.userId = profile.userId();
+        userProfile.encryptedProfile = profile.payload().ciphertext();
+        userProfile.profileIv = profile.payload().iv();
+        userProfile.profileWrappedKey = profile.payload().wrappedKey();
+        userProfile.profileKeyVersion = profile.payload().keyVersion();
+        userProfile.timezone = profile.timezone();
+        userProfile.locale = profile.locale();
+        userProfile.createdAt = now;
+        userProfile.updatedAt = now;
+        entityManager.persist(userProfile);
     }
 
     @Override public Optional<Profile> find(UUID userId) {
-        return Optional.ofNullable(entityManager.find(UserProfileEntity.class, userId)).map(this::profile);
+        return Optional.ofNullable(entityManager.find(UserProfile.class, userId)).map(this::profile);
     }
 
     @Override public boolean update(Profile profile, long expectedVersion, Instant now) {
         int changed = entityManager.createQuery("""
-                update UserProfileEntity p set p.encryptedProfile=:ciphertext, p.profileIv=:iv,
+                update UserProfile p set p.encryptedProfile=:ciphertext, p.profileIv=:iv,
                   p.profileWrappedKey=:wrappedKey, p.profileKeyVersion=:keyVersion,
                   p.timezone=:timezone, p.locale=:locale, p.updatedAt=:now,
                   p.rowVersion=p.rowVersion+1
@@ -60,7 +60,7 @@ class UserRepository implements UserStore {
 
     @Override public boolean completeOnboarding(UUID userId, long expectedVersion, Instant now) {
         int changed = entityManager.createQuery("""
-                update UserProfileEntity p set p.onboardingCompletedAt=coalesce(p.onboardingCompletedAt,:now),
+                update UserProfile p set p.onboardingCompletedAt=coalesce(p.onboardingCompletedAt,:now),
                   p.updatedAt=:now, p.rowVersion=p.rowVersion+1
                 where p.userId=:userId and p.rowVersion=:expectedVersion
                 """)
@@ -74,31 +74,31 @@ class UserRepository implements UserStore {
 
     @Override public void addConsent(UUID id, UUID userId, String type, String version,
                                      boolean granted, String source, Instant now) {
-        UserConsentEntity entity = new UserConsentEntity();
-        entity.id = id;
-        entity.userId = userId;
-        entity.consentType = type;
-        entity.documentVersion = version;
-        entity.granted = granted;
-        entity.decidedAt = now;
-        entity.source = source;
-        entityManager.persist(entity);
+        UserConsent consent = new UserConsent();
+        consent.id = id;
+        consent.userId = userId;
+        consent.consentType = type;
+        consent.documentVersion = version;
+        consent.granted = granted;
+        consent.decidedAt = now;
+        consent.source = source;
+        entityManager.persist(consent);
     }
 
     @Override public List<Consent> latestConsents(UUID userId) {
         @SuppressWarnings("unchecked")
-        List<UserConsentEntity> latest = entityManager.createNativeQuery("""
+        List<UserConsent> latest = entityManager.createNativeQuery("""
                 SELECT DISTINCT ON (consent_type) * FROM user_consents
                 WHERE user_id=?1 ORDER BY consent_type, decided_at DESC, id DESC
-                """, UserConsentEntity.class).setParameter(1, userId).getResultList();
-        return latest.stream().map(entity -> new Consent(entity.consentType, entity.documentVersion,
-                entity.granted, entity.decidedAt)).toList();
+                """, UserConsent.class).setParameter(1, userId).getResultList();
+        return latest.stream().map(consent -> new Consent(consent.consentType, consent.documentVersion,
+                consent.granted, consent.decidedAt)).toList();
     }
 
-    private Profile profile(UserProfileEntity entity) {
-        return new Profile(entity.userId,
-                new SensitiveDataCipher.Encrypted(entity.encryptedProfile, entity.profileIv,
-                        entity.profileWrappedKey, entity.profileKeyVersion), entity.timezone, entity.locale,
-                entity.onboardingCompletedAt, entity.rowVersion);
+    private Profile profile(UserProfile userProfile) {
+        return new Profile(userProfile.userId,
+                new SensitiveDataCipher.Encrypted(userProfile.encryptedProfile, userProfile.profileIv,
+                        userProfile.profileWrappedKey, userProfile.profileKeyVersion), userProfile.timezone, userProfile.locale,
+                userProfile.onboardingCompletedAt, userProfile.rowVersion);
     }
 }

@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "users")
-class UserEntity {
+class User {
     @Id UUID id;
     @Column(name = "email_lookup_hash", nullable = false) byte[] emailLookupHash;
     @Column(name = "encrypted_email", nullable = false) byte[] encryptedEmail;

@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "audit_logs")
-class AuditLogEntity {
+class AuditLog {
     @Id UUID id;
     @Column(name = "actor_user_id") UUID actorUserId;
     @Column(name = "actor_type", nullable = false) String actorType;

@@ -12,7 +12,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "user_roles")
 @IdClass(UserRoleId.class)
-class UserRoleEntity {
+class UserRole {
     @Id @Column(name = "user_id") UUID userId;
     @Id @Column(name = "role_id") UUID roleId;
     @Column(name = "assigned_by") UUID assignedBy;

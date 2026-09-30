@@ -200,7 +200,7 @@ journal/
 │   └── exception/JournalEntryNotFound.java
 └── infrastructure/
     ├── persistence/
-    │   ├── JournalEntryJpaEntity.java
+    │   ├── JournalEntryRecord.java
     │   ├── SpringDataJournalRepository.java
     │   ├── JpaJournalEntryRepository.java
     │   └── JournalPersistenceMapper.java
@@ -270,12 +270,13 @@ PostgreSQL
 Response đi ngược lại qua mapper:
 
 ```text
-JpaEntity → Domain/Projection → Response DTO → JSON
+JPA model → Domain/Projection → Response DTO → JSON
 ```
 
 Khác biệt quan trọng so với mô hình ba layer đơn giản:
 
 - JPA/Hibernate là cách truy cập PostgreSQL thống nhất trong production code. M1 `identity`/`user` dùng entity và `EntityManager` trong `infrastructure/persistence`; adapter ánh xạ entity sang record của application port. Các module tiếp theo cũng đặt entity và adapter tại đây. Có thể dùng native SQL qua JPA cho thao tác đặc thù PostgreSQL hoặc cần tính nguyên tử như `ON CONFLICT`, `DISTINCT ON`, `FOR UPDATE SKIP LOCKED`; kiểm thử các câu SQL đó trên PostgreSQL thật.
+- Class JPA dùng tên ngắn theo đối tượng (`User`, `AuthSession`, `UserProfile`) trong package `infrastructure/persistence`, không thêm hậu tố `Entity`. Nếu trùng tên với domain model, dùng tên thể hiện rõ vai trò như `JournalEntryRecord`. Biến trong repository đặt theo dữ liệu đang xử lý (`user`, `session`, `profile`), không đặt chung là `entity`.
 - Flyway migration là nguồn schema thực thi; Hibernate `ddl-auto=validate` chỉ kiểm tra ánh xạ, không tạo/sửa bảng. Không sửa V1–V3 đã áp dụng lên Supabase; thay đổi schema dùng migration mới. Không trả entity trực tiếp qua API.
 - `Service` được gọi là application service/use case và chỉ điều phối một nghiệp vụ cụ thể.
 - Business rule quan trọng nằm trong domain object/policy, không dồn hết vào một service lớn.

@@ -9,10 +9,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "permissions")
-class PermissionEntity {
+@Table(name = "roles")
+class Role {
     @Id UUID id;
     @Column(name = "code", nullable = false) String code;
+    @Column(name = "name", nullable = false) String name;
     @Column(name = "description") String description;
+    @Column(name = "system_role", nullable = false) boolean systemRole;
     @Column(name = "created_at", nullable = false) Instant createdAt;
 }

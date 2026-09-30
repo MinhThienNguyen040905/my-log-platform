@@ -9,7 +9,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "auth_rate_limits")
-class AuthRateLimitEntity {
+class AuthRateLimit {
     @Id @Column(name = "subject_hash") byte[] subjectHash;
     @Column(name = "attempts", nullable = false) int attempts;
     @Column(name = "window_started_at", nullable = false) Instant windowStartedAt;

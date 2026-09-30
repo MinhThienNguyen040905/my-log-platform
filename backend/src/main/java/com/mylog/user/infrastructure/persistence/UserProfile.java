@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "user_profiles")
-class UserProfileEntity {
+class UserProfile {
     @Id @Column(name = "user_id") UUID userId;
     @Column(name = "encrypted_profile", nullable = false) byte[] encryptedProfile;
     @Column(name = "profile_iv", nullable = false) byte[] profileIv;

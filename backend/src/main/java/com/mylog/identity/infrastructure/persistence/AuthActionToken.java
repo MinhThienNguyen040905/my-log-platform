@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "auth_action_tokens")
-class AuthActionTokenEntity {
+class AuthActionToken {
     @Id UUID id;
     @Column(name = "user_id", nullable = false) UUID userId;
     @Column(name = "token_hash", nullable = false) byte[] tokenHash;

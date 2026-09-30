@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "auth_sessions")
-class AuthSessionEntity {
+class AuthSession {
     @Id UUID id;
     @Column(name = "user_id", nullable = false) UUID userId;
     @Column(name = "token_family_id", nullable = false) UUID tokenFamilyId;
