@@ -55,14 +55,16 @@ Database local có thể dùng Docker Compose; môi trường được triển k
 
 ## Chạy local
 
-`.env` hiện tại trỏ PostgreSQL tới Supabase. Vì vậy local chỉ cần khởi động Redis:
+Nếu `.env` trỏ PostgreSQL tới Supabase, khởi động Redis và Mailpit để chạy identity/email verification:
 
 ```powershell
 cd backend
-docker compose up -d redis
+docker compose up -d redis mailpit
 ```
 
 Nếu muốn phát triển hoàn toàn offline bằng PostgreSQL/pgvector local, đổi `MYLOG_DB_*` về giá trị trong `.env.example` rồi chạy `docker compose up -d`. Các biến `MYLOG_LOCAL_DB_*` của Compose được tách riêng để credential Supabase không bị dùng cho container local.
+
+Mailpit UI: `http://localhost:8025`. Nếu dùng PostgreSQL local thay Supabase, chạy `docker compose up -d` để khởi động cả ba service.
 
 Chạy ứng dụng:
 
@@ -84,6 +86,17 @@ GET http://localhost:8080/internal/swagger-ui
 ```
 
 API docs mặc định bị tắt trong production.
+
+## M1 Identity, profile và consent
+
+Các endpoint M1 được bật trong profile `local`, `staging`, `prod`; profile `test` chỉ bật khi integration test yêu cầu. Luồng local:
+
+1. `POST /api/v1/auth/register` với email, password (tối thiểu 12 ký tự), timezone IANA, locale, `termsVersion`, `privacyVersion`, `acceptTerms=true`, `acceptPrivacy=true`.
+2. Lấy mã xác minh từ Mailpit rồi gọi `POST /api/v1/auth/email-verifications:confirm` với `{ "token": "..." }`.
+3. `POST /api/v1/auth/login` trả access JWT 10 phút và refresh token opaque 30 ngày. `POST /api/v1/auth/refresh` đổi refresh token mỗi lần; dùng lại token cũ sẽ revoke session family.
+4. Dùng `Authorization: Bearer <accessToken>` cho `GET/PATCH /api/v1/me`, consent và session APIs. `PATCH /me` dùng `If-Match` từ ETag của `GET /me`.
+
+M1 dùng BCrypt cost 12, mã hóa email/profile bằng AES-GCM envelope, HMAC có khóa cho email lookup và token hash. Khóa AES dùng để mã hóa payload có thể rotate bằng `MYLOG_IDENTITY_PREVIOUS_KEYS`; `MYLOG_IDENTITY_LOOKUP_KEY` phải giữ ổn định. JWT có thể chuyển khóa ký bằng `MYLOG_JWT_PREVIOUS_PUBLIC_KEYS`. Local/test có khóa phát triển mặc định; staging/prod yêu cầu khóa và SMTP từ secret manager/environment, không có fallback.
 
 ## Supabase PostgreSQL
 

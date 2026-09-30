@@ -40,6 +40,8 @@ management:
 
 mylog:
   app-profile: ${MYLOG_APP_PROFILE:all}
+  identity:
+    enabled: false
   web:
     allowed-origins: ${MYLOG_ALLOWED_ORIGINS:http://localhost:3000}
   open-api:

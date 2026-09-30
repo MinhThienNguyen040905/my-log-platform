@@ -1,6 +1,7 @@
 package com.mylog.platform.web;
 
 import com.mylog.platform.security.UnauthenticatedUserException;
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.security.access.AccessDeniedException;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Hidden
 @RequestMapping("/test/errors")
 class ErrorTestController {
     @PostMapping("/validation")

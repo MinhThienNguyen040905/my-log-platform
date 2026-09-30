@@ -1,4 +1,7 @@
 spring:
+  mail:
+    host: ${MYLOG_MAIL_HOST:localhost}
+    port: ${MYLOG_MAIL_PORT:1025}
   datasource:
     url: ${MYLOG_DB_URL:jdbc:postgresql://localhost:5432/mylog}
     username: ${MYLOG_DB_USERNAME:mylog}
@@ -15,6 +18,8 @@ logging:
     com.mylog: DEBUG
 
 mylog:
+  identity:
+    enabled: true
   open-api:
     enabled: ${MYLOG_OPENAPI_ENABLED:true}
 

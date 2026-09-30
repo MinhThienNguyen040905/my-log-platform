@@ -1,4 +1,12 @@
 spring:
+  mail:
+    host: ${MYLOG_MAIL_HOST}
+    port: ${MYLOG_MAIL_PORT:587}
+    username: ${MYLOG_MAIL_USERNAME}
+    password: ${MYLOG_MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
   datasource:
     url: ${MYLOG_DB_URL}
     username: ${MYLOG_DB_USERNAME}
@@ -11,6 +19,8 @@ spring:
       url: ${MYLOG_REDIS_URL}
 
 mylog:
+  identity:
+    enabled: true
   web:
     allowed-origins: ${MYLOG_ALLOWED_ORIGINS}
   open-api:

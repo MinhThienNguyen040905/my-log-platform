@@ -5,7 +5,6 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
@@ -33,7 +32,6 @@ class OpenApiConfiguration {
                         .contact(new Contact().name("mylog backend team"))
                         .license(new License().name("Private project")))
                 .servers(List.of(new Server().url("/").description("Current environment")))
-                .components(new Components().addSecuritySchemes(BEARER_AUTH, bearerScheme))
-                .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH));
+                .components(new Components().addSecuritySchemes(BEARER_AUTH, bearerScheme));
     }
 }

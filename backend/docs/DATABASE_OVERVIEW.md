@@ -111,8 +111,9 @@ Chứa identity tối thiểu, không chứa profile wellness.
 | Column | Type | Constraint/ý nghĩa |
 |---|---|---|
 | `id` | UUID | PK |
-| `email_lookup_hash` | BYTEA | NOT NULL, UNIQUE; HMAC của email normalize để login |
+| `email_lookup_hash` | BYTEA | NOT NULL; partial unique khi `deleted_at IS NULL`, HMAC của email normalize |
 | `encrypted_email` | BYTEA | NOT NULL |
+| `email_iv`, `email_wrapped_key` | BYTEA | nonce và wrapped DEK |
 | `email_key_version` | VARCHAR(32) | NOT NULL |
 | `password_hash` | VARCHAR(255) | NULL nếu external IdP |
 | `auth_provider` | VARCHAR(32) | `LOCAL`, `GOOGLE`, `OIDC` |
@@ -140,6 +141,7 @@ Indexes:
 |---|---|---|
 | `user_id` | UUID | PK, FK users CASCADE |
 | `encrypted_profile` | BYTEA | display name, pen name và dữ liệu riêng tư |
+| `profile_iv`, `profile_wrapped_key` | BYTEA | nonce và wrapped DEK |
 | `profile_key_version` | VARCHAR(32) | key version |
 | `timezone` | VARCHAR(64) | IANA timezone, ví dụ `Asia/Ho_Chi_Minh` |
 | `locale` | VARCHAR(10) | `vi`, `en` |
@@ -160,10 +162,9 @@ Một user có nhiều quyết định consent theo loại và version.
 | `document_version` | VARCHAR(40) | version văn bản user đã xem |
 | `granted` | BOOLEAN | quyết định |
 | `decided_at` | TIMESTAMPTZ | thời điểm quyết định |
-| `withdrawn_at` | TIMESTAMPTZ | nullable |
 | `source` | VARCHAR(24) | `ONBOARDING`, `SETTINGS`, `ADMIN_IMPORT` |
 
-Unique `(user_id, consent_type, document_version)`. Không update lịch sử consent; quyết định mới tạo record/version mới.
+Không update lịch sử consent. Mỗi quyết định mới tạo row riêng, kể cả rút lại/chấp thuận lại cùng `document_version`. Index `(user_id, consent_type, decided_at DESC)` phục vụ truy vấn quyết định mới nhất.
 
 ### 4.4 RBAC
 
@@ -182,7 +183,7 @@ Unique theo `code`, composite PK cho join table. `assigned_by` FK users với `O
 |---|---|---|
 | `id` | UUID | PK/session ID |
 | `user_id` | UUID | FK users CASCADE |
-| `refresh_token_hash` | BYTEA | UNIQUE, không lưu token thô |
+| `current_token_hash` | BYTEA | UNIQUE, HMAC của refresh token hiện tại; không lưu token thô |
 | `token_family_id` | UUID | phát hiện refresh token reuse |
 | `device_name` | VARCHAR(120) | nullable, user-facing |
 | `user_agent_hash` | BYTEA | optional, không lưu raw nếu không cần |
@@ -194,7 +195,7 @@ Unique theo `code`, composite PK cho join table. `assigned_by` FK users với `O
 
 Index `(user_id, revoked_at, expires_at)` và cleanup index `(expires_at)`.
 
-Token verify/reset dùng table chung `auth_action_tokens` với `token_hash`, `purpose`, `expires_at`, `consumed_at`; tuyệt đối không lưu token thô.
+`auth_refresh_history` giữ HMAC của token đã dùng để phát hiện replay; reuse revoke toàn bộ `token_family_id`. Token verify/reset dùng table chung `auth_action_tokens` với `token_hash`, `purpose`, `expires_at`, `consumed_at`; tuyệt đối không lưu token thô. `auth_rate_limits` lưu HMAC của IP/email pseudonym và cửa sổ giới hạn, được cleanup định kỳ.
 
 ## 5. Journal và check-in
 
@@ -858,10 +859,10 @@ Một transaction:
 Giữ `V1__platform_foundation.sql` cho extension. Các migration tiếp theo nên nhỏ theo dependency:
 
 ```text
-V2__identity_and_rbac.sql
+V2__identity_and_rbac.sql          -- bao gồm audit_logs cần cho session revoke
 V3__user_profile_and_consent.sql
 V4__journal_and_checkin.sql
-V5__platform_outbox_idempotency_audit.sql
+V5__platform_outbox_idempotency_audit.sql  -- không tạo lại audit_logs
 V6__safety.sql
 V7__ai_analysis_and_jobs.sql
 V8__insights_and_reports.sql

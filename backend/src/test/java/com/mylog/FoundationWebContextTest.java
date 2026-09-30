@@ -8,8 +8,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -59,18 +57,11 @@ class FoundationWebContextTest {
 
     @Test
     void exportsOpenApiContractWithoutActuatorPaths() throws Exception {
-        String contract = mockMvc.perform(get("/internal/openapi"))
+        mockMvc.perform(get("/internal/openapi"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.info.title").value("mylog Backend API"))
                 .andExpect(jsonPath("$.components.securitySchemes.bearerAuth").exists())
-                .andExpect(content().string(not(containsString("/actuator"))))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        Path outputDirectory = Path.of("target", "openapi");
-        Files.createDirectories(outputDirectory);
-        Files.writeString(outputDirectory.resolve("mylog-v1.json"), contract);
+                .andExpect(content().string(not(containsString("/actuator"))));
     }
 }

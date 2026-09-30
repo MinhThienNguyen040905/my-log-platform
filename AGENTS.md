@@ -24,8 +24,8 @@ Nếu tài liệu, code và migration không khớp, chỉ rõ sự khác biệt
 
 ## 3. Tiến độ: luôn xác minh trước khi triển khai
 
-- `BACKEND_DEVELOPMENT_PLAN.md` ghi M0 foundation đã hoàn thành; M1 identity/profile và các milestone sau chưa được đánh dấu hoàn thành.
-- Ở trạng thái repository khi tạo file này, code nghiệp vụ chủ yếu vẫn là package skeleton; `platform` có security baseline, error contract, request ID, configuration, UUIDv7, OpenAPI, log redaction và Cloudinary configuration. Flyway hiện có `V1__platform_foundation.sql`.
+- `BACKEND_DEVELOPMENT_PLAN.md` ghi M0 foundation đã hoàn thành. M1 backend đã có identity/profile/consent API, V2/V3 và integration tests; mục tích hợp frontend và kiểm tra consent tại lúc AI worker chạy còn mở. Các milestone M2+ chưa triển khai.
+- `platform` có security baseline, error contract, request ID, configuration, UUIDv7, OpenAPI, log redaction và Cloudinary configuration. Identity/user đã có use case và JDBC adapter; các feature khác chủ yếu vẫn là package skeleton. Flyway có V1, V2 và V3.
 - Không giả định các class trong cây ví dụ của tài liệu (như `JournalCommandService`) đã tồn tại. Mỗi phiên cần kiểm tra file/migration/test và `git status` thực tế, nhất là khi người dùng có thay đổi chưa lưu trong IDE.
 - Thứ tự phụ thuộc mục tiêu: M0 foundation → M1 identity/profile → M2 journal/check-in/safety đầu vào → M3 outbox/AI → M4 insight/report; M5 self-care có thể theo sau M2; M6 knowledge/admin, M7 data rights, M8 hardening theo kế hoạch.
 

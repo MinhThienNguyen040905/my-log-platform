@@ -5,8 +5,10 @@ Project mylog {
 
 Table users {
   id uuid [pk]
-  email_lookup_hash bytea [not null, unique]
+  email_lookup_hash bytea [not null, note: 'Partial unique where deleted_at IS NULL in Flyway V2']
   encrypted_email bytea [not null]
+  email_iv bytea [not null]
+  email_wrapped_key bytea [not null]
   email_key_version varchar(32) [not null]
   password_hash varchar(255)
   auth_provider varchar(32) [not null]
@@ -24,6 +26,8 @@ Table users {
 Table user_profiles {
   user_id uuid [pk, ref: > users.id]
   encrypted_profile bytea [not null]
+  profile_iv bytea [not null]
+  profile_wrapped_key bytea [not null]
   profile_key_version varchar(32) [not null]
   timezone varchar(64) [not null]
   locale varchar(10) [not null]
@@ -41,11 +45,10 @@ Table user_consents {
   document_version varchar(40) [not null]
   granted boolean [not null]
   decided_at timestamptz [not null]
-  withdrawn_at timestamptz
   source varchar(24) [not null]
 
   indexes {
-    (user_id, consent_type, document_version) [unique]
+    (user_id, consent_type, decided_at)
   }
 }
 
@@ -90,7 +93,7 @@ Table user_roles {
 Table auth_sessions {
   id uuid [pk]
   user_id uuid [not null, ref: > users.id]
-  refresh_token_hash bytea [not null, unique]
+  current_token_hash bytea [not null, unique]
   token_family_id uuid [not null]
   device_name varchar(120)
   user_agent_hash bytea
@@ -100,6 +103,29 @@ Table auth_sessions {
   revoked_at timestamptz
   revoke_reason varchar(40)
   created_at timestamptz [not null]
+}
+
+Table auth_refresh_history {
+  token_hash bytea [pk]
+  session_id uuid [not null, ref: > auth_sessions.id]
+  used_at timestamptz [not null]
+}
+
+Table auth_action_tokens {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  token_hash bytea [not null, unique]
+  purpose varchar(32) [not null]
+  expires_at timestamptz [not null]
+  consumed_at timestamptz
+  created_at timestamptz [not null]
+}
+
+Table auth_rate_limits {
+  subject_hash bytea [pk]
+  attempts integer [not null]
+  window_started_at timestamptz [not null]
+  blocked_until timestamptz
 }
 
 Table journal_entries {

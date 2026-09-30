@@ -13,11 +13,15 @@ import java.util.List;
 public record MylogProperties(
         @NotBlank String appProfile,
         @Valid Web web,
-        @Valid OpenApi openApi
+        @Valid OpenApi openApi,
+        @Valid Identity identity
 ) {
     public record Web(@NotEmpty List<@NotBlank String> allowedOrigins) {
     }
 
     public record OpenApi(boolean enabled) {
+    }
+
+    public record Identity(boolean enabled) {
     }
 }

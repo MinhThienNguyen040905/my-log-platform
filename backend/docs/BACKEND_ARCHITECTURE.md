@@ -99,7 +99,7 @@ Cùng một artifact có thể chạy theo profile:
 | `admin` | use case vận hành, aggregate dashboard | đọc journal raw mặc định |
 | `audit` | append-only audit hành động nhạy cảm | chứa journal thô |
 | `feedback` | feedback/bug report và workflow | bắt buộc gửi nội dung nhạy cảm |
-| `platform` | config, web, security primitives, jobs, observability | chứa business rule |
+| `platform` | config, web, security primitives, crypto dùng chung, jobs, observability | chứa business rule |
 
 ## 5. Cấu trúc repository
 
@@ -474,13 +474,19 @@ Base path `/api/v1`. JSON `camelCase`; enum `UPPER_SNAKE_CASE`; ID là UUID stri
 
 ```text
 POST   /auth/register
+POST   /auth/email-verifications
+POST   /auth/email-verifications:confirm
 POST   /auth/login
 POST   /auth/refresh
 POST   /auth/logout
 GET    /me
 PATCH  /me
+POST   /me/onboarding:complete
+GET    /me/consents
+PUT    /me/consents/{type}
 GET    /me/sessions
 DELETE /me/sessions/{sessionId}
+DELETE /me/sessions?exceptCurrent=true
 
 POST   /journal-entries
 GET    /journal-entries?from=&to=&cursor=&tag=&favorite=

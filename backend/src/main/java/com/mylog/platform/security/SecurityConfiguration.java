@@ -1,6 +1,9 @@
 package com.mylog.platform.security;
 
 import com.mylog.platform.config.MylogProperties;
+import com.mylog.identity.infrastructure.IdentityJwt;
+import com.mylog.identity.infrastructure.IdentityAuthenticationConverter;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -23,9 +26,12 @@ class SecurityConfiguration {
             HttpSecurity http,
             MylogProperties properties,
             ProblemAuthenticationEntryPoint authenticationEntryPoint,
-            ProblemAccessDeniedHandler accessDeniedHandler
+            ProblemAccessDeniedHandler accessDeniedHandler,
+            ObjectProvider<IdentityJwt> identityJwt,
+            ObjectProvider<IdentityAuthenticationConverter> identityConverter
     ) throws Exception {
-        return http
+        boolean identityEnabled = properties.identity().enabled();
+        http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -38,13 +44,26 @@ class SecurityConfiguration {
                                 "/swagger-ui/**"
                         ).permitAll();
                     }
+                    if (identityEnabled) {
+                        authorize.requestMatchers(HttpMethod.POST,
+                                "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
+                                "/api/v1/auth/email-verifications", "/api/v1/auth/email-verifications:confirm")
+                                .permitAll();
+                        authorize.requestMatchers("/api/v1/auth/logout", "/api/v1/me", "/api/v1/me/**")
+                                .authenticated();
+                    }
                     authorize.anyRequest().denyAll();
                 })
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
-                .requestCache(cache -> cache.disable())
-                .build();
+                .requestCache(cache -> cache.disable());
+        if (identityEnabled) {
+            http.oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt
+                    .decoder(identityJwt.getObject())
+                    .jwtAuthenticationConverter(identityConverter.getObject())));
+        }
+        return http.build();
     }
 
     @Bean

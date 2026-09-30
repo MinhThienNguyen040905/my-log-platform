@@ -52,11 +52,11 @@ Kế hoạch này biến blueprint kiến trúc thành các increment có thể 
 - [x] ArchUnit rule nền tảng.
 - [x] Testcontainers configuration.
 - [x] Backend architecture và database blueprint.
+- [x] M1 backend: identity/profile/consent API, V2/V3 migrations và PostgreSQL integration tests.
 
 ### Chưa triển khai
 
-- [ ] Entity/repository nghiệp vụ.
-- [ ] Identity/JWT/session.
+- [ ] Entity/repository nghiệp vụ ngoài identity/user.
 - [ ] Journal/check-in API.
 - [ ] Mã hóa journal cấp application.
 - [ ] Safety engine.
@@ -177,19 +177,19 @@ Không cần chốt model AI cuối cùng để làm journal; cần chốt provi
 
 ### Database
 
-- [ ] `V2__identity_and_rbac.sql`.
-- [ ] `V3__user_profile_and_consent.sql`.
-- [ ] V2 seed role `USER` tối thiểu; admin role/permission mở rộng được bổ sung khi codes ổn định.
-- [ ] Repository integration test trên PostgreSQL thật.
+- [x] `V2__identity_and_rbac.sql`.
+- [x] `V3__user_profile_and_consent.sql`.
+- [x] V2 seed role `USER` tối thiểu; admin role/permission mở rộng được bổ sung khi codes ổn định.
+- [x] Repository integration test trên PostgreSQL thật.
 
 ### IDN-001 — User registration (P0, L)
 
-- [ ] Normalize email theo policy cố định.
-- [ ] HMAC email lookup + encrypted email.
-- [ ] Hash password bằng Argon2id/BCrypt đã benchmark.
-- [ ] Tạo user/profile/default USER role trong một transaction.
-- [ ] Idempotent email verification token.
-- [ ] Rate limit theo IP/email pseudonym.
+- [x] Normalize email theo policy cố định.
+- [x] HMAC email lookup + encrypted email.
+- [x] Hash password bằng BCrypt cost 12; benchmark local ban đầu bên dưới.
+- [x] Tạo user/profile/default USER role trong một transaction.
+- [x] Idempotent email verification token.
+- [x] Rate limit theo IP/email pseudonym.
 
 API:
 
@@ -201,11 +201,11 @@ POST /api/v1/auth/email-verifications:confirm
 
 ### IDN-002 — Login/token rotation (P0, L)
 
-- [ ] Access JWT sống ngắn.
-- [ ] Refresh token opaque, chỉ lưu hash.
-- [ ] Rotation và token-family reuse detection.
-- [ ] Lock/rate limit sau nhiều lần đăng nhập sai.
-- [ ] Revoke family khi phát hiện reuse.
+- [x] Access JWT sống ngắn.
+- [x] Refresh token opaque, chỉ lưu hash.
+- [x] Rotation và token-family reuse detection.
+- [x] Lock/rate limit sau nhiều lần đăng nhập sai.
+- [x] Revoke family khi phát hiện reuse.
 
 API:
 
@@ -217,9 +217,9 @@ POST /api/v1/auth/logout
 
 ### IDN-003 — Session management (P1, M)
 
-- [ ] Danh sách session không lộ raw user agent/IP đầy đủ.
-- [ ] Revoke một session hoặc tất cả session khác.
-- [ ] Audit action revoke nhạy cảm.
+- [x] Danh sách session không lộ raw user agent/IP đầy đủ.
+- [x] Revoke một session hoặc tất cả session khác.
+- [x] Audit action revoke nhạy cảm.
 
 ```text
 GET    /api/v1/me/sessions
@@ -229,10 +229,10 @@ DELETE /api/v1/me/sessions?exceptCurrent=true
 
 ### USR-001 — Profile/onboarding (P0, M)
 
-- [ ] Profile encrypted payload.
-- [ ] Validate IANA timezone và locale.
-- [ ] Optimistic locking.
-- [ ] Onboarding goals không được hiểu là diagnosis.
+- [x] Profile encrypted payload.
+- [x] Validate IANA timezone và locale.
+- [x] Optimistic locking.
+- [x] Onboarding goals giới hạn ở các mã wellness; không dùng diagnosis/treatment.
 
 ```text
 GET   /api/v1/me
@@ -242,10 +242,12 @@ POST  /api/v1/me/onboarding:complete
 
 ### USR-002 — Consent/privacy (P0, M)
 
-- [ ] Versioned TERMS/PRIVACY/AI_PROCESSING consent.
-- [ ] Optional analytics/model-training mặc định false.
-- [ ] Withdraw consent không xóa lịch sử quyết định.
+- [x] Versioned TERMS/PRIVACY/AI_PROCESSING consent.
+- [x] Optional analytics/model-training mặc định false.
+- [x] Withdraw consent không xóa lịch sử quyết định.
 - [ ] AI use case kiểm tra consent tại execution time, không chỉ enqueue time.
+
+`UserProfileUseCase.isConsentGranted` đã có để M3 kiểm tra consent khi worker thực thi; chưa có AI worker trong M1 nên mục trên vẫn mở.
 
 ### Test bắt buộc
 
@@ -262,6 +264,14 @@ POST  /api/v1/me/onboarding:complete
 - Token rotation/revoke hoạt động.
 - Permission seed và authorization test pass.
 - Không lưu plaintext email/token/password.
+
+### Bằng chứng và giới hạn M1 backend
+
+- Flyway V2/V3, register → email verification → login → profile/consent → refresh/reuse chạy qua PostgreSQL Testcontainers. Test có registration race, account pending/suspended, ownership session, ciphertext/tokens, log redaction và key rotation. OpenAPI artifact được xuất từ context bật M1, có các endpoint identity/profile.
+- BCrypt cost 12 được chọn sau benchmark local ngày 2026-09-30 (Java 25 trên máy phát triển): trung bình khoảng 264 ms cho một cặp encode + verify; cost 10 khoảng 70 ms, cost 11 khoảng 131 ms. Cần đo lại trên hạ tầng triển khai trước release.
+- Local email verification gửi đến Mailpit (`docker compose up -d mailpit`, UI cổng 8025). Production cần SMTP và khóa do secret manager cung cấp; không dùng fallback local.
+- Frontend chưa tích hợp các API M1; điều kiện frontend ở exit criteria cần được xác nhận khi tích hợp.
+- M1 dùng `audit_logs` sớm trong V2 để audit session revoke. Khi viết V5, chỉ bổ sung outbox/idempotency và phần audit còn thiếu, không tạo lại bảng này.
 
 ## 8. M2 — Journal, check-in và safety đầu vào
 
