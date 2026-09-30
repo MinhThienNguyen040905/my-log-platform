@@ -857,20 +857,21 @@ Giữ `V1__platform_foundation.sql` cho extension. Các migration tiếp theo n�
 V2__identity_and_rbac.sql
 V3__user_profile_and_consent.sql
 V4__journal_and_checkin.sql
-V5__safety.sql
-V6__ai_analysis_and_jobs.sql
-V7__insights_and_reports.sql
-V8__selfcare.sql
-V9__knowledge_and_prompts.sql
-V10__platform_outbox_audit.sql
+V5__platform_outbox_idempotency_audit.sql
+V6__safety.sql
+V7__ai_analysis_and_jobs.sql
+V8__insights_and_reports.sql
+V9__selfcare.sql
+V10__knowledge_and_prompts.sql
 V11__exports_deletion_feedback.sql
-V12__seed_roles_permissions.sql
+V12__seed_extended_admin_roles_permissions.sql
 ```
 
 Quy tắc Flyway:
 
 - Migration đã merge/deploy không được sửa.
 - DDL mới có migration mới, kể cả sửa constraint/index.
+- V2 seed luôn role `USER` tối thiểu để registration hoạt động; V12 bổ sung các admin role/permission đã ổn định.
 - Seed chỉ dành cho stable system codes/roles, không seed journal/user thật.
 - Index lớn production dùng kế hoạch online/concurrent riêng; `CREATE INDEX CONCURRENTLY` không chạy trong transaction Flyway mặc định.
 - Mỗi migration phải chạy được trên database rỗng và database có dữ liệu representative.

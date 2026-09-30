@@ -7,6 +7,7 @@ Tài liệu thiết kế:
 - [Backend architecture](docs/BACKEND_ARCHITECTURE.md)
 - [Database design](docs/DATABASE_OVERVIEW.md)
 - [Database DBML](docs/database/mylog.dbml)
+- [Backend development plan](docs/BACKEND_DEVELOPMENT_PLAN.md)
 
 ## Yêu cầu
 

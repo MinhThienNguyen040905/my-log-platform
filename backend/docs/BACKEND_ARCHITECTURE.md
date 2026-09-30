@@ -116,6 +116,7 @@ my-log-platform/
 │   ├── Dockerfile
 │   ├── docs/
 │   │   ├── BACKEND_ARCHITECTURE.md
+│   │   ├── BACKEND_DEVELOPMENT_PLAN.md
 │   │   ├── API_CONVENTIONS.md
 │   │   ├── DATABASE_OVERVIEW.md
 │   │   ├── AI_OPERATIONS_RUNBOOK.md
