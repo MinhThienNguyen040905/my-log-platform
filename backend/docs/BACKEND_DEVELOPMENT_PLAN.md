@@ -52,7 +52,7 @@ Kế hoạch này biến blueprint kiến trúc thành các increment có thể 
 - [x] ArchUnit rule nền tảng.
 - [x] Testcontainers configuration.
 - [x] Backend architecture và database blueprint.
-- [x] M1 backend: identity/profile/consent API, V2/V3 migrations và PostgreSQL integration tests.
+- [x] M1 backend: identity/profile/consent API, V2–V4 migrations và PostgreSQL integration tests.
 
 ### Chưa triển khai
 
@@ -179,6 +179,7 @@ Không cần chốt model AI cuối cùng để làm journal; cần chốt provi
 
 - [x] `V2__identity_and_rbac.sql`.
 - [x] `V3__user_profile_and_consent.sql`.
+- [x] `V4__auth_refresh_history_id.sql`: khóa chính UUID cho lịch sử refresh, `token_hash` tiếp tục unique.
 - [x] V2 seed role `USER` tối thiểu; admin role/permission mở rộng được bổ sung khi codes ổn định.
 - [x] Repository integration test trên PostgreSQL thật.
 
@@ -267,20 +268,20 @@ POST  /api/v1/me/onboarding:complete
 
 ### Bằng chứng và giới hạn M1 backend
 
-- Persistence M1 dùng JPA entity và `EntityManager` trong `identity`/`user` `infrastructure/persistence`, với native SQL qua JPA cho rate-limit upsert và truy vấn consent mới nhất. Flyway V2/V3 vẫn là schema nguồn; Hibernate chỉ `validate`.
-- Flyway V2/V3, register → email verification → login → profile/consent → refresh/reuse chạy qua PostgreSQL Testcontainers. Test có registration race, account pending/suspended, ownership session, ciphertext/tokens, log redaction và key rotation. OpenAPI artifact được xuất từ context bật M1, có các endpoint identity/profile.
+- Persistence M1 dùng JPA entity và `EntityManager` trong `identity`/`user` `infrastructure/persistence`, với native SQL qua JPA cho rate-limit upsert và truy vấn consent mới nhất. Flyway V2–V4 vẫn là schema nguồn; Hibernate chỉ `validate`.
+- Flyway V2–V4, register → email verification → login → profile/consent → refresh/reuse chạy qua PostgreSQL Testcontainers. Test có registration race, account pending/suspended, ownership session, ciphertext/tokens, log redaction và key rotation. OpenAPI artifact được xuất từ context bật M1, có các endpoint identity/profile.
 - BCrypt cost 12 được chọn sau benchmark local ngày 2026-09-30 (Java 25 trên máy phát triển): trung bình khoảng 264 ms cho một cặp encode + verify; cost 10 khoảng 70 ms, cost 11 khoảng 131 ms. Cần đo lại trên hạ tầng triển khai trước release.
 - Local email verification gửi đến Mailpit (`docker compose up -d mailpit`, UI cổng 8025). Production cần SMTP và khóa do secret manager cung cấp; không dùng fallback local.
 - Frontend chưa tích hợp các API M1; điều kiện frontend ở exit criteria cần được xác nhận khi tích hợp.
-- M1 dùng `audit_logs` sớm trong V2 để audit session revoke. Khi viết V5, chỉ bổ sung outbox/idempotency và phần audit còn thiếu, không tạo lại bảng này.
+- M1 dùng `audit_logs` sớm trong V2 để audit session revoke. Khi viết V6, chỉ bổ sung outbox/idempotency và phần audit còn thiếu, không tạo lại bảng này.
 
 ## 8. M2 — Journal, check-in và safety đầu vào
 
 ### Database
 
-- [ ] `V4__journal_and_checkin.sql`.
-- [ ] `V5__platform_outbox_idempotency_audit.sql` phần cần cho journal.
-- [ ] `V6__safety.sql`.
+- [ ] `V5__journal_and_checkin.sql`.
+- [ ] `V6__platform_outbox_idempotency_audit.sql` phần cần cho journal.
+- [ ] `V7__safety.sql`.
 - [ ] Constraint/range/index đúng database blueprint.
 
 ### JRN-001 — Encryption adapter (P0, L)
@@ -360,8 +361,8 @@ Asset có thể chuyển P2 nếu demo MVP không cần upload ảnh thật.
 
 ### Database
 
-- [ ] Hoàn tất outbox/job indexes từ V5.
-- [ ] `V7__ai_analysis_and_jobs.sql`.
+- [ ] Hoàn tất outbox/job indexes từ V6.
+- [ ] `V8__ai_analysis_and_jobs.sql`.
 - [ ] Unique/idempotency constraints cho analysis version.
 
 ### JOB-001 — Transactional outbox (P0, L)
@@ -419,7 +420,7 @@ GET  /api/v1/journal-entries/{entryId}
 
 ### Database
 
-- [ ] `V8__insights_and_reports.sql`.
+- [ ] `V9__insights_and_reports.sql`.
 - [ ] Evidence/index theo user và period.
 
 ### INS-001 — Daily aggregate (P0, L)
@@ -472,7 +473,7 @@ Các số trên là engineering target ban đầu, phải đo lại trên môi t
 
 ### Database/API
 
-- [ ] `V9__selfcare.sql`.
+- [ ] `V10__selfcare.sql`.
 - [ ] Goal/habit text encrypted.
 - [ ] Completion unique theo habit/local date.
 - [ ] Ownership và optimistic locking.
@@ -503,8 +504,8 @@ DELETE /api/v1/self-care/habits/{habitId}/completions/{localDate}
 
 ### Database
 
-- [ ] `V10__knowledge_and_prompts.sql`.
-- [ ] `V12__seed_extended_admin_roles_permissions.sql` cho content/safety/system/support/auditor.
+- [ ] `V11__knowledge_and_prompts.sql`.
+- [ ] `V13__seed_extended_admin_roles_permissions.sql` cho content/safety/system/support/auditor.
 
 ### KB-001 — Knowledge workflow (P1, L)
 
@@ -559,7 +560,7 @@ POST /api/v1/admin/ai-jobs/{jobId}:retry
 
 ### Database
 
-- [ ] `V11__exports_deletion_feedback.sql`.
+- [ ] `V12__exports_deletion_feedback.sql`.
 - [ ] Partial unique cho active deletion/export theo policy.
 
 ### EXP-001 — Export (P0, L)

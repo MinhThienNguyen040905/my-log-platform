@@ -4,6 +4,7 @@ import com.mylog.TestcontainersConfiguration;
 import com.mylog.identity.application.VerificationDelivery;
 import com.mylog.identity.application.IdentityService;
 import com.mylog.platform.crypto.SensitiveDataCipher;
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,6 +14,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import javax.sql.DataSource;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -38,6 +40,7 @@ class IdentityFlowIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
     @Autowired JdbcTemplate jdbc;
+    @Autowired DataSource dataSource;
     @Autowired IdentityService identity;
     @Autowired SensitiveDataCipher cipher;
     @MockitoBean VerificationDelivery delivery;
@@ -55,6 +58,29 @@ class IdentityFlowIntegrationTest {
         Path target = Path.of("target", "openapi");
         Files.createDirectories(target);
         Files.writeString(target.resolve("mylog-v1.json"), contract);
+    }
+
+    @Test
+    void migrationBackfillsExistingRefreshHistoryAndKeepsTokenHashUnique() {
+        String schema = "history_migration_" + UUID.randomUUID().toString().replace("-", "");
+        byte[] hash = new byte[] { 1, 2, 3, 4 };
+        jdbc.execute("CREATE SCHEMA " + schema);
+        try {
+            jdbc.execute("CREATE TABLE " + schema + ".auth_refresh_history (token_hash BYTEA PRIMARY KEY, session_id UUID NOT NULL, used_at TIMESTAMPTZ NOT NULL)");
+            jdbc.update("INSERT INTO " + schema + ".auth_refresh_history(token_hash,session_id,used_at) VALUES (?,?,now())",
+                    hash, UUID.randomUUID());
+            Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema)
+                    .locations("classpath:db/migration").baselineOnMigrate(true).baselineVersion("3")
+                    .load().migrate();
+            UUID backfilledId = jdbc.queryForObject("SELECT id FROM " + schema + ".auth_refresh_history WHERE token_hash=?",
+                    UUID.class, hash);
+            org.junit.jupiter.api.Assertions.assertNotNull(backfilledId);
+            org.junit.jupiter.api.Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                    () -> jdbc.update("INSERT INTO " + schema + ".auth_refresh_history(id,token_hash,session_id,used_at) VALUES (?,?,?,now())",
+                            UUID.randomUUID(), hash, UUID.randomUUID()));
+        } finally {
+            jdbc.execute("DROP SCHEMA " + schema + " CASCADE");
+        }
     }
 
     @Test
@@ -140,6 +166,8 @@ class IdentityFlowIntegrationTest {
         String rotated = mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + refresh + "\"}"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        UUID historyId = jdbc.queryForObject("SELECT id FROM auth_refresh_history WHERE token_hash=?", UUID.class, storedRefresh);
+        org.junit.jupiter.api.Assertions.assertEquals(7, historyId.version());
         String nextAccess = mapper.readTree(rotated).get("accessToken").asText();
         mvc.perform(post("/api/v1/auth/refresh").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"" + refresh + "\"}"))

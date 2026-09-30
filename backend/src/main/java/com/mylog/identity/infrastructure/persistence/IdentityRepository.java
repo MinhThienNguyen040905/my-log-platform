@@ -165,6 +165,7 @@ class IdentityRepository implements IdentityStore {
 
     @Override public void rotate(UUID sessionId, byte[] oldHash, byte[] newHash, Instant expiry, Instant now) {
         AuthRefreshHistory history = new AuthRefreshHistory();
+        history.id = ids.next();
         history.tokenHash = oldHash;
         history.sessionId = sessionId;
         history.usedAt = now;

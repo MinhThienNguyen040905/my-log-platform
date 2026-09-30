@@ -106,7 +106,8 @@ Table auth_sessions {
 }
 
 Table auth_refresh_history {
-  token_hash bytea [pk]
+  id uuid [pk]
+  token_hash bytea [not null, unique]
   session_id uuid [not null, ref: > auth_sessions.id]
   used_at timestamptz [not null]
 }

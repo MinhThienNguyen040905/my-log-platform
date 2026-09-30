@@ -23,7 +23,7 @@ Tài liệu này là nguồn thiết kế chính cho schema. File DBML đi kèm 
 | Thành phần | Quy ước |
 |---|---|
 | Table/column/index | `snake_case` |
-| Primary key | `id UUID` |
+| Primary key | Mặc định `id UUID`; bảng nối có thể dùng khóa ghép, bảng trạng thái theo một subject hoặc quan hệ một–một có thể dùng khóa nghiệp vụ nếu tránh được `id` dư thừa |
 | ID tạo ở application | UUIDv7 để index locality tốt; test có thể dùng fixed UUID |
 | Timestamp | `TIMESTAMPTZ`, luôn lưu UTC |
 | Ngày theo người dùng | `local_date DATE` + `timezone VARCHAR(64)` |
@@ -195,7 +195,9 @@ Unique theo `code`, composite PK cho join table. `assigned_by` FK users với `O
 
 Index `(user_id, revoked_at, expires_at)` và cleanup index `(expires_at)`.
 
-`auth_refresh_history` giữ HMAC của token đã dùng để phát hiện replay; reuse revoke toàn bộ `token_family_id`. Token verify/reset dùng table chung `auth_action_tokens` với `token_hash`, `purpose`, `expires_at`, `consumed_at`; tuyệt đối không lưu token thô. `auth_rate_limits` lưu HMAC của IP/email pseudonym và cửa sổ giới hạn, được cleanup định kỳ.
+`auth_refresh_history` có `id UUID` làm khóa chính và `token_hash BYTEA NOT NULL UNIQUE` để tra cứu HMAC của token đã dùng, phát hiện replay và revoke toàn bộ `token_family_id`. V4 backfill UUID cho dòng cũ; dòng mới nhận UUIDv7 từ application. Token verify/reset dùng table chung `auth_action_tokens` với `token_hash`, `purpose`, `expires_at`, `consumed_at`; tuyệt đối không lưu token thô. `auth_rate_limits` lưu HMAC của IP/email pseudonym và cửa sổ giới hạn, được cleanup định kỳ.
+
+Chọn khóa chính theo vai trò dữ liệu: bản ghi có vòng đời hoặc cần tham chiếu độc lập dùng `id UUID`; bảng nối thuần túy dùng khóa ghép của hai khóa ngoại nếu mỗi cặp chỉ được tồn tại một lần; quan hệ một–một như `user_profiles` có thể dùng `user_id` vừa là PK vừa là FK; bảng trạng thái chỉ có một dòng cho mỗi subject như `auth_rate_limits` có thể dùng subject hash làm PK. Nếu thêm `id` cho bảng vốn được định danh bằng giá trị khác, vẫn phải giữ `UNIQUE` trên giá trị đó. Tránh dùng `byte[]` làm `@Id` cho bản ghi có vòng đời trong JPA. Xác định PK, unique và mục đích truy vấn trước khi viết migration; không thêm `id` chỉ để mọi bảng giống nhau.
 
 ## 5. Journal và check-in
 
@@ -861,22 +863,23 @@ Giữ `V1__platform_foundation.sql` cho extension. Các migration tiếp theo n�
 ```text
 V2__identity_and_rbac.sql          -- bao gồm audit_logs cần cho session revoke
 V3__user_profile_and_consent.sql
-V4__journal_and_checkin.sql
-V5__platform_outbox_idempotency_audit.sql  -- không tạo lại audit_logs
-V6__safety.sql
-V7__ai_analysis_and_jobs.sql
-V8__insights_and_reports.sql
-V9__selfcare.sql
-V10__knowledge_and_prompts.sql
-V11__exports_deletion_feedback.sql
-V12__seed_extended_admin_roles_permissions.sql
+V4__auth_refresh_history_id.sql   -- thêm id, giữ token_hash unique
+V5__journal_and_checkin.sql
+V6__platform_outbox_idempotency_audit.sql  -- không tạo lại audit_logs
+V7__safety.sql
+V8__ai_analysis_and_jobs.sql
+V9__insights_and_reports.sql
+V10__selfcare.sql
+V11__knowledge_and_prompts.sql
+V12__exports_deletion_feedback.sql
+V13__seed_extended_admin_roles_permissions.sql
 ```
 
 Quy tắc Flyway:
 
 - Migration đã merge/deploy không được sửa.
 - DDL mới có migration mới, kể cả sửa constraint/index.
-- V2 seed luôn role `USER` tối thiểu để registration hoạt động; V12 bổ sung các admin role/permission đã ổn định.
+- V2 seed luôn role `USER` tối thiểu để registration hoạt động; V13 dự kiến bổ sung các admin role/permission đã ổn định.
 - Seed chỉ dành cho stable system codes/roles, không seed journal/user thật.
 - Index lớn production dùng kế hoạch online/concurrent riêng; `CREATE INDEX CONCURRENTLY` không chạy trong transaction Flyway mặc định.
 - Mỗi migration phải chạy được trên database rỗng và database có dữ liệu representative.

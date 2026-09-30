@@ -11,7 +11,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "auth_refresh_history")
 class AuthRefreshHistory {
-    @Id @Column(name = "token_hash") byte[] tokenHash;
+    @Id UUID id;
+    @Column(name = "token_hash", nullable = false, unique = true) byte[] tokenHash;
     @Column(name = "session_id", nullable = false) UUID sessionId;
     @Column(name = "used_at", nullable = false) Instant usedAt;
 }
