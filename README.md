@@ -2,7 +2,7 @@
 
 mylog là nền tảng nhật ký thông minh hỗ trợ self-reflection và theo dõi mental wellness bằng AI. Sản phẩm không phải công cụ chẩn đoán hoặc thay thế chuyên gia sức khỏe tâm thần.
 
-Repository hiện có frontend prototype và blueprint kiến trúc backend cho giai đoạn phát triển tiếp theo.
+Repository gồm frontend prototype, backend Spring Boot đã bootstrap và tài liệu kiến trúc.
 
 ## Backend
 
@@ -10,6 +10,14 @@ Backend được thiết kế theo modular monolith với Java/Spring Boot, Post
 
 - [Tổng quan backend](backend/README.md)
 - [Kiến trúc backend chi tiết](docs/BACKEND_ARCHITECTURE.md)
+
+Chạy backend local:
+
+```powershell
+cd backend
+docker compose up -d
+./mvnw.cmd spring-boot:run
+```
 
 ## Frontend
 
@@ -40,6 +48,10 @@ Mở `http://localhost:3000` trong trình duyệt.
 my-log-platform/
 ├── README.md
 ├── backend/
+│   ├── src/
+│   ├── compose.yaml
+│   ├── Dockerfile
+│   ├── pom.xml
 │   └── README.md
 ├── docs/
 │   └── BACKEND_ARCHITECTURE.md

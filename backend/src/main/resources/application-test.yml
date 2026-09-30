@@ -1,0 +1,7 @@
+spring:
+  jpa:
+    show-sql: false
+  data:
+    redis:
+      repositories:
+        enabled: false

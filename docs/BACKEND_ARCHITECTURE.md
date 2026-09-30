@@ -106,8 +106,6 @@ Cùng một artifact có thể chạy theo profile:
 ```text
 my-log-platform/
 ├── README.md
-├── compose.yaml
-├── .env.example
 ├── docs/
 │   ├── BACKEND_ARCHITECTURE.md
 │   ├── API_CONVENTIONS.md
@@ -119,6 +117,8 @@ my-log-platform/
 │       └── 0003-journal-encryption.md
 ├── backend/
 │   ├── README.md
+│   ├── compose.yaml
+│   ├── .env.example
 │   ├── pom.xml
 │   ├── mvnw
 │   ├── mvnw.cmd
@@ -697,7 +697,7 @@ Môi trường:
 
 ## 18. Quy ước code
 
-- Java 21, Spring Boot 3.x, Maven Wrapper.
+- Java 21, Spring Boot 4.1.x, Maven Wrapper.
 - Constructor injection; không field injection.
 - `record` cho immutable DTO/command nhỏ.
 - Không dùng `Optional` cho entity/request field; dùng có chủ đích ở return type.

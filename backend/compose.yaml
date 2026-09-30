@@ -1,0 +1,37 @@
+name: mylog-local
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: ${MYLOG_DB_NAME:-mylog}
+      POSTGRES_USER: ${MYLOG_DB_USERNAME:-mylog}
+      POSTGRES_PASSWORD: ${MYLOG_DB_PASSWORD:-mylog_local_only}
+    ports:
+      - "5432:5432"
+    volumes:
+      - mylog_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - mylog_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  mylog_postgres_data:
+  mylog_redis_data:
