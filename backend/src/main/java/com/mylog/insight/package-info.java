@@ -1,2 +1,2 @@
-/** Evidence-based insights and suggested-action lifecycle. */
+/** Evidence-backed trends and correlations. */
 package com.mylog.insight;

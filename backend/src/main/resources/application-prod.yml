@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: ${MYLOG_DB_URL}
+    username: ${MYLOG_DB_USERNAME}
+    password: ${MYLOG_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${MYLOG_DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${MYLOG_DB_POOL_MIN_IDLE:5}
+  data:
+    redis:
+      url: ${MYLOG_REDIS_URL}
+
+mylog:
+  web:
+    allowed-origins: ${MYLOG_ALLOWED_ORIGINS}

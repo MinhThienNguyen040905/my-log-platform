@@ -118,7 +118,7 @@ export function JournalProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('mylog_draft_journal');
-    // Reserved for clearing tokens when backend is integrated
+    // Reserved for future session cleanup
   };
 
   const toggleGoal = (id: string) => {

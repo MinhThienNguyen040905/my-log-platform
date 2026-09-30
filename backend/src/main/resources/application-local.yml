@@ -1,22 +1,15 @@
 spring:
-  config:
-    activate:
-      on-profile: local
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/mylog}
-    username: ${DB_USERNAME:mylog}
-    password: ${DB_PASSWORD:mylog_local_password}
+    url: ${MYLOG_DB_URL:jdbc:postgresql://localhost:5432/mylog}
+    username: ${MYLOG_DB_USERNAME:mylog}
+    password: ${MYLOG_DB_PASSWORD:mylog_local_only}
+    hikari:
+      maximum-pool-size: ${MYLOG_DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${MYLOG_DB_POOL_MIN_IDLE:2}
+  data:
+    redis:
+      url: ${MYLOG_REDIS_URL:redis://localhost:6379}
 
-mylog:
-  security:
-    jwt:
-      signing-key-base64: ${JWT_SIGNING_KEY_BASE64:bXlsb2ctbG9jYWwtZGV2LWtleS1kb250LXVzZS1pbi1wcm9k}
-    password:
-      bcrypt-strength: 10
-    refresh-cookie:
-      secure: false
-
-management:
-  endpoint:
-    health:
-      show-details: always
+logging:
+  level:
+    com.mylog: DEBUG

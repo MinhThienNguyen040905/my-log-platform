@@ -1,18 +1,18 @@
-name: mylog-backend
+name: mylog-local
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     environment:
-      POSTGRES_DB: mylog
-      POSTGRES_USER: mylog
-      POSTGRES_PASSWORD: mylog_local_password
+      POSTGRES_DB: ${MYLOG_DB_NAME:-mylog}
+      POSTGRES_USER: ${MYLOG_DB_USERNAME:-mylog}
+      POSTGRES_PASSWORD: ${MYLOG_DB_PASSWORD:-mylog_local_only}
     ports:
       - "5432:5432"
     volumes:
-      - mylog-postgres-data:/var/lib/postgresql/data
+      - mylog_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mylog -d mylog"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,7 +24,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - mylog-redis-data:/data
+      - mylog_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -32,24 +32,6 @@ services:
       retries: 10
     restart: unless-stopped
 
-  rabbitmq:
-    image: rabbitmq:4-management-alpine
-    environment:
-      RABBITMQ_DEFAULT_USER: mylog
-      RABBITMQ_DEFAULT_PASS: mylog_local_password
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - mylog-rabbitmq-data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
 volumes:
-  mylog-postgres-data:
-  mylog-redis-data:
-  mylog-rabbitmq-data:
+  mylog_postgres_data:
+  mylog_redis_data:

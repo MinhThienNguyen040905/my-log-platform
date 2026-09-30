@@ -1,2 +1,2 @@
-/** AI analysis orchestration and provider abstraction module. */
+/** Asynchronous AI analysis and structured results. */
 package com.mylog.analysis;

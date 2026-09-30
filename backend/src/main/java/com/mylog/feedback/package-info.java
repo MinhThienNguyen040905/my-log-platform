@@ -1,2 +1,2 @@
-/** User feedback for reflections, suggested actions and insights. */
+/** User feedback and issue handling. */
 package com.mylog.feedback;
