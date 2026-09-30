@@ -2,6 +2,8 @@ package com.mylog.identity.application;
 
 import com.mylog.identity.application.IdentityStore.Account;
 import com.mylog.identity.application.IdentityStore.Session;
+import com.mylog.identity.application.query.SessionSummary;
+import com.mylog.identity.application.result.AuthResult;
 import com.mylog.platform.id.IdGenerator;
 import com.mylog.platform.crypto.SensitiveDataCipher;
 import com.mylog.platform.web.ApplicationException;
@@ -49,9 +51,6 @@ public class IdentityService {
         this.store = store; this.cipher = cipher; this.accessTokens = accessTokens; this.delivery = delivery;
         this.profiles = profiles; this.ids = ids; this.clock = clock; this.random = random;
     }
-
-    public record AuthResult(UUID userId, String accessToken, String refreshToken, long expiresInSeconds) {}
-    public record SessionView(UUID id, String deviceName, Instant createdAt, Instant lastUsedAt, Instant expiresAt) {}
 
     public static String normalizeEmail(String value) {
         if (value == null) throw new InvalidRequestException();
@@ -152,8 +151,8 @@ public class IdentityService {
     }
 
     @Transactional(readOnly = true)
-    public List<SessionView> sessions(UUID userId) {
-        return store.sessions(userId).stream().map(s -> new SessionView(s.id(), s.deviceName(),
+    public List<SessionSummary> sessions(UUID userId) {
+        return store.sessions(userId).stream().map(s -> new SessionSummary(s.id(), s.deviceName(),
                 s.createdAt(), s.lastUsedAt(), s.expiresAt())).toList();
     }
 

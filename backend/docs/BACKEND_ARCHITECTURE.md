@@ -216,6 +216,8 @@ Quy tắc:
 - Domain model bảo vệ invariant, không mở setter hàng loạt.
 - JPA entity nằm trong infrastructure và không được trả ra API.
 - Request/response DTO tách khỏi command/domain để API tiến hóa độc lập.
+- Mỗi request/response DTO của HTTP là một record ở file riêng trong `api/request/` hoặc `api/response/` như cây thư mục trên; không khai báo DTO lồng trong controller. Controller chuyển dữ liệu từ use case sang response DTO, không dùng trực tiếp application result/projection làm HTTP response. Endpoint không có body thì không cần response DTO.
+- Nếu use case cần kiểu dữ liệu trả về riêng, đặt nó trong `application/query/` hoặc `application/result/` theo vai trò, tách khỏi contract HTTP. Ví dụ hiện tại: `ProfileView`, `ConsentView` là dữ liệu application; `ProfileResponse`, `ConsentResponse` là contract API.
 - Mapper quan trọng viết tay và có test.
 
 Ví dụ application service rút gọn:

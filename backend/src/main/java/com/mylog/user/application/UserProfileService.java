@@ -1,5 +1,7 @@
 package com.mylog.user.application;
 
+import com.mylog.user.application.query.ConsentView;
+import com.mylog.user.application.query.ProfileView;
 import com.mylog.platform.crypto.SensitiveDataCipher;
 import com.mylog.platform.id.IdGenerator;
 import com.mylog.platform.web.ConflictException;

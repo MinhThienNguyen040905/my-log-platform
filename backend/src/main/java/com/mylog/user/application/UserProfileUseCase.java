@@ -1,14 +1,13 @@
 package com.mylog.user.application;
 
+import com.mylog.user.application.query.ConsentView;
+import com.mylog.user.application.query.ProfileView;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 public interface UserProfileUseCase {
-    record ProfileView(UUID userId, String displayName, String penName, List<String> onboardingGoals, String timezone,
-                       String locale, Instant onboardingCompletedAt, long version) {}
-    record ConsentView(String type, String documentVersion, boolean granted, Instant decidedAt) {}
-
     void createDefault(UUID userId, String timezone, String locale, String termsVersion,
                        String privacyVersion, Instant now);
     ProfileView get(UUID userId);
