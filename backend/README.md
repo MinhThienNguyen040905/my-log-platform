@@ -2,7 +2,7 @@
 
 Backend modular monolith của **mylog**, được khởi tạo bằng Java 21 và Spring Boot 4.1.1.
 
-Kiến trúc đầy đủ: [Backend architecture](../docs/BACKEND_ARCHITECTURE.md).
+Kiến trúc đầy đủ: [Backend architecture](docs/BACKEND_ARCHITECTURE.md).
 
 ## Yêu cầu
 

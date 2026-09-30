@@ -9,7 +9,7 @@ Repository gồm frontend prototype, backend Spring Boot đã bootstrap và tài
 Backend được thiết kế theo modular monolith với Java/Spring Boot, PostgreSQL/pgvector, Redis và background jobs. Thiết kế ưu tiên privacy, safety, khả năng truy vết insight và khả năng mở rộng.
 
 - [Tổng quan backend](backend/README.md)
-- [Kiến trúc backend chi tiết](docs/BACKEND_ARCHITECTURE.md)
+- [Kiến trúc backend chi tiết](backend/docs/BACKEND_ARCHITECTURE.md)
 
 Chạy backend local:
 
@@ -52,9 +52,9 @@ my-log-platform/
 │   ├── compose.yaml
 │   ├── Dockerfile
 │   ├── pom.xml
+│   ├── docs/
+│   │   └── BACKEND_ARCHITECTURE.md
 │   └── README.md
-├── docs/
-│   └── BACKEND_ARCHITECTURE.md
 └── front-end/
     └── my-app/
 ```

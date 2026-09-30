@@ -106,15 +106,6 @@ Cùng một artifact có thể chạy theo profile:
 ```text
 my-log-platform/
 ├── README.md
-├── docs/
-│   ├── BACKEND_ARCHITECTURE.md
-│   ├── API_CONVENTIONS.md
-│   ├── DATABASE_OVERVIEW.md
-│   ├── AI_OPERATIONS_RUNBOOK.md
-│   └── adr/
-│       ├── 0001-modular-monolith.md
-│       ├── 0002-transactional-outbox.md
-│       └── 0003-journal-encryption.md
 ├── backend/
 │   ├── README.md
 │   ├── compose.yaml
@@ -123,6 +114,15 @@ my-log-platform/
 │   ├── mvnw
 │   ├── mvnw.cmd
 │   ├── Dockerfile
+│   ├── docs/
+│   │   ├── BACKEND_ARCHITECTURE.md
+│   │   ├── API_CONVENTIONS.md
+│   │   ├── DATABASE_OVERVIEW.md
+│   │   ├── AI_OPERATIONS_RUNBOOK.md
+│   │   └── adr/
+│   │       ├── 0001-modular-monolith.md
+│   │       ├── 0002-transactional-outbox.md
+│   │       └── 0003-journal-encryption.md
 │   └── src/
 │       ├── main/
 │       │   ├── java/com/mylog/
@@ -240,6 +240,68 @@ class JournalCommandService {
 ```
 
 Persistence adapter mã hóa nội dung. Event/outbox chỉ mang ID/version, tuyệt đối không chứa raw journal.
+
+### 6.1 So sánh với Controller → Service → Repository truyền thống
+
+Luồng cơ bản vẫn giống Spring Boot thông thường, nhưng tên gọi và vị trí phụ thuộc rõ hơn:
+
+```text
+HTTP Request
+   ↓
+api/JournalController                       Controller
+   ↓
+application/JournalCommandService           Service / Use case
+   ↓
+domain/JournalEntry + domain policies        Business rules
+   ↓
+application/port/JournalEntryRepository      Repository interface (port)
+   ↓
+infrastructure/persistence/
+  JpaJournalEntryRepository                  Repository implementation (adapter)
+   ↓
+PostgreSQL
+```
+
+Response đi ngược lại qua mapper:
+
+```text
+JpaEntity → Domain/Projection → Response DTO → JSON
+```
+
+Khác biệt quan trọng so với mô hình ba layer đơn giản:
+
+- `Service` được gọi là application service/use case và chỉ điều phối một nghiệp vụ cụ thể.
+- Business rule quan trọng nằm trong domain object/policy, không dồn hết vào một service lớn.
+- Repository trong application là interface; code JPA triển khai interface đó ở infrastructure.
+- Controller không biết JPA entity và repository implementation.
+- Module khác không gọi xuyên vào repository; nó gọi public application facade hoặc giao tiếp bằng event.
+- Query chỉ đọc có thể dùng projection tối ưu qua query port, không bắt buộc dựng đầy đủ domain aggregate.
+
+Với một tính năng CRUD rất đơn giản, luồng có thể chỉ là:
+
+```text
+Controller → Application Service → Repository Port → JPA Adapter → Database
+```
+
+Với journal có AI, luồng ghi và luồng phân tích được tách ra:
+
+```text
+JournalController
+   → JournalCommandService
+      → SafetyScreeningUseCase
+      → JournalEntry domain
+      → JournalEntryRepository port → JPA adapter → PostgreSQL
+      → OutboxEventPublisher → outbox_events
+
+Background worker
+   → claim outbox event
+   → AnalysisApplicationService
+   → AI provider adapter
+   → output safety validation
+   → AnalysisRepository port → JPA adapter → PostgreSQL
+```
+
+Nhờ vậy thao tác lưu journal không thất bại chỉ vì AI chậm hoặc tạm ngừng hoạt động.
 
 ## 7. Luồng quan trọng
 
