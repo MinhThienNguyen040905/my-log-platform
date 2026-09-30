@@ -10,6 +10,7 @@ Backend được thiết kế theo modular monolith với Java/Spring Boot, Post
 
 - [Tổng quan backend](backend/README.md)
 - [Kiến trúc backend chi tiết](backend/docs/BACKEND_ARCHITECTURE.md)
+- [Thiết kế database](backend/docs/DATABASE_OVERVIEW.md)
 
 Chạy backend local:
 

@@ -119,6 +119,8 @@ my-log-platform/
 │   │   ├── API_CONVENTIONS.md
 │   │   ├── DATABASE_OVERVIEW.md
 │   │   ├── AI_OPERATIONS_RUNBOOK.md
+│   │   ├── database/
+│   │   │   └── mylog.dbml
 │   │   └── adr/
 │   │       ├── 0001-modular-monolith.md
 │   │       ├── 0002-transactional-outbox.md
@@ -364,6 +366,8 @@ Chỉ tính/hiển thị correlation khi đạt minimum sample size được c�
 5. Job có checkpoint và idempotent để tiếp tục sau lỗi.
 
 ## 8. Mô hình dữ liệu
+
+Thiết kế table, constraint, index, encryption và retention chi tiết nằm tại [DATABASE_OVERVIEW.md](DATABASE_OVERVIEW.md). Sơ đồ có thể import vào dbdiagram nằm tại [database/mylog.dbml](database/mylog.dbml).
 
 Mọi bảng nghiệp vụ dùng `UUID`, `created_at timestamptz`, `updated_at timestamptz`. Timestamp lưu UTC; dữ liệu theo ngày lưu thêm `local_date` và timezone.
 
