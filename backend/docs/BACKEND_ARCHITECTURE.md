@@ -55,7 +55,7 @@ api ───────► application ───────► domain
 
 ### 2.4 Nguồn dữ liệu
 
-- PostgreSQL là source of truth cho nghiệp vụ, job và audit.
+- PostgreSQL do Supabase quản lý là source of truth cho nghiệp vụ, job và audit ở môi trường triển khai; local/test vẫn dùng PostgreSQL container.
 - `pgvector` lưu embedding của knowledge base đã duyệt.
 - Redis chỉ dùng cache ngắn hạn, rate limit và distributed lock.
 - Transactional outbox bảo đảm event không mất sau commit.
@@ -66,9 +66,9 @@ api ───────► application ───────► domain
 Next.js user app ───────┐
                        ├── HTTPS ──► Spring Boot API
 Next.js admin app ──────┘                 │
-                                         ├── PostgreSQL + pgvector
+                                         ├── Supabase PostgreSQL + pgvector
                                          ├── Redis
-                                         ├── Private object storage
+                                         ├── Cloudinary private images
                                          └── AI provider
 
 Spring Boot worker ── claim outbox/jobs ──► AI / RAG / report / export
@@ -99,7 +99,7 @@ Cùng một artifact có thể chạy theo profile:
 | `admin` | use case vận hành, aggregate dashboard | đọc journal raw mặc định |
 | `audit` | append-only audit hành động nhạy cảm | chứa journal thô |
 | `feedback` | feedback/bug report và workflow | bắt buộc gửi nội dung nhạy cảm |
-| `platform` | config, web, security primitives, jobs, observability | chứa business rule |
+| `platform` | config, web, security primitives, crypto dùng chung, jobs, observability | chứa business rule |
 
 ## 5. Cấu trúc repository
 
@@ -200,7 +200,7 @@ journal/
 │   └── exception/JournalEntryNotFound.java
 └── infrastructure/
     ├── persistence/
-    │   ├── JournalEntryJpaEntity.java
+    │   ├── JournalEntryRecord.java
     │   ├── SpringDataJournalRepository.java
     │   ├── JpaJournalEntryRepository.java
     │   └── JournalPersistenceMapper.java
@@ -216,6 +216,8 @@ Quy tắc:
 - Domain model bảo vệ invariant, không mở setter hàng loạt.
 - JPA entity nằm trong infrastructure và không được trả ra API.
 - Request/response DTO tách khỏi command/domain để API tiến hóa độc lập.
+- Mỗi request/response DTO của HTTP là một record ở file riêng trong `api/request/` hoặc `api/response/` như cây thư mục trên; không khai báo DTO lồng trong controller. Controller chuyển dữ liệu từ use case sang response DTO, không dùng trực tiếp application result/projection làm HTTP response. Endpoint không có body thì không cần response DTO.
+- Nếu use case cần kiểu dữ liệu trả về riêng, đặt nó trong `application/query/` hoặc `application/result/` theo vai trò, tách khỏi contract HTTP. Ví dụ hiện tại: `ProfileView`, `ConsentView` là dữ liệu application; `ProfileResponse`, `ConsentResponse` là contract API.
 - Mapper quan trọng viết tay và có test.
 
 Ví dụ application service rút gọn:
@@ -268,11 +270,15 @@ PostgreSQL
 Response đi ngược lại qua mapper:
 
 ```text
-JpaEntity → Domain/Projection → Response DTO → JSON
+JPA model → Domain/Projection → Response DTO → JSON
 ```
 
 Khác biệt quan trọng so với mô hình ba layer đơn giản:
 
+- JPA/Hibernate là cách truy cập PostgreSQL thống nhất trong production code. M1 `identity`/`user` dùng entity và `EntityManager` trong `infrastructure/persistence`; adapter ánh xạ entity sang record của application port. Các module tiếp theo cũng đặt entity và adapter tại đây. Có thể dùng native SQL qua JPA cho thao tác đặc thù PostgreSQL hoặc cần tính nguyên tử như `ON CONFLICT`, `DISTINCT ON`, `FOR UPDATE SKIP LOCKED`; kiểm thử các câu SQL đó trên PostgreSQL thật.
+- Class JPA dùng tên ngắn theo đối tượng (`User`, `AuthSession`, `UserProfile`) trong package `infrastructure/persistence`, không thêm hậu tố `Entity`. Nếu trùng tên với domain model, dùng tên thể hiện rõ vai trò như `JournalEntryRecord`. Biến trong repository đặt theo dữ liệu đang xử lý (`user`, `session`, `profile`), không đặt chung là `entity`.
+- Flyway migration là nguồn schema thực thi; Hibernate `ddl-auto=validate` chỉ kiểm tra ánh xạ, không tạo/sửa bảng. Không sửa migration đã áp dụng lên Supabase; thay đổi schema dùng migration mới. Không trả entity trực tiếp qua API.
+- Mặc định bản ghi độc lập dùng `id UUID` do application tạo. Bảng nối chỉ biểu diễn một cặp quan hệ có thể dùng khóa ghép; quan hệ một–một có thể dùng FK làm PK; bảng trạng thái một dòng theo subject có thể dùng subject key. Khi thêm surrogate `id`, vẫn giữ `UNIQUE` trên khóa nghiệp vụ cần lookup/chống trùng. Ví dụ `auth_refresh_history` dùng `id UUID` từ V4 và `UNIQUE(token_hash)` để phát hiện token dùng lại; không dùng `byte[]` làm JPA `@Id` cho bản ghi này.
 - `Service` được gọi là application service/use case và chỉ điều phối một nghiệp vụ cụ thể.
 - Business rule quan trọng nằm trong domain object/policy, không dồn hết vào một service lớn.
 - Repository trong application là interface; code JPA triển khai interface đó ở infrastructure.
@@ -474,13 +480,19 @@ Base path `/api/v1`. JSON `camelCase`; enum `UPPER_SNAKE_CASE`; ID là UUID stri
 
 ```text
 POST   /auth/register
+POST   /auth/email-verifications
+POST   /auth/email-verifications:confirm
 POST   /auth/login
 POST   /auth/refresh
 POST   /auth/logout
 GET    /me
 PATCH  /me
+POST   /me/onboarding:complete
+GET    /me/consents
+PUT    /me/consents/{type}
 GET    /me/sessions
 DELETE /me/sessions/{sessionId}
+DELETE /me/sessions?exceptCurrent=true
 
 POST   /journal-entries
 GET    /journal-entries?from=&to=&cursor=&tag=&favorite=
@@ -584,7 +596,7 @@ Không trả stack trace, SQL, provider response hay journal content. Request t�
 - Khóa dữ liệu không nằm trong DB; production dùng KMS/secret manager và `keyVersion` để rotate.
 - AAD gồm tối thiểu `userId + entryId + fieldName` để chống tráo ciphertext.
 - Không cache raw content lâu hơn request/job.
-- Object storage private, signed URL ngắn hạn, kiểm tra MIME/size/malware.
+- Ảnh journal lưu trên Cloudinary với signed delivery URL ngắn hạn; kiểm tra MIME/size/malware và không dùng unsigned upload preset.
 
 ### 10.3 Logging/audit
 
@@ -739,7 +751,11 @@ MYLOG_JWT_PRIVATE_KEY
 MYLOG_ENCRYPTION_MASTER_KEY_REF
 MYLOG_AI_PROVIDER
 MYLOG_AI_API_KEY
-MYLOG_OBJECT_STORAGE_BUCKET
+MYLOG_CLOUDINARY_ENABLED
+MYLOG_CLOUDINARY_CLOUD_NAME
+MYLOG_CLOUDINARY_API_KEY
+MYLOG_CLOUDINARY_API_SECRET
+MYLOG_CLOUDINARY_FOLDER
 MYLOG_ALLOWED_ORIGINS
 MYLOG_APP_PROFILE=api|worker|all
 ```
@@ -751,7 +767,7 @@ Môi trường:
 - `local`: Docker Compose, mail sink, optional stub AI.
 - `test`: Testcontainers, fixed clock, fake provider.
 - `staging`: synthetic data, topology giống production.
-- `prod`: managed secrets/KMS, backup, alert, least privilege.
+- `prod`: Supabase PostgreSQL, Cloudinary cho ảnh, managed secrets/KMS, backup, alert, least privilege.
 
 ## 17. Observability/vận hành
 

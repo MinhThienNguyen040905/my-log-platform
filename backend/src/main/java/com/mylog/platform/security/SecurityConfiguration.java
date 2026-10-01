@@ -1,6 +1,9 @@
 package com.mylog.platform.security;
 
 import com.mylog.platform.config.MylogProperties;
+import com.mylog.identity.infrastructure.IdentityJwt;
+import com.mylog.identity.infrastructure.IdentityAuthenticationConverter;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -19,16 +22,52 @@ import java.util.List;
 class SecurityConfiguration {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            MylogProperties properties,
+            ProblemAuthenticationEntryPoint authenticationEntryPoint,
+            ProblemAccessDeniedHandler accessDeniedHandler,
+            ObjectProvider<IdentityJwt> identityJwt,
+            ObjectProvider<IdentityAuthenticationConverter> identityConverter
+    ) throws Exception {
+        boolean identityEnabled = properties.identity().enabled();
+        http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                        .anyRequest().denyAll())
-                .requestCache(cache -> cache.disable())
-                .build();
+                .authorizeHttpRequests(authorize -> {
+                    authorize.requestMatchers("/actuator/health", "/actuator/health/**").permitAll();
+                    authorize.requestMatchers(HttpMethod.GET, "/api/v1/safety/resources").permitAll();
+                    if (properties.openApi().enabled()) {
+                        authorize.requestMatchers(
+                                "/internal/openapi", "/internal/openapi/**",
+                                "/internal/swagger-ui", "/internal/swagger-ui/**",
+                                "/swagger-ui/**"
+                        ).permitAll();
+                    }
+                    if (identityEnabled) {
+                        authorize.requestMatchers(HttpMethod.POST,
+                                "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
+                                "/api/v1/auth/email-verifications", "/api/v1/auth/email-verifications:confirm")
+                                .permitAll();
+                        authorize.requestMatchers("/api/v1/auth/logout", "/api/v1/me", "/api/v1/me/**",
+                                        "/api/v1/journal-entries", "/api/v1/journal-entries/**",
+                                        "/api/v1/journal-tags", "/api/v1/journal-tags/**",
+                                        "/api/v1/check-ins", "/api/v1/check-ins/**")
+                                .authenticated();
+                    }
+                    authorize.anyRequest().denyAll();
+                })
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
+                .requestCache(cache -> cache.disable());
+        if (identityEnabled) {
+            http.oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt
+                    .decoder(identityJwt.getObject())
+                    .jwtAuthenticationConverter(identityConverter.getObject())));
+        }
+        return http.build();
     }
 
     @Bean

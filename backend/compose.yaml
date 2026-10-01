@@ -4,9 +4,9 @@ services:
   postgres:
     image: pgvector/pgvector:pg17
     environment:
-      POSTGRES_DB: ${MYLOG_DB_NAME:-mylog}
-      POSTGRES_USER: ${MYLOG_DB_USERNAME:-mylog}
-      POSTGRES_PASSWORD: ${MYLOG_DB_PASSWORD:-mylog_local_only}
+      POSTGRES_DB: ${MYLOG_LOCAL_DB_NAME:-mylog}
+      POSTGRES_USER: ${MYLOG_LOCAL_DB_USERNAME:-mylog}
+      POSTGRES_PASSWORD: ${MYLOG_LOCAL_DB_PASSWORD:-mylog_local_only}
     ports:
       - "5432:5432"
     volumes:
@@ -30,6 +30,13 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "1025:1025"
+      - "8025:8025"
     restart: unless-stopped
 
 volumes:

@@ -5,3 +5,13 @@ spring:
     redis:
       repositories:
         enabled: false
+
+mylog:
+  open-api:
+    enabled: true
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: false

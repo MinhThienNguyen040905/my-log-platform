@@ -8,6 +8,7 @@ Tài liệu thiết kế:
 - [Database design](docs/DATABASE_OVERVIEW.md)
 - [Database DBML](docs/database/mylog.dbml)
 - [Backend development plan](docs/BACKEND_DEVELOPMENT_PLAN.md)
+- [Architecture decisions](docs/adr/README.md)
 
 ## Yêu cầu
 
@@ -45,16 +46,25 @@ MYLOG_SERVER_PORT
 MYLOG_DB_*
 MYLOG_REDIS_URL
 MYLOG_ALLOWED_ORIGINS
+MYLOG_OPENAPI_ENABLED
+MYLOG_SWAGGER_UI_ENABLED
+MYLOG_CLOUDINARY_*
 ```
+
+Database local có thể dùng Docker Compose; môi trường được triển khai dùng PostgreSQL do Supabase quản lý qua `MYLOG_DB_URL`, `MYLOG_DB_USERNAME` và `MYLOG_DB_PASSWORD`. Ảnh nhật ký dùng Cloudinary; bật adapter bằng `MYLOG_CLOUDINARY_ENABLED=true` sau khi điền credential server-side.
 
 ## Chạy local
 
-Khởi động PostgreSQL/pgvector và Redis:
+Nếu `.env` trỏ PostgreSQL tới Supabase, khởi động Redis và Mailpit để chạy identity/email verification:
 
 ```powershell
 cd backend
-docker compose up -d
+docker compose up -d redis mailpit
 ```
+
+Nếu muốn phát triển hoàn toàn offline bằng PostgreSQL/pgvector local, đổi `MYLOG_DB_*` về giá trị trong `.env.example` rồi chạy `docker compose up -d`. Các biến `MYLOG_LOCAL_DB_*` của Compose được tách riêng để credential Supabase không bị dùng cho container local.
+
+Mailpit UI: `http://localhost:8025`. Nếu dùng PostgreSQL local thay Supabase, chạy `docker compose up -d` để khởi động cả ba service.
 
 Chạy ứng dụng:
 
@@ -67,6 +77,64 @@ Kiểm tra:
 ```text
 GET http://localhost:8080/actuator/health
 ```
+
+OpenAPI trong profile local:
+
+```text
+GET http://localhost:8080/internal/openapi
+GET http://localhost:8080/internal/swagger-ui
+```
+
+API docs mặc định bị tắt trong production.
+
+## M1 Identity, profile và consent
+
+Các endpoint M1 được bật trong profile `local`, `staging`, `prod`; profile `test` chỉ bật khi integration test yêu cầu. Luồng local:
+
+1. `POST /api/v1/auth/register` với email, password (tối thiểu 12 ký tự), timezone IANA, locale, `termsVersion`, `privacyVersion`, `acceptTerms=true`, `acceptPrivacy=true`.
+2. Lấy mã xác minh từ Mailpit rồi gọi `POST /api/v1/auth/email-verifications:confirm` với `{ "token": "..." }`.
+3. `POST /api/v1/auth/login` trả access JWT 10 phút và refresh token opaque 30 ngày. `POST /api/v1/auth/refresh` đổi refresh token mỗi lần; dùng lại token cũ sẽ revoke session family.
+4. Dùng `Authorization: Bearer <accessToken>` cho `GET/PATCH /api/v1/me`, consent và session APIs. `PATCH /me` dùng `If-Match` từ ETag của `GET /me`.
+
+M1 dùng BCrypt cost 12, mã hóa email/profile bằng AES-GCM envelope, HMAC có khóa cho email lookup và token hash. Khóa AES dùng để mã hóa payload có thể rotate bằng `MYLOG_IDENTITY_PREVIOUS_KEYS`; `MYLOG_IDENTITY_LOOKUP_KEY` phải giữ ổn định. JWT có thể chuyển khóa ký bằng `MYLOG_JWT_PREVIOUS_PUBLIC_KEYS`. Local/test có khóa phát triển mặc định; staging/prod yêu cầu khóa và SMTP từ secret manager/environment, không có fallback.
+
+Persistence M1 dùng JPA entity và `EntityManager` trong `identity`/`user` `infrastructure/persistence`. Flyway quản lý schema PostgreSQL; Hibernate chạy ở chế độ `validate`. Các thao tác PostgreSQL đặc thù có thể dùng native SQL qua JPA.
+
+## M2 Journal, check-in và safety đầu vào
+
+Sau khi đăng nhập, gửi `Authorization: Bearer <accessToken>` cho các endpoint sau:
+
+| Tài nguyên | Endpoint |
+|---|---|
+| Journal | `POST/GET /api/v1/journal-entries`, `GET/PATCH/DELETE /api/v1/journal-entries/{entryId}` |
+| Favorite | `PUT/DELETE /api/v1/journal-entries/{entryId}/favorite` |
+| Tag | `POST/GET /api/v1/journal-tags`, `PUT/DELETE /api/v1/journal-entries/{entryId}/tags/{tagId}` |
+| Check-in | `PUT/GET /api/v1/check-ins/{localDate}`, `GET /api/v1/check-ins?from=&to=` |
+
+`POST journal` cần `Idempotency-Key` dài 8–160 ký tự và `contentJson` là TipTap document đã allowlist. `PATCH/DELETE journal` cần `If-Match` bằng ETag trả từ GET/create; version xung đột trả `409`. Danh sách journal dùng cursor, `limit` 1–100, và lọc `from`, `to`, `tag`, `favorite`. Ngày được tính từ `occurredAt` với timezone IANA gửi trong request. Check-in dùng một bản ghi cho mỗi user/ngày; `PUT` thay cả metrics, note và activities của ngày đó. Note và journal payload được mã hóa trước khi ghi DB.
+
+Safety ingress luôn chạy lúc tạo/sửa journal. Rule HIGH/CRITICAL đặt `analysisStatus=BLOCKED_BY_SAFETY`; nếu classifier không khả dụng thì trạng thái cũng bị chặn và outbox chỉ có ID/version cho lần screen lại. Chưa có classifier hoặc bộ nội dung/nguồn hỗ trợ được duyệt; các bản ghi `safety_resources` không được tự điền hotline. Frontend hiện là prototype dùng auth mock và `localStorage`; chưa kết nối API M1/M2.
+
+`GET /api/v1/safety/resources?locale=vi-VN&country=VN` là API công khai, chỉ trả nguồn hỗ trợ đã được duyệt, có `verified_at` và nguồn HTTPS. Frontend safety modal dùng `NEXT_PUBLIC_BACKEND_URL` để đọc API này (mặc định `http://localhost:8080` khi phát triển local) và chỉ hiện liên hệ khi API trả dữ liệu đã xác minh. Classifier trả mức rủi ro thấp cũng không mở ordinary analysis nếu `safety_policy_versions` chưa có policy `APPROVED` đang hiệu lực với rule version, classifier provider/version và ngưỡng confidence khớp. Hiện chưa có policy được duyệt nên API nguồn hỗ trợ trả danh sách rỗng và journal vẫn ở chế độ fail-safe.
+
+## Supabase PostgreSQL
+
+Project `mylog` dùng Supabase PostgreSQL 17 và kết nối qua IPv4 session pooler với SSL. Flyway vẫn là nguồn quản lý schema; không sửa schema production trực tiếp bằng Table Editor.
+
+Credential nằm trong `.env` local hoặc secret manager khi deploy. Không đưa database password, service-role key hoặc connection string chứa password vào Git.
+
+## Cloudinary
+
+Cloudinary chỉ dùng cho ảnh journal. Backend đã có Cloudinary Java SDK và fail-fast validation khi `MYLOG_CLOUDINARY_ENABLED=true`. Cần cấu hình bốn biến server-side:
+
+```text
+MYLOG_CLOUDINARY_CLOUD_NAME
+MYLOG_CLOUDINARY_API_KEY
+MYLOG_CLOUDINARY_API_SECRET
+MYLOG_CLOUDINARY_FOLDER=mylog
+```
+
+Không gửi `MYLOG_CLOUDINARY_API_SECRET` xuống frontend. Quy tắc signed delivery, metadata và deletion được chốt trong [ADR-0006](docs/adr/0006-cloudinary-image-storage.md).
 
 Tắt hạ tầng local nhưng giữ dữ liệu:
 
@@ -87,6 +155,20 @@ Build artifact:
 ```powershell
 ./mvnw.cmd clean package
 ```
+
+Kiểm tra tên và thứ tự Flyway migration:
+
+```powershell
+./scripts/check-migrations.ps1
+```
+
+Chạy dependency vulnerability scan:
+
+```powershell
+./mvnw.cmd -Psecurity-checks verify
+```
+
+Report được tạo tại `target/dependency-check-report.html`. CI còn chạy Gitleaks, xuất OpenAPI JSON và build container trên mỗi pull request.
 
 Build container:
 

@@ -23,7 +23,7 @@ Tài liệu này là nguồn thiết kế chính cho schema. File DBML đi kèm 
 | Thành phần | Quy ước |
 |---|---|
 | Table/column/index | `snake_case` |
-| Primary key | `id UUID` |
+| Primary key | Mặc định `id UUID`; bảng nối có thể dùng khóa ghép, bảng trạng thái theo một subject hoặc quan hệ một–một có thể dùng khóa nghiệp vụ nếu tránh được `id` dư thừa |
 | ID tạo ở application | UUIDv7 để index locality tốt; test có thể dùng fixed UUID |
 | Timestamp | `TIMESTAMPTZ`, luôn lưu UTC |
 | Ngày theo người dùng | `local_date DATE` + `timezone VARCHAR(64)` |
@@ -111,8 +111,9 @@ Chứa identity tối thiểu, không chứa profile wellness.
 | Column | Type | Constraint/ý nghĩa |
 |---|---|---|
 | `id` | UUID | PK |
-| `email_lookup_hash` | BYTEA | NOT NULL, UNIQUE; HMAC của email normalize để login |
+| `email_lookup_hash` | BYTEA | NOT NULL; partial unique khi `deleted_at IS NULL`, HMAC của email normalize |
 | `encrypted_email` | BYTEA | NOT NULL |
+| `email_iv`, `email_wrapped_key` | BYTEA | nonce và wrapped DEK |
 | `email_key_version` | VARCHAR(32) | NOT NULL |
 | `password_hash` | VARCHAR(255) | NULL nếu external IdP |
 | `auth_provider` | VARCHAR(32) | `LOCAL`, `GOOGLE`, `OIDC` |
@@ -140,6 +141,7 @@ Indexes:
 |---|---|---|
 | `user_id` | UUID | PK, FK users CASCADE |
 | `encrypted_profile` | BYTEA | display name, pen name và dữ liệu riêng tư |
+| `profile_iv`, `profile_wrapped_key` | BYTEA | nonce và wrapped DEK |
 | `profile_key_version` | VARCHAR(32) | key version |
 | `timezone` | VARCHAR(64) | IANA timezone, ví dụ `Asia/Ho_Chi_Minh` |
 | `locale` | VARCHAR(10) | `vi`, `en` |
@@ -160,10 +162,9 @@ Một user có nhiều quyết định consent theo loại và version.
 | `document_version` | VARCHAR(40) | version văn bản user đã xem |
 | `granted` | BOOLEAN | quyết định |
 | `decided_at` | TIMESTAMPTZ | thời điểm quyết định |
-| `withdrawn_at` | TIMESTAMPTZ | nullable |
 | `source` | VARCHAR(24) | `ONBOARDING`, `SETTINGS`, `ADMIN_IMPORT` |
 
-Unique `(user_id, consent_type, document_version)`. Không update lịch sử consent; quyết định mới tạo record/version mới.
+Không update lịch sử consent. Mỗi quyết định mới tạo row riêng, kể cả rút lại/chấp thuận lại cùng `document_version`. Index `(user_id, consent_type, decided_at DESC)` phục vụ truy vấn quyết định mới nhất.
 
 ### 4.4 RBAC
 
@@ -182,7 +183,7 @@ Unique theo `code`, composite PK cho join table. `assigned_by` FK users với `O
 |---|---|---|
 | `id` | UUID | PK/session ID |
 | `user_id` | UUID | FK users CASCADE |
-| `refresh_token_hash` | BYTEA | UNIQUE, không lưu token thô |
+| `current_token_hash` | BYTEA | UNIQUE, HMAC của refresh token hiện tại; không lưu token thô |
 | `token_family_id` | UUID | phát hiện refresh token reuse |
 | `device_name` | VARCHAR(120) | nullable, user-facing |
 | `user_agent_hash` | BYTEA | optional, không lưu raw nếu không cần |
@@ -194,7 +195,9 @@ Unique theo `code`, composite PK cho join table. `assigned_by` FK users với `O
 
 Index `(user_id, revoked_at, expires_at)` và cleanup index `(expires_at)`.
 
-Token verify/reset dùng table chung `auth_action_tokens` với `token_hash`, `purpose`, `expires_at`, `consumed_at`; tuyệt đối không lưu token thô.
+`auth_refresh_history` có `id UUID` làm khóa chính và `token_hash BYTEA NOT NULL UNIQUE` để tra cứu HMAC của token đã dùng, phát hiện replay và revoke toàn bộ `token_family_id`. V4 backfill UUID cho dòng cũ; dòng mới nhận UUIDv7 từ application. Token verify/reset dùng table chung `auth_action_tokens` với `token_hash`, `purpose`, `expires_at`, `consumed_at`; tuyệt đối không lưu token thô. `auth_rate_limits` lưu HMAC của IP/email pseudonym và cửa sổ giới hạn, được cleanup định kỳ.
+
+Chọn khóa chính theo vai trò dữ liệu: bản ghi có vòng đời hoặc cần tham chiếu độc lập dùng `id UUID`; bảng nối thuần túy dùng khóa ghép của hai khóa ngoại nếu mỗi cặp chỉ được tồn tại một lần; quan hệ một–một như `user_profiles` có thể dùng `user_id` vừa là PK vừa là FK; bảng trạng thái chỉ có một dòng cho mỗi subject như `auth_rate_limits` có thể dùng subject hash làm PK. Nếu thêm `id` cho bảng vốn được định danh bằng giá trị khác, vẫn phải giữ `UNIQUE` trên giá trị đó. Tránh dùng `byte[]` làm `@Id` cho bản ghi có vòng đời trong JPA. Xác định PK, unique và mục đích truy vấn trước khi viết migration; không thêm `id` chỉ để mọi bảng giống nhau.
 
 ## 5. Journal và check-in
 
@@ -276,13 +279,17 @@ Unique `(user_id, name_lookup_hash)`. `journal_entry_tags(entry_id, tag_id, crea
 
 ### 5.3 `journal_assets`
 
-Chỉ lưu metadata, binary nằm trong private object storage.
+Chỉ lưu metadata; binary ảnh nằm trên Cloudinary theo ADR-0006.
 
 ```text
 id UUID PK
 journal_entry_id UUID FK journal_entries CASCADE
 user_id UUID FK users CASCADE
-storage_key VARCHAR(512) UNIQUE NOT NULL
+provider_asset_id VARCHAR(255) UNIQUE NOT NULL
+public_id VARCHAR(512) UNIQUE NOT NULL
+provider_version BIGINT NOT NULL
+format VARCHAR(32) NOT NULL
+delivery_type VARCHAR(32) NOT NULL CHECK AUTHENTICATED/PRIVATE
 asset_type VARCHAR(24) CHECK IMAGE/ATTACHMENT
 mime_type VARCHAR(120)
 size_bytes BIGINT CHECK >= 0
@@ -294,7 +301,7 @@ caption_key_version VARCHAR(32) NULL
 created_at, deleted_at TIMESTAMPTZ
 ```
 
-Không lưu signed URL vì URL có thời hạn; sinh URL khi trả response.
+Không lưu signed URL vì URL có thời hạn; backend sinh URL Cloudinary đã ký khi trả response. `public_id` không chứa PII hoặc nội dung journal.
 
 ### 5.4 `daily_checkins`
 
@@ -818,7 +825,7 @@ PostgreSQL Row Level Security là defense-in-depth cho phase hardening. Chưa b�
 | Audit admin | giữ theo policy vận hành; không giữ sensitive content |
 | Backup | expiry riêng; deletion SLA phải tính cả backup lifecycle |
 
-Account deletion worker xóa theo batch/idempotent. Không dựa hoàn toàn vào cascade vì còn object storage, cache và provider-side artifacts.
+Account deletion worker xóa theo batch/idempotent. Không dựa hoàn toàn vào cascade vì còn Cloudinary assets, cache và provider-side artifacts.
 
 ## 17. Transaction boundaries
 
@@ -854,24 +861,25 @@ Một transaction:
 Giữ `V1__platform_foundation.sql` cho extension. Các migration tiếp theo nên nhỏ theo dependency:
 
 ```text
-V2__identity_and_rbac.sql
+V2__identity_and_rbac.sql          -- bao gồm audit_logs cần cho session revoke
 V3__user_profile_and_consent.sql
-V4__journal_and_checkin.sql
-V5__platform_outbox_idempotency_audit.sql
-V6__safety.sql
-V7__ai_analysis_and_jobs.sql
-V8__insights_and_reports.sql
-V9__selfcare.sql
-V10__knowledge_and_prompts.sql
-V11__exports_deletion_feedback.sql
-V12__seed_extended_admin_roles_permissions.sql
+V4__auth_refresh_history_id.sql   -- thêm id, giữ token_hash unique
+V5__journal_and_checkin.sql
+V6__platform_outbox_idempotency_audit.sql  -- không tạo lại audit_logs
+V7__safety.sql
+V8__ai_analysis_and_jobs.sql
+V9__insights_and_reports.sql
+V10__selfcare.sql
+V11__knowledge_and_prompts.sql
+V12__exports_deletion_feedback.sql
+V13__seed_extended_admin_roles_permissions.sql
 ```
 
 Quy tắc Flyway:
 
 - Migration đã merge/deploy không được sửa.
 - DDL mới có migration mới, kể cả sửa constraint/index.
-- V2 seed luôn role `USER` tối thiểu để registration hoạt động; V12 bổ sung các admin role/permission đã ổn định.
+- V2 seed luôn role `USER` tối thiểu để registration hoạt động; V13 dự kiến bổ sung các admin role/permission đã ổn định.
 - Seed chỉ dành cho stable system codes/roles, không seed journal/user thật.
 - Index lớn production dùng kế hoạch online/concurrent riêng; `CREATE INDEX CONCURRENTLY` không chạy trong transaction Flyway mặc định.
 - Mỗi migration phải chạy được trên database rỗng và database có dữ liệu representative.
@@ -907,4 +915,4 @@ Quy tắc Flyway:
 - [ ] Job/outbox payload không chứa raw content.
 - [ ] Insight/report có sample size và evidence.
 - [ ] Migration chạy qua PostgreSQL/pgvector Testcontainers.
-- [ ] Account deletion test xác nhận không còn dữ liệu ở DB, cache và object storage.
+- [ ] Account deletion test xác nhận không còn dữ liệu ở DB, cache và Cloudinary.

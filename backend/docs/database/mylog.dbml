@@ -5,8 +5,10 @@ Project mylog {
 
 Table users {
   id uuid [pk]
-  email_lookup_hash bytea [not null, unique]
+  email_lookup_hash bytea [not null, note: 'Partial unique where deleted_at IS NULL in Flyway V2']
   encrypted_email bytea [not null]
+  email_iv bytea [not null]
+  email_wrapped_key bytea [not null]
   email_key_version varchar(32) [not null]
   password_hash varchar(255)
   auth_provider varchar(32) [not null]
@@ -24,6 +26,8 @@ Table users {
 Table user_profiles {
   user_id uuid [pk, ref: > users.id]
   encrypted_profile bytea [not null]
+  profile_iv bytea [not null]
+  profile_wrapped_key bytea [not null]
   profile_key_version varchar(32) [not null]
   timezone varchar(64) [not null]
   locale varchar(10) [not null]
@@ -41,11 +45,10 @@ Table user_consents {
   document_version varchar(40) [not null]
   granted boolean [not null]
   decided_at timestamptz [not null]
-  withdrawn_at timestamptz
   source varchar(24) [not null]
 
   indexes {
-    (user_id, consent_type, document_version) [unique]
+    (user_id, consent_type, decided_at)
   }
 }
 
@@ -90,7 +93,7 @@ Table user_roles {
 Table auth_sessions {
   id uuid [pk]
   user_id uuid [not null, ref: > users.id]
-  refresh_token_hash bytea [not null, unique]
+  current_token_hash bytea [not null, unique]
   token_family_id uuid [not null]
   device_name varchar(120)
   user_agent_hash bytea
@@ -100,6 +103,30 @@ Table auth_sessions {
   revoked_at timestamptz
   revoke_reason varchar(40)
   created_at timestamptz [not null]
+}
+
+Table auth_refresh_history {
+  id uuid [pk]
+  token_hash bytea [not null, unique]
+  session_id uuid [not null, ref: > auth_sessions.id]
+  used_at timestamptz [not null]
+}
+
+Table auth_action_tokens {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  token_hash bytea [not null, unique]
+  purpose varchar(32) [not null]
+  expires_at timestamptz [not null]
+  consumed_at timestamptz
+  created_at timestamptz [not null]
+}
+
+Table auth_rate_limits {
+  subject_hash bytea [pk]
+  attempts integer [not null]
+  window_started_at timestamptz [not null]
+  blocked_until timestamptz
 }
 
 Table journal_entries {
@@ -140,6 +167,8 @@ Table journal_tags {
   user_id uuid [not null, ref: > users.id]
   name_lookup_hash bytea [not null]
   encrypted_name bytea [not null]
+  name_iv bytea [not null]
+  name_wrapped_key bytea [not null]
   name_key_version varchar(32) [not null]
   color varchar(9)
   created_at timestamptz [not null]
@@ -164,13 +193,19 @@ Table journal_assets {
   id uuid [pk]
   journal_entry_id uuid [not null, ref: > journal_entries.id]
   user_id uuid [not null, ref: > users.id]
-  storage_key varchar(512) [not null, unique]
+  provider_asset_id varchar(255) [not null, unique]
+  public_id varchar(512) [not null, unique]
+  provider_version bigint [not null]
+  format varchar(32) [not null]
+  delivery_type varchar(32) [not null]
   asset_type varchar(24) [not null]
   mime_type varchar(120) [not null]
   size_bytes bigint [not null]
   sha256 bytea [not null]
   status varchar(24) [not null]
   encrypted_caption bytea
+  caption_iv bytea
+  caption_wrapped_key bytea
   caption_key_version varchar(32)
   created_at timestamptz [not null]
   deleted_at timestamptz
@@ -187,6 +222,8 @@ Table daily_checkins {
   energy_score numeric(3,1)
   sleep_minutes smallint
   encrypted_note bytea
+  note_iv bytea
+  note_wrapped_key bytea
   note_key_version varchar(32)
   source varchar(24) [not null]
   created_at timestamptz [not null]
@@ -195,6 +232,19 @@ Table daily_checkins {
 
   indexes {
     (user_id, local_date) [unique]
+  }
+}
+
+Table checkin_activities {
+  id uuid [pk]
+  checkin_id uuid [not null, ref: > daily_checkins.id]
+  activity_code varchar(40) [not null]
+  duration_minutes smallint
+  intensity varchar(16)
+  created_at timestamptz [not null]
+
+  indexes {
+    (checkin_id, activity_code) [unique]
   }
 }
 
@@ -263,6 +313,34 @@ Table safety_events {
   confidence numeric(6,5)
   resource_set_version varchar(40)
   created_at timestamptz [not null]
+}
+
+Table safety_policy_versions {
+  id uuid [pk]
+  version varchar(40) [not null, unique]
+  status varchar(24) [not null]
+  config jsonb [not null]
+  approved_by uuid [ref: > users.id]
+  approved_at timestamptz
+  effective_from timestamptz
+  effective_to timestamptz
+  created_at timestamptz [not null]
+}
+
+Table safety_resources {
+  id uuid [pk]
+  locale varchar(10) [not null]
+  country_code varchar(2) [not null, note: 'Exactly two characters; checked in V7']
+  resource_type varchar(32) [not null]
+  name varchar(200) [not null]
+  contact_value varchar(300)
+  description text
+  source_url text
+  verified_at timestamptz
+  status varchar(24) [not null]
+  version integer [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
 }
 
 Table ai_jobs {
@@ -468,6 +546,24 @@ Table outbox_events {
   locked_by varchar(120)
   created_at timestamptz [not null]
   published_at timestamptz
+}
+
+Table idempotency_keys {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  operation varchar(80) [not null]
+  idempotency_key varchar(160) [not null]
+  request_hash bytea [not null]
+  response_status integer
+  response_reference uuid
+  state varchar(24) [not null]
+  expires_at timestamptz [not null]
+  created_at timestamptz [not null]
+  completed_at timestamptz
+
+  indexes {
+    (user_id, operation, idempotency_key) [unique]
+  }
 }
 
 Table audit_logs {

@@ -52,11 +52,11 @@ Kế hoạch này biến blueprint kiến trúc thành các increment có thể 
 - [x] ArchUnit rule nền tảng.
 - [x] Testcontainers configuration.
 - [x] Backend architecture và database blueprint.
+- [x] M1 backend: identity/profile/consent API, V2–V4 migrations và PostgreSQL integration tests.
 
 ### Chưa triển khai
 
-- [ ] Entity/repository nghiệp vụ.
-- [ ] Identity/JWT/session.
+- [ ] Entity/repository nghiệp vụ ngoài identity/user.
 - [ ] Journal/check-in API.
 - [ ] Mã hóa journal cấp application.
 - [ ] Safety engine.
@@ -110,51 +110,51 @@ Biến project skeleton thành nền tảng mà các module có thể phát tri�
 
 #### FND-001 — Chốt ADR nền tảng (P0, M)
 
-- [ ] ADR authentication: local credential + JWT hay external IdP.
-- [ ] ADR encryption: local key provider và production KMS contract.
-- [ ] ADR safety classifier/rule ownership.
-- [ ] ADR AI provider và data retention.
-- [ ] ADR object storage.
+- [x] ADR authentication: local credential + JWT hay external IdP.
+- [x] ADR encryption: local key provider và production KMS contract.
+- [x] ADR safety classifier/rule ownership.
+- [x] ADR AI provider và data retention.
+- [x] ADR object storage.
 
 Không cần chốt model AI cuối cùng để làm journal; cần chốt provider interface và data handling trước M3.
 
 #### FND-002 — Error contract (P0, M)
 
-- [ ] `ApiProblem` theo `application/problem+json`.
-- [ ] `GlobalExceptionHandler`.
-- [ ] Stable error codes: validation, unauthorized, forbidden, not found, conflict, rate limited, dependency unavailable.
-- [ ] Không trả stack trace, SQL hoặc provider response.
-- [ ] Controller test cho từng nhóm lỗi.
+- [x] `ApiProblem` theo `application/problem+json`.
+- [x] `GlobalExceptionHandler`.
+- [x] Stable error codes: validation, unauthorized, forbidden, not found, conflict, rate limited, dependency unavailable.
+- [x] Không trả stack trace, SQL hoặc provider response.
+- [x] Controller test cho từng nhóm lỗi.
 
 #### FND-003 — Request context và logging (P0, M)
 
-- [ ] Nhận hoặc tạo `X-Request-Id`.
-- [ ] Đưa request ID/trace ID vào MDC.
-- [ ] JSON logging cho staging/prod.
-- [ ] Redaction test cho Authorization, cookie, email và journal fields.
-- [ ] Không log request/response body mặc định.
+- [x] Nhận hoặc tạo `X-Request-Id`.
+- [x] Đưa request ID/trace ID vào MDC.
+- [x] JSON logging cho staging/prod.
+- [x] Redaction test cho Authorization, cookie, email và journal fields.
+- [x] Không log request/response body mặc định.
 
 #### FND-004 — Clock, UUID và current user ports (P0, S)
 
-- [ ] Inject `Clock` thay vì gọi thời gian trực tiếp.
-- [ ] `IdGenerator` sinh UUIDv7.
-- [ ] `CurrentUser` abstraction, chưa phụ thuộc controller.
-- [ ] Fixed test implementations.
+- [x] Inject `Clock` thay vì gọi thời gian trực tiếp.
+- [x] `IdGenerator` sinh UUIDv7.
+- [x] `CurrentUser` abstraction, chưa phụ thuộc controller.
+- [x] Fixed test implementations.
 
 #### FND-005 — CI baseline (P0, M)
 
-- [ ] Compile và unit/architecture test trên mỗi pull request.
-- [ ] Integration test khi Docker/Testcontainers khả dụng.
-- [ ] Dependency vulnerability scan.
-- [ ] Kiểm tra secret và migration naming.
-- [ ] Build container nhưng chưa push production registry.
+- [x] Compile và unit/architecture test trên mỗi pull request.
+- [x] Integration test khi Docker/Testcontainers khả dụng.
+- [x] Dependency vulnerability scan.
+- [x] Kiểm tra secret và migration naming.
+- [x] Build container nhưng chưa push production registry.
 
 #### FND-006 — OpenAPI baseline (P1, S)
 
-- [ ] Cấu hình API title/version/server.
-- [ ] Khai báo bearer authentication scheme.
-- [ ] Hide actuator/internal endpoints.
-- [ ] Export OpenAPI JSON làm contract artifact.
+- [x] Cấu hình API title/version/server.
+- [x] Khai báo bearer authentication scheme.
+- [x] Hide actuator/internal endpoints.
+- [x] Export OpenAPI JSON làm contract artifact.
 
 ### Exit criteria M0
 
@@ -164,23 +164,33 @@ Không cần chốt model AI cuối cùng để làm journal; cần chốt provi
 - ADR P0 được merge.
 - Không có secret trong Git history mới.
 
+### Bằng chứng hoàn thành M0
+
+- ADR đã được chốt tại `docs/adr/` với trạng thái `Accepted`.
+- `mvn test` và `mvn verify` chạy contract, security, request-context, redaction, UUIDv7 và architecture tests.
+- Integration test dùng PostgreSQL/pgvector và Redis Testcontainers; tự chạy khi Docker khả dụng và được CI bắt buộc bằng Docker daemon.
+- CI kiểm tra Flyway naming, secret bằng Gitleaks, dependency bằng OWASP Dependency-Check, xuất OpenAPI artifact và build container.
+- OpenAPI chỉ bật theo cấu hình; profile production tắt API docs/Swagger UI và dùng structured JSON logging.
+- `.env` local được Git ignore; repository chỉ lưu `.env.example` không chứa secret thật.
+
 ## 7. M1 — Identity, RBAC và profile
 
 ### Database
 
-- [ ] `V2__identity_and_rbac.sql`.
-- [ ] `V3__user_profile_and_consent.sql`.
-- [ ] V2 seed role `USER` tối thiểu; admin role/permission mở rộng được bổ sung khi codes ổn định.
-- [ ] Repository integration test trên PostgreSQL thật.
+- [x] `V2__identity_and_rbac.sql`.
+- [x] `V3__user_profile_and_consent.sql`.
+- [x] `V4__auth_refresh_history_id.sql`: khóa chính UUID cho lịch sử refresh, `token_hash` tiếp tục unique.
+- [x] V2 seed role `USER` tối thiểu; admin role/permission mở rộng được bổ sung khi codes ổn định.
+- [x] Repository integration test trên PostgreSQL thật.
 
 ### IDN-001 — User registration (P0, L)
 
-- [ ] Normalize email theo policy cố định.
-- [ ] HMAC email lookup + encrypted email.
-- [ ] Hash password bằng Argon2id/BCrypt đã benchmark.
-- [ ] Tạo user/profile/default USER role trong một transaction.
-- [ ] Idempotent email verification token.
-- [ ] Rate limit theo IP/email pseudonym.
+- [x] Normalize email theo policy cố định.
+- [x] HMAC email lookup + encrypted email.
+- [x] Hash password bằng BCrypt cost 12; benchmark local ban đầu bên dưới.
+- [x] Tạo user/profile/default USER role trong một transaction.
+- [x] Idempotent email verification token.
+- [x] Rate limit theo IP/email pseudonym.
 
 API:
 
@@ -192,11 +202,11 @@ POST /api/v1/auth/email-verifications:confirm
 
 ### IDN-002 — Login/token rotation (P0, L)
 
-- [ ] Access JWT sống ngắn.
-- [ ] Refresh token opaque, chỉ lưu hash.
-- [ ] Rotation và token-family reuse detection.
-- [ ] Lock/rate limit sau nhiều lần đăng nhập sai.
-- [ ] Revoke family khi phát hiện reuse.
+- [x] Access JWT sống ngắn.
+- [x] Refresh token opaque, chỉ lưu hash.
+- [x] Rotation và token-family reuse detection.
+- [x] Lock/rate limit sau nhiều lần đăng nhập sai.
+- [x] Revoke family khi phát hiện reuse.
 
 API:
 
@@ -208,9 +218,9 @@ POST /api/v1/auth/logout
 
 ### IDN-003 — Session management (P1, M)
 
-- [ ] Danh sách session không lộ raw user agent/IP đầy đủ.
-- [ ] Revoke một session hoặc tất cả session khác.
-- [ ] Audit action revoke nhạy cảm.
+- [x] Danh sách session không lộ raw user agent/IP đầy đủ.
+- [x] Revoke một session hoặc tất cả session khác.
+- [x] Audit action revoke nhạy cảm.
 
 ```text
 GET    /api/v1/me/sessions
@@ -220,10 +230,10 @@ DELETE /api/v1/me/sessions?exceptCurrent=true
 
 ### USR-001 — Profile/onboarding (P0, M)
 
-- [ ] Profile encrypted payload.
-- [ ] Validate IANA timezone và locale.
-- [ ] Optimistic locking.
-- [ ] Onboarding goals không được hiểu là diagnosis.
+- [x] Profile encrypted payload.
+- [x] Validate IANA timezone và locale.
+- [x] Optimistic locking.
+- [x] Onboarding goals giới hạn ở các mã wellness; không dùng diagnosis/treatment.
 
 ```text
 GET   /api/v1/me
@@ -233,10 +243,12 @@ POST  /api/v1/me/onboarding:complete
 
 ### USR-002 — Consent/privacy (P0, M)
 
-- [ ] Versioned TERMS/PRIVACY/AI_PROCESSING consent.
-- [ ] Optional analytics/model-training mặc định false.
-- [ ] Withdraw consent không xóa lịch sử quyết định.
+- [x] Versioned TERMS/PRIVACY/AI_PROCESSING consent.
+- [x] Optional analytics/model-training mặc định false.
+- [x] Withdraw consent không xóa lịch sử quyết định.
 - [ ] AI use case kiểm tra consent tại execution time, không chỉ enqueue time.
+
+`UserProfileUseCase.isConsentGranted` đã có để M3 kiểm tra consent khi worker thực thi; chưa có AI worker trong M1 nên mục trên vẫn mở.
 
 ### Test bắt buộc
 
@@ -254,32 +266,41 @@ POST  /api/v1/me/onboarding:complete
 - Permission seed và authorization test pass.
 - Không lưu plaintext email/token/password.
 
+### Bằng chứng và giới hạn M1 backend
+
+- Persistence M1 dùng JPA entity và `EntityManager` trong `identity`/`user` `infrastructure/persistence`, với native SQL qua JPA cho rate-limit upsert và truy vấn consent mới nhất. Flyway V2–V4 vẫn là schema nguồn; Hibernate chỉ `validate`.
+- Flyway V2–V4, register → email verification → login → profile/consent → refresh/reuse chạy qua PostgreSQL Testcontainers. Test có registration race, account pending/suspended, ownership session, ciphertext/tokens, log redaction và key rotation. OpenAPI artifact được xuất từ context bật M1, có các endpoint identity/profile.
+- BCrypt cost 12 được chọn sau benchmark local ngày 2026-09-30 (Java 25 trên máy phát triển): trung bình khoảng 264 ms cho một cặp encode + verify; cost 10 khoảng 70 ms, cost 11 khoảng 131 ms. Cần đo lại trên hạ tầng triển khai trước release.
+- Local email verification gửi đến Mailpit (`docker compose up -d mailpit`, UI cổng 8025). Production cần SMTP và khóa do secret manager cung cấp; không dùng fallback local.
+- Frontend chưa tích hợp các API M1; điều kiện frontend ở exit criteria cần được xác nhận khi tích hợp.
+- M1 dùng `audit_logs` sớm trong V2 để audit session revoke. Khi viết V6, chỉ bổ sung outbox/idempotency và phần audit còn thiếu, không tạo lại bảng này.
+
 ## 8. M2 — Journal, check-in và safety đầu vào
 
 ### Database
 
-- [ ] `V4__journal_and_checkin.sql`.
-- [ ] `V5__platform_outbox_idempotency_audit.sql` phần cần cho journal.
-- [ ] `V6__safety.sql`.
-- [ ] Constraint/range/index đúng database blueprint.
+- [x] `V5__journal_and_checkin.sql`.
+- [x] `V6__platform_outbox_idempotency_audit.sql` phần cần cho journal.
+- [x] `V7__safety.sql`.
+- [x] Constraint/range/index cho các bảng M2; đã validate trên PostgreSQL 17 và Supabase.
 
 ### JRN-001 — Encryption adapter (P0, L)
 
-- [ ] `JournalContentCipher` port.
-- [ ] AES-GCM adapter với nonce duy nhất và AAD.
-- [ ] Local key provider chỉ dùng development.
-- [ ] Key version trong mỗi payload.
-- [ ] Decrypt failure trả lỗi an toàn, không log ciphertext/key.
-- [ ] Test tampering, wrong owner/AAD và rotation path.
+- [x] `JournalContentCipher` port.
+- [x] AES-GCM adapter với nonce duy nhất và AAD.
+- [x] Local key provider chỉ dùng development.
+- [x] Key version trong mỗi payload.
+- [x] Decrypt failure trả lỗi an toàn, không log ciphertext/key.
+- [x] Test tampering, wrong owner/AAD và rotation path qua shared cipher và journal integration.
 
 ### JRN-002 — Create/read journal (P0, L)
 
-- [ ] Validate TipTap JSON allowlist và giới hạn size/depth.
-- [ ] Server tự sinh plain text đã sanitize.
-- [ ] Normalize mood/stress/energy/sleep.
-- [ ] Lưu `occurred_at`, timezone snapshot và `local_date`.
-- [ ] Idempotency-Key cho create.
-- [ ] Ownership query bắt buộc `entryId + currentUserId`.
+- [x] Validate TipTap JSON allowlist và giới hạn size/depth.
+- [x] Server tự sinh plain text đã sanitize.
+- [x] Validate mood/stress/energy/sleep theo range và precision.
+- [x] Lưu `occurred_at`, timezone snapshot và `local_date`.
+- [x] Idempotency-Key cho create.
+- [x] Ownership query bắt buộc `entryId + currentUserId`.
 
 ```text
 POST /api/v1/journal-entries
@@ -289,17 +310,17 @@ GET  /api/v1/journal-entries?cursor=&from=&to=&tag=&favorite=
 
 ### JRN-003 — Update/delete/favorite (P0, M)
 
-- [ ] `If-Match` hoặc row version chống lost update.
-- [ ] Tăng content version khi field ảnh hưởng analysis thay đổi.
-- [ ] Soft delete + purge workflow.
-- [ ] Favorite endpoints idempotent.
-- [ ] Entry đã xóa không xuất hiện trong list/dashboard.
+- [x] `If-Match` hoặc row version chống lost update.
+- [x] Tăng content version khi update nội dung hoặc metadata ảnh hưởng analysis.
+- [x] Soft delete + purge sau 30 ngày; chặn purge nếu còn asset chưa xóa.
+- [x] Favorite endpoints idempotent.
+- [x] Entry đã xóa không xuất hiện trong list journal.
 
 ### JRN-004 — Tags/assets (P1, L)
 
-- [ ] Tag encrypted + HMAC lookup.
-- [ ] Giới hạn số tag/entry và độ dài.
-- [ ] Asset upload dùng presigned workflow/private bucket.
+- [x] Tag encrypted + HMAC lookup theo user.
+- [x] Giới hạn 20 tag/entry và tên 40 code point.
+- [ ] Asset upload dùng Cloudinary signed workflow, delivery type private/authenticated.
 - [ ] MIME/size/checksum/malware state.
 - [ ] Không chấp nhận remote URL tùy ý làm storage source.
 
@@ -307,26 +328,26 @@ Asset có thể chuyển P2 nếu demo MVP không cần upload ảnh thật.
 
 ### CHK-001 — Daily check-in (P0, M)
 
-- [ ] Upsert một check-in/user/local date.
-- [ ] Validate timezone và metric range.
-- [ ] Activity structured codes.
+- [x] Upsert một check-in/user/local date.
+- [x] Validate timezone và metric range.
+- [x] Activity structured codes.
 - [ ] Quy tắc dashboard ưu tiên daily check-in, journal observation chỉ fallback.
 
 ### SAF-001 — Rule-based screening (P0, L)
 
 - [ ] Versioned curated rules cho tiếng Việt/Anh.
 - [ ] `NORMAL/LOW/MODERATE/HIGH/CRITICAL`.
-- [ ] Fail-safe nếu classifier unavailable.
+- [x] Fail-safe nếu classifier unavailable.
 - [ ] Safety response/resource duyệt trước theo locale.
-- [ ] Chỉ lưu event tối thiểu, không lưu matched raw text.
-- [ ] HIGH/CRITICAL không phát event analysis thông thường.
+- [x] Chỉ lưu event tối thiểu, không lưu matched raw text.
+- [x] HIGH/CRITICAL không phát event analysis thông thường.
 
 ### SAF-002 — Safety regression corpus (P0, L)
 
-- [ ] Synthetic cases: trực tiếp, phủ định, trích dẫn, tiếng lóng, mỉa mai.
-- [ ] Theo dõi false positive/false negative.
-- [ ] Không commit dữ liệu người dùng thật.
-- [ ] Báo cáo eval có rule/classifier version.
+- [x] Synthetic cases: trực tiếp, phủ định, trích dẫn, tiếng lóng, mỉa mai.
+- [ ] Theo dõi false positive/false negative trên bộ nhãn được duyệt.
+- [x] Không commit dữ liệu người dùng thật.
+- [ ] Báo cáo eval có rule/classifier version và ngưỡng chấp nhận.
 
 ### Exit criteria M2
 
@@ -336,12 +357,19 @@ Asset có thể chuyển P2 nếu demo MVP không cần upload ảnh thật.
 - Test horizontal authorization pass cho mọi journal endpoint.
 - High-risk case đi đúng safety flow.
 
+### Ghi nhận triển khai M2 ngày 2026-09-30
+
+- Backend đã có journal CRUD/list/favorite/tag, daily check-in, encryption, idempotency, outbox và safety event trong cùng transaction. Flyway V5–V7 đã áp dụng lên Supabase PostgreSQL (schema version 7); ứng dụng khởi động và Hibernate validate thành công với schema này. `mvn verify` qua PostgreSQL Testcontainers.
+- Classifier mặc định trả `unavailable`: journal vẫn lưu; ordinary analysis bị chặn và tạo `SafetyRescreenRequested`. Kể cả khi cắm classifier, policy gate chỉ cho ordinary analysis nếu có policy `APPROVED` đang hiệu lực và khớp rule/provider/version/confidence. Rule tiếng Việt/Anh hiện là **draft**, không được coi là policy đã duyệt. Corpus synthetic ghi nhận false positive dự kiến ở câu phủ định/trích dẫn; chưa có đánh giá false negative đáng tin cậy. API safety resources công khai chỉ trả nguồn đã duyệt, xác minh và có nguồn HTTPS; safety modal gọi API nhưng chưa có hotline hoặc nguồn hỗ trợ thật nào được duyệt trong DB.
+- Frontend hiện còn auth mock và journal trong `localStorage`; chưa đạt exit criteria tích hợp API. Frontend safety modal đã bỏ số điện thoại chưa xác minh. Cần nối auth M1 trước khi thay luồng journal/check-in bằng API có token, rồi kiểm tra high-risk end-to-end.
+- Asset upload Cloudinary signed workflow vẫn mở và có thể chuyển P2 theo quy định ở trên. Dashboard ưu tiên check-in là quy tắc cho M4, chưa có dashboard query thực tế để xác nhận.
+
 ## 9. M3 — Outbox, jobs và AI analysis
 
 ### Database
 
-- [ ] Hoàn tất outbox/job indexes từ V5.
-- [ ] `V7__ai_analysis_and_jobs.sql`.
+- [ ] Hoàn tất outbox/job indexes từ V6.
+- [ ] `V8__ai_analysis_and_jobs.sql`.
 - [ ] Unique/idempotency constraints cho analysis version.
 
 ### JOB-001 — Transactional outbox (P0, L)
@@ -399,7 +427,7 @@ GET  /api/v1/journal-entries/{entryId}
 
 ### Database
 
-- [ ] `V8__insights_and_reports.sql`.
+- [ ] `V9__insights_and_reports.sql`.
 - [ ] Evidence/index theo user và period.
 
 ### INS-001 — Daily aggregate (P0, L)
@@ -452,7 +480,7 @@ Các số trên là engineering target ban đầu, phải đo lại trên môi t
 
 ### Database/API
 
-- [ ] `V9__selfcare.sql`.
+- [ ] `V10__selfcare.sql`.
 - [ ] Goal/habit text encrypted.
 - [ ] Completion unique theo habit/local date.
 - [ ] Ownership và optimistic locking.
@@ -483,8 +511,8 @@ DELETE /api/v1/self-care/habits/{habitId}/completions/{localDate}
 
 ### Database
 
-- [ ] `V10__knowledge_and_prompts.sql`.
-- [ ] `V12__seed_extended_admin_roles_permissions.sql` cho content/safety/system/support/auditor.
+- [ ] `V11__knowledge_and_prompts.sql`.
+- [ ] `V13__seed_extended_admin_roles_permissions.sql` cho content/safety/system/support/auditor.
 
 ### KB-001 — Knowledge workflow (P1, L)
 
@@ -539,7 +567,7 @@ POST /api/v1/admin/ai-jobs/{jobId}:retry
 
 ### Database
 
-- [ ] `V11__exports_deletion_feedback.sql`.
+- [ ] `V12__exports_deletion_feedback.sql`.
 - [ ] Partial unique cho active deletion/export theo policy.
 
 ### EXP-001 — Export (P0, L)
@@ -556,7 +584,7 @@ POST /api/v1/admin/ai-jobs/{jobId}:retry
 - [ ] Grace period/cancel.
 - [ ] Revoke session khi bắt đầu deletion.
 - [ ] Idempotent checkpoint worker.
-- [ ] Xóa DB, object storage, cache và provider artifacts.
+- [ ] Xóa DB, Cloudinary assets, cache và provider artifacts.
 - [ ] Audit tối thiểu/pseudonymous theo retention.
 - [ ] Test xác nhận không còn data user-owned.
 
@@ -578,7 +606,7 @@ POST /api/v1/admin/ai-jobs/{jobId}:retry
 
 ### Security (P0)
 
-- [ ] Threat model cho auth, journal, admin, AI provider và object storage.
+- [ ] Threat model cho auth, journal, admin, AI provider và Cloudinary.
 - [ ] Dependency/container scan không còn critical unresolved.
 - [ ] Authorization regression toàn endpoint.
 - [ ] Rate limit login, journal, analysis retry, export.
