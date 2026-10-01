@@ -6,6 +6,7 @@ import com.mylog.platform.id.IdGenerator;
 import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.platform.web.ResourceNotFoundException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ public class FeedbackService {
     private final SensitiveDataCipher cipher;
     private final IdGenerator ids;
     private final Clock clock;
+    @Value("${mylog.app-profile:all}") private String appProfile;
     public FeedbackService(FeedbackStore store,SensitiveDataCipher cipher,IdGenerator ids,Clock clock) {
         this.store=store;this.cipher=cipher;this.ids=ids;this.clock=clock;
     }
@@ -61,5 +63,5 @@ public class FeedbackService {
         return store.find(id,actor,true).orElseThrow();
     }
     @Scheduled(fixedDelayString="${mylog.feedback.retention-delay-ms:86400000}")
-    @Transactional public void cleanup() {store.expire(clock.instant());}
+    @Transactional public void cleanup() {if (!"api".equals(appProfile)) store.expire(clock.instant());}
 }

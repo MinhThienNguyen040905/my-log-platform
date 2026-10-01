@@ -31,6 +31,7 @@ public class AccountDeletionService {
     private final Clock clock;
     private final TransactionTemplate transactions;
     private final boolean workerEnabled;
+    @Value("${mylog.app-profile:all}") private String appProfile;
     public AccountDeletionService(DeletionStore store,AccountPurge purge,JournalAssetDeletion assets,
             IdentityService identity,SensitiveDataCipher cipher,IdGenerator ids,Clock clock,
             TransactionTemplate transactions,@Value("${mylog.deletion.enabled:true}") boolean workerEnabled) {
@@ -68,7 +69,7 @@ public class AccountDeletionService {
     }
     @Scheduled(fixedDelayString = "${mylog.deletion.poll-delay-ms:5000}")
     public void poll() {
-        if (!workerEnabled) return;
+        if (!workerEnabled || "api".equals(appProfile)) return;
         transactions.executeWithoutResult(s -> store.purgeAudit(clock.instant().minus(365,ChronoUnit.DAYS)));
         DeletionStore.Work work=transactions.execute(s -> store.claim(clock.instant()).orElse(null));
         if (work==null) return;

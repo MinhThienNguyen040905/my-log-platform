@@ -4,6 +4,7 @@ import com.mylog.platform.config.MylogProperties;
 import com.mylog.identity.infrastructure.IdentityJwt;
 import com.mylog.identity.infrastructure.IdentityAuthenticationConverter;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -20,6 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration(proxyBeanMethods = false)
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @EnableMethodSecurity
 class SecurityConfiguration {
 
@@ -33,12 +35,17 @@ class SecurityConfiguration {
             ObjectProvider<IdentityAuthenticationConverter> identityConverter
     ) throws Exception {
         boolean identityEnabled = properties.identity().enabled();
+        boolean workerOnly = "worker".equals(properties.appProfile());
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> {
                     authorize.requestMatchers("/actuator/health", "/actuator/health/**").permitAll();
+                    if (workerOnly) {
+                        authorize.anyRequest().denyAll();
+                        return;
+                    }
                     authorize.requestMatchers(HttpMethod.GET, "/api/v1/safety/resources").permitAll();
                     if (properties.openApi().enabled()) {
                         authorize.requestMatchers(
@@ -76,6 +83,11 @@ class SecurityConfiguration {
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .requestCache(cache -> cache.disable());
+        http.headers(headers -> headers
+                .contentTypeOptions(Customizer.withDefaults())
+                .frameOptions(frame -> frame.deny())
+                .referrerPolicy(referrer -> referrer.policy(
+                        org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)));
         if (identityEnabled) {
             http.oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt
                     .decoder(identityJwt.getObject())

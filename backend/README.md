@@ -237,6 +237,17 @@ Mỗi module nghiệp vụ sẽ được phát triển theo `api/application/dom
 
 ## Trạng thái security ban đầu
 
+M8 release preparation: xem [`docs/M8_THREAT_MODEL.md`](docs/M8_THREAT_MODEL.md) và
+[`docs/M8_RELEASE_RUNBOOK.md`](docs/M8_RELEASE_RUNBOOK.md). Staging/prod mặc định không chạy
+Flyway trong từng app instance; cần migration process riêng trước rollout.
+Chạy image một lần với `--spring.profiles.active=staging,migrate` hoặc `prod,migrate`;
+profile `migrate` không mở HTTP, không chạy worker và thoát sau Flyway.
+`MYLOG_APP_PROFILE=api` ngăn scheduled worker, `worker` chỉ mở health HTTP,
+`all` dành cho local/test. Journal/tag writes được giới hạn 60 lần/15 phút/user,
+export creation 3 lần/ngày/user. Readiness staging/prod kiểm tra PostgreSQL;
+liveness không gọi provider ngoài. M8 chưa đạt release gate cho đến khi hoàn thành
+staging, restore drill và các phê duyệt privacy/safety.
+
 - Chỉ `/actuator/health` được truy cập công khai.
 - Mọi endpoint khác bị deny mặc định.
 - CORS chỉ cho phép origin khai báo bởi `MYLOG_ALLOWED_ORIGINS`.

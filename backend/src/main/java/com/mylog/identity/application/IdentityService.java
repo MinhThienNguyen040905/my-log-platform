@@ -193,6 +193,15 @@ public class IdentityService {
         return store.accountById(userId).map(account -> "ACTIVE".equals(account.status())).orElse(false);
     }
 
+    /** Shared, durable quota for authenticated write actions across API instances. */
+    @Transactional(noRollbackFor = RateLimitExceededException.class)
+    public void checkWriteQuota(UUID userId, String action, int maximum, long windowSeconds) {
+        if (!store.recordRateLimit(cipher.lookupHash("write:" + action + ":" + userId),
+                clock.instant(), maximum, windowSeconds)) {
+            throw new RateLimitExceededException();
+        }
+    }
+
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public UUID authenticateForCancellation(String email, String password, String remoteAddress) {
         Instant now = clock.instant();

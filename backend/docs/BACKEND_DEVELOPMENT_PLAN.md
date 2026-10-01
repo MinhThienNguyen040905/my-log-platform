@@ -635,13 +635,13 @@ Backend M7 đã có API/worker cho CSV/PDF, xóa tài khoản và feedback. V14�
 
 ### Security (P0)
 
-- [ ] Threat model cho auth, journal, admin, AI provider và Cloudinary.
+- [x] Threat model cho auth, journal, admin, AI provider và Cloudinary (`M8_THREAT_MODEL.md`; release blockers được ghi rõ).
 - [ ] Dependency/container scan không còn critical unresolved.
 - [ ] Authorization regression toàn endpoint.
-- [ ] Rate limit login, journal, analysis retry, export.
+- [x] Rate limit login, journal, analysis retry, export (journal/tag 60 writes/15 phút/user; export 3 requests/ngày/user; DB-backed HMAC subject).
 - [ ] Secret rotation drill.
-- [ ] Encryption key rotation test.
-- [ ] CORS và security headers review.
+- [x] Encryption key rotation test (`SensitiveDataCipherTest` đọc payload khóa cũ bằng keyring mới; `IdentityJwtTest` xác minh JWT bằng public key cũ).
+- [x] CORS và security headers review (exact configured origins; nosniff, DENY frame, no-referrer; cần xác nhận origin HTTPS thật ở staging).
 - [ ] Admin MFA hoặc ghi rõ giới hạn nếu demo local.
 
 ### Privacy/safety (P0)
@@ -650,7 +650,7 @@ Backend M7 đã có API/worker cho CSV/PDF, xóa tài khoản và feedback. V14�
 - [ ] Provider retention/opt-out được xác nhận.
 - [ ] Safety eval đạt threshold đã chốt.
 - [ ] Crisis resources được duyệt và có verified timestamp.
-- [ ] Consent withdrawal chặn future AI processing.
+- [x] Consent withdrawal chặn future AI processing (PostgreSQL integration test thu hồi sau enqueue, trước worker).
 - [ ] Backup retention phù hợp deletion policy.
 
 ### Reliability/performance (P0/P1)
@@ -665,13 +665,15 @@ Backend M7 đã có API/worker cho CSV/PDF, xóa tài khoản và feedback. V14�
 ### Deployment (P1)
 
 - [ ] Staging dùng synthetic data.
-- [ ] API/worker chạy profile riêng.
-- [ ] Readiness kiểm tra dependency cần thiết; liveness không phụ thuộc provider ngoài.
-- [ ] Flyway chạy một lần có kiểm soát trước rollout app.
-- [ ] Rollback application không rollback destructive migration.
+- [ ] API/worker chạy profile riêng (`MYLOG_APP_PROFILE=api|worker` đã có trong code; staging deployment chưa kiểm chứng).
+- [ ] Readiness kiểm tra dependency cần thiết; liveness không phụ thuộc provider ngoài (đã cấu hình DB ở staging/prod, chưa kiểm chứng deployment).
+- [ ] Flyway chạy một lần có kiểm soát trước rollout app (`migrate` profile đã chạy trên PostgreSQL tách biệt, exit 0/V15; chưa chạy staging).
+- [x] Runbook rollback application không rollback destructive migration (`M8_RELEASE_RUNBOOK.md`; chưa diễn tập).
 - [ ] Dashboard/alert cho HTTP, DB, queue, AI và safety dependency.
 
 ### Exit criteria M8
+
+M8 chưa đạt exit criteria release. Đã bổ sung quota ghi journal/export, tách HTTP worker và lịch xử lý trên API instance, security headers, readiness DB ở staging/prod, migration-only profile, threat model và runbook. Migration-only profile đã áp dụng V1–V15 và thoát mã 0 trên PostgreSQL/pgvector 17 tách biệt; chưa chạy staging. Các đánh giá security, safety, restore, performance và phê duyệt bên ngoài còn mở; không phát hành production dựa trên checklist này.
 
 - Demo script end-to-end chạy ổn định trên staging.
 - Không còn P0 bug mở.

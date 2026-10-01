@@ -5,6 +5,7 @@ import com.mylog.export.api.request.CreateExportRequest;
 import com.mylog.export.api.response.DownloadGrantResponse;
 import com.mylog.export.api.response.ExportResponse;
 import com.mylog.export.application.ExportService;
+import com.mylog.identity.application.IdentityService;
 import com.mylog.platform.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -23,10 +24,12 @@ import java.util.UUID;
 public class ExportController {
     private final ExportService exports;
     private final CurrentUserProvider current;
-    public ExportController(ExportService exports, CurrentUserProvider current) {
-        this.exports=exports;this.current=current;
+    private final IdentityService identity;
+    public ExportController(ExportService exports, CurrentUserProvider current, IdentityService identity) {
+        this.exports=exports;this.current=current;this.identity=identity;
     }
     @PostMapping public ResponseEntity<ExportResponse> create(@Valid @RequestBody CreateExportRequest request) {
+        identity.checkWriteQuota(user(),"export",3,86400);
         var view=exports.request(user(),request.format());
         return ResponseEntity.accepted().body(ExportResponse.from(view));
     }

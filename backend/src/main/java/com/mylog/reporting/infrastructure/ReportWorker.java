@@ -4,6 +4,7 @@ import com.mylog.reporting.application.ReportService;
 import com.mylog.reporting.application.ReportStore;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 @Component
 @ConditionalOnProperty(prefix = "mylog.reports", name = "enabled", havingValue = "true")
+@ConditionalOnExpression("'${mylog.app-profile:all}' != 'api'")
 public class ReportWorker {
     private final ReportStore store;
     private final ReportService reports;

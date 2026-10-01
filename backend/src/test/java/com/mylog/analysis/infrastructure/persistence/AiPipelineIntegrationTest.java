@@ -123,6 +123,21 @@ class AiPipelineIntegrationTest {
         assertEquals("ANALYZED", journal.get(owner, created.id()).analysisStatus());
     }
 
+    @Test void consentWithdrawalAfterQueueBlocksFutureAnalysis() {
+        UUID owner = user();
+        approve(owner);
+        users.decideConsent(owner, "AI_PROCESSING", "v1", true);
+        var created = journal.create(owner, command("Synthetic withdrawn consent"),
+                "m8-withdraw-" + UUID.randomUUID());
+        outbox.poll();
+        assertEquals(1, jdbc.queryForObject("select count(*) from ai_jobs where aggregate_id=?", Integer.class, created.id()));
+        users.decideConsent(owner, "AI_PROCESSING", "v1", false);
+        jobs.poll();
+        assertEquals("FAILED", jdbc.queryForObject("select status from ai_jobs where aggregate_id=?", String.class, created.id()));
+        assertEquals("CONSENT_REQUIRED", jdbc.queryForObject("select last_error_code from ai_jobs where aggregate_id=?", String.class, created.id()));
+        assertEquals(0, jdbc.queryForObject("select count(*) from ai_analyses where journal_entry_id=?", Integer.class, created.id()));
+    }
+
     @Test void parallelPollsKeepOneJobAndOneActiveAnalysis() {
         UUID owner = user();
         approve(owner);

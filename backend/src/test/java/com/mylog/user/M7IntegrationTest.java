@@ -4,6 +4,7 @@ import com.mylog.TestcontainersConfiguration;
 import com.mylog.export.application.ExportService;
 import com.mylog.feedback.application.FeedbackService;
 import com.mylog.identity.application.IdentityStore;
+import com.mylog.identity.application.IdentityService;
 import com.mylog.identity.application.VerificationDelivery;
 import com.mylog.journal.application.JournalAssetDeletion;
 import com.mylog.journal.application.JournalService;
@@ -55,11 +56,23 @@ class M7IntegrationTest {
     @Autowired AccountDeletionService deletion;
     @Autowired FeedbackService feedback;
     @Autowired IdentityStore identity;
+    @Autowired IdentityService identityService;
     @Autowired MockMvc mvc;
     @Autowired JournalService journal;
     @Autowired ObjectMapper mapper;
     @MockitoBean VerificationDelivery delivery;
     @MockitoBean JournalAssetDeletion assets;
+
+    @Test void writeQuotaPersistsAfterRejectionAndIsScopedByActionAndUser() {
+        UUID owner=user(), other=user();
+        for (int i=0;i<3;i++) identityService.checkWriteQuota(owner,"export",3,86400);
+        assertThrows(com.mylog.platform.web.RateLimitExceededException.class,
+                () -> identityService.checkWriteQuota(owner,"export",3,86400));
+        assertEquals(4,jdbc.queryForObject("select attempts from auth_rate_limits where subject_hash=?",
+                Integer.class,cipher.lookupHash("write:export:"+owner)));
+        identityService.checkWriteQuota(other,"export",3,86400);
+        identityService.checkWriteQuota(owner,"journal",60,900);
+    }
 
     @Test void directPublicSchemaTablesRequireBackendAccess() {
         assertEquals(0,jdbc.queryForObject("""

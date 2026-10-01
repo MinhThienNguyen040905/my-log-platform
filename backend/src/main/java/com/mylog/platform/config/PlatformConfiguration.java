@@ -4,11 +4,13 @@ import com.mylog.platform.id.IdGenerator;
 import com.mylog.platform.id.UuidV7Generator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.security.SecureRandom;
 import java.time.Clock;
 
 @Configuration(proxyBeanMethods = false)
+@EnableScheduling
 class PlatformConfiguration {
 
     @Bean

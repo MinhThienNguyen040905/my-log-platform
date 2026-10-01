@@ -37,6 +37,9 @@ management:
       probes:
         enabled: true
       show-details: never
+      group:
+        readiness:
+          include: readinessState
 
 mylog:
   app-profile: ${MYLOG_APP_PROFILE:all}

@@ -3,6 +3,7 @@ package com.mylog.platform.outbox;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.persistence.EntityManager;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -16,6 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 @ConditionalOnProperty(prefix = "mylog.jobs", name = "enabled", havingValue = "true")
+@ConditionalOnExpression("'${mylog.app-profile:all}' != 'api'")
 public class OutboxWorker {
     private final EntityManager em;
     private final TransactionTemplate tx;

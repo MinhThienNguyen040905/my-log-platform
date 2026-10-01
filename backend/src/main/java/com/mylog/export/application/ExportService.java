@@ -34,6 +34,7 @@ public class ExportService {
     private final Clock clock;
     private final TransactionTemplate transactions;
     private final boolean workerEnabled;
+    @Value("${mylog.app-profile:all}") private String appProfile;
     public ExportService(ExportStore store, ExportSnapshot snapshot, ExportDocument document,
                          IdentityService identity, SensitiveDataCipher cipher, IdGenerator ids, Clock clock,
                          TransactionTemplate transactions,
@@ -87,7 +88,7 @@ public class ExportService {
     }
     @Scheduled(fixedDelayString = "${mylog.exports.poll-delay-ms:5000}")
     public void poll() {
-        if (!workerEnabled) return;
+        if (!workerEnabled || "api".equals(appProfile)) return;
         transactions.executeWithoutResult(s -> store.expire(clock.instant()));
         ExportStore.Work work=transactions.execute(s -> store.claim(clock.instant()).orElse(null));
         if (work==null) return;
