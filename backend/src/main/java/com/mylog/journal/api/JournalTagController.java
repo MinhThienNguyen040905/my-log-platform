@@ -3,6 +3,7 @@ package com.mylog.journal.api;
 import com.mylog.journal.api.request.CreateJournalTagRequest;
 import com.mylog.journal.api.response.JournalTagResponse;
 import com.mylog.journal.application.JournalTagService;
+import com.mylog.identity.application.IdentityService;
 import com.mylog.platform.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -20,13 +21,15 @@ import java.util.UUID;
 public class JournalTagController {
     private final JournalTagService tags;
     private final CurrentUserProvider current;
+    private final IdentityService identity;
 
-    public JournalTagController(JournalTagService tags, CurrentUserProvider current) {
-        this.tags = tags; this.current = current;
+    public JournalTagController(JournalTagService tags, CurrentUserProvider current, IdentityService identity) {
+        this.tags = tags; this.current = current; this.identity = identity;
     }
 
     @PostMapping("/api/v1/journal-tags")
     public ResponseEntity<JournalTagResponse> create(@Valid @RequestBody CreateJournalTagRequest request) {
+        writeQuota();
         var tag = tags.create(user(), request.name(), request.color());
         return ResponseEntity.created(URI.create("/api/v1/journal-tags/" + tag.id()))
                 .body(JournalTagResponse.from(tag));
@@ -39,15 +42,18 @@ public class JournalTagController {
 
     @PutMapping("/api/v1/journal-entries/{entryId}/tags/{tagId}")
     public ResponseEntity<Void> attach(@PathVariable UUID entryId, @PathVariable UUID tagId) {
+        writeQuota();
         tags.attach(user(), entryId, tagId);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/api/v1/journal-entries/{entryId}/tags/{tagId}")
     public ResponseEntity<Void> detach(@PathVariable UUID entryId, @PathVariable UUID tagId) {
+        writeQuota();
         tags.detach(user(), entryId, tagId);
         return ResponseEntity.noContent().build();
     }
 
     private UUID user() { return current.requireCurrent().userId(); }
+    private void writeQuota() { identity.checkWriteQuota(user(), "journal", 60, 900); }
 }

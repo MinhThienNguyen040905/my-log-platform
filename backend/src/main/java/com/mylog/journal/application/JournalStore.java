@@ -11,8 +11,13 @@ public interface JournalStore {
     Optional<JournalEntrySnapshot> find(UUID userId, UUID entryId);
     List<JournalEntrySnapshot> list(UUID userId, LocalDate from, LocalDate to, UUID tagId,
                                     Boolean favorite, Instant cursorTime, UUID cursorId, int limit);
+    List<JournalEntrySnapshot> exportAll(UUID userId, int limit);
     boolean update(JournalEntrySnapshot entry, long expectedVersion);
     boolean setFavorite(UUID userId, UUID entryId, boolean favorite, Instant now);
     boolean softDelete(UUID userId, UUID entryId, long expectedVersion, Instant now);
+    boolean transitionAnalysis(UUID userId, UUID entryId, int contentVersion,
+                               List<String> from, String to, UUID analysisId, Instant now);
+    boolean applyRescreen(UUID userId, UUID entryId, int contentVersion,
+                          String riskLevel, String analysisStatus, Instant now);
     int purgeDeletedBefore(Instant cutoff);
 }

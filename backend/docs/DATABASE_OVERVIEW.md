@@ -370,16 +370,15 @@ analysis_emotions(
 analysis_topics(
   id UUID PK,
   analysis_id UUID FK ai_analyses CASCADE,
-  topic_code VARCHAR(48) NULL,
-  encrypted_custom_label BYTEA NULL,
-  label_key_version VARCHAR(32) NULL,
+  topic_code VARCHAR(48) NOT NULL,
   score NUMERIC(6,5),
   rank SMALLINT,
-  CHECK ((topic_code IS NOT NULL) <> (encrypted_custom_label IS NOT NULL))
+  UNIQUE (analysis_id, topic_code),
+  UNIQUE (analysis_id, rank)
 )
 ```
 
-Chỉ curated `emotion_code/topic_code` được dùng trực tiếp cho aggregate. Custom label và extracted entity nằm trong encrypted output để giảm rò rỉ.
+V8 chỉ nhận curated `emotion_code/topic_code` để aggregate. Nếu sau này hỗ trợ custom label hoặc extracted entity, phải mã hóa trong output và thêm migration mới; V8 chưa có các cột custom label.
 
 ### 6.3 `ai_jobs`
 
@@ -388,7 +387,7 @@ id UUID PK
 job_type VARCHAR(40)
 aggregate_type VARCHAR(40)
 aggregate_id UUID
-user_id UUID NULL FK users CASCADE
+user_id UUID NOT NULL FK users CASCADE
 status VARCHAR(24)
 priority SMALLINT DEFAULT 100
 attempt INTEGER DEFAULT 0
@@ -488,6 +487,7 @@ sample_size INTEGER CHECK >= 0
 algorithm_version VARCHAR(40)
 metrics_snapshot JSONB
 encrypted_narrative BYTEA NULL
+narrative_iv, narrative_wrapped_key BYTEA NULL
 narrative_key_version VARCHAR(32) NULL
 generated_by VARCHAR(24) CHECK RULE/STATISTICAL/AI_ASSISTED
 created_at, superseded_at TIMESTAMPTZ
@@ -514,9 +514,9 @@ Không copy journal text vào evidence.
 
 ### 8.3 `reports` và `report_evidence`
 
-`reports` gồm user, `report_type` (`WEEKLY`, `MONTHLY`), period, timezone, version, status, sample size, metrics snapshot, encrypted narrative, model/prompt/policy version và timestamps. Unique `(user_id, report_type, period_start, version)`.
+`reports` gồm user, `report_type` (`WEEKLY`, `MONTHLY`), period, timezone, version, status (`PENDING`, `PROCESSING`, `READY`, `FAILED`, `DEAD`), sample size, metrics snapshot, encrypted narrative với IV/wrapped key, model/prompt/policy version, lease/attempt và timestamps. Unique `(user_id, report_type, period_start, version)`. V9 dùng narrative `RULE` từ structured metric; AI narrative chưa bật khi output safety và provider M3 chưa được duyệt.
 
-`report_evidence` liên kết report với `insight_id` hoặc structured metric. Không nhúng raw journal.
+`report_evidence` liên kết report với `insight_id` hoặc structured metric. Không nhúng raw journal. Scheduler theo timezone user tạo version 1 của tuần/tháng đã khép; worker claim bằng lease và version cũ không bị sửa khi regenerate.
 
 ## 9. Self-care
 
@@ -527,8 +527,13 @@ id UUID PK
 user_id UUID FK users CASCADE
 category VARCHAR(32) CHECK SLEEP/MINDFULNESS/EXERCISE/SOCIAL/CUSTOM
 encrypted_title BYTEA
+title_iv BYTEA
+title_wrapped_key BYTEA
+title_key_version VARCHAR(32)
 encrypted_description BYTEA NULL
-encryption_key_version VARCHAR(32)
+description_iv BYTEA NULL
+description_wrapped_key BYTEA NULL
+description_key_version VARCHAR(32) NULL
 status VARCHAR(24) CHECK ACTIVE/PAUSED/COMPLETED/ARCHIVED
 start_date, target_date DATE NULL
 created_at, updated_at, completed_at TIMESTAMPTZ
@@ -543,9 +548,10 @@ habits(
   goal_id UUID FK selfcare_goals CASCADE,
   user_id UUID FK users CASCADE,
   encrypted_title BYTEA,
-  encryption_key_version VARCHAR(32),
+  title_iv BYTEA, title_wrapped_key BYTEA, title_key_version VARCHAR(32),
   target_value NUMERIC(10,2), unit VARCHAR(32),
   frequency_type VARCHAR(24), frequency_config JSONB,
+  timezone VARCHAR(64),
   status VARCHAR(24), created_at, updated_at TIMESTAMPTZ,
   row_version BIGINT
 )
@@ -564,6 +570,11 @@ habit_completions(
 
 Giữ `user_id` ở completion để ownership query không phải join nhiều tầng và hỗ trợ partition/cleanup.
 
+V10 dùng FK ghép `(goal_id, user_id)` và `(habit_id, user_id)` để database bảo đảm cùng owner.
+Text của goal/habit được mã hóa bằng envelope encryption; mỗi field có IV, wrapped key và key version riêng.
+`frequency_config` chứa `daysOfWeek` (ISO 1–7) cho WEEKLY, hoặc danh sách rỗng cho DAILY.
+`timezone` trên habit là snapshot khi tạo để ngày completion và streak giữ cùng một lịch.
+
 ## 10. Knowledge base và RAG
 
 ### 10.1 Content lifecycle
@@ -573,7 +584,7 @@ knowledge_items(
   id UUID PK, slug VARCHAR(160) UNIQUE,
   topic_code VARCHAR(48), locale VARCHAR(10),
   source_name VARCHAR(240), source_url TEXT,
-  owner_team VARCHAR(80), status VARCHAR(24),
+  owner_team VARCHAR(80), status VARCHAR(24) CHECK ACTIVE/ARCHIVED,
   created_by UUID FK users SET NULL,
   created_at, updated_at TIMESTAMPTZ
 )
@@ -583,15 +594,19 @@ knowledge_versions(
   version INTEGER, title VARCHAR(300), content TEXT,
   content_sha256 BYTEA,
   status VARCHAR(24), review_notes TEXT,
+  chunk_strategy_version VARCHAR(40),
   created_by UUID FK users SET NULL,
+  reviewed_by UUID FK users SET NULL,
   approved_by UUID FK users SET NULL,
   approved_at, effective_from, effective_to TIMESTAMPTZ,
-  created_at TIMESTAMPTZ,
+  created_at, updated_at TIMESTAMPTZ,
   UNIQUE (item_id, version)
 )
 ```
 
 Knowledge content là nội dung công khai/đã kiểm duyệt, không phải journal nên không cần journal encryption. Nếu nguồn có license hạn chế, lưu reference và excerpt theo chính sách bản quyền.
+V11 dùng trigger để giữ title/content/checksum/provenance của bản APPROVED/ARCHIVED bất biến.
+Chỉ cho phép chuyển APPROVED → ARCHIVED; archive không xóa version/chunk để citation cũ còn truy được.
 
 ### 10.2 Chunk và embedding
 
@@ -660,15 +675,17 @@ aggregate_id UUID
 event_type VARCHAR(120)
 event_version SMALLINT
 payload JSONB                 -- ID/version only
-status VARCHAR(24) CHECK PENDING/PROCESSING/PUBLISHED/FAILED
+status VARCHAR(24) CHECK PENDING/PROCESSING/PUBLISHED/FAILED/DEAD
 attempt INTEGER
 available_at TIMESTAMPTZ
 locked_at TIMESTAMPTZ NULL
 locked_by VARCHAR(120) NULL
+lease_expires_at TIMESTAMPTZ NULL
+last_error_code VARCHAR(80) NULL
 created_at, published_at TIMESTAMPTZ
 ```
 
-Index partial `(available_at, created_at) WHERE status IN ('PENDING','FAILED')`. Insert cùng transaction với aggregate.
+Index partial `(available_at, created_at) WHERE status IN ('PENDING','FAILED')` và `(lease_expires_at) WHERE status = 'PROCESSING'` (V8). Insert cùng transaction với aggregate.
 
 ### 12.2 `idempotency_keys`
 
@@ -731,49 +748,57 @@ Không lưu secret/API key. Chỉ lưu feature/policy config không bí mật v�
 ```text
 id UUID PK
 user_id UUID FK users CASCADE
-format VARCHAR(16) CHECK CSV/PDF/JSON
-status VARCHAR(24)
-scope JSONB
-storage_key VARCHAR(512) NULL
+format VARCHAR(8) CHECK CSV/PDF
+status VARCHAR(16) CHECK PENDING/PROCESSING/READY/FAILED/EXPIRED
+encrypted_file, file_iv, file_wrapped_key BYTEA NULL
+file_key_version VARCHAR(32) NULL
 file_sha256 BYTEA NULL
+file_size_bytes BIGINT NULL
 expires_at TIMESTAMPTZ NULL
 attempt INTEGER
-last_error_code VARCHAR(80) NULL
-created_at, started_at, completed_at TIMESTAMPTZ
+available_at TIMESTAMPTZ
+lease_expires_at TIMESTAMPTZ NULL
+last_error_code VARCHAR(60) NULL
+created_at, completed_at TIMESTAMPTZ
 ```
 
-File export mã hóa/private, signed URL sinh khi download. Cleanup xóa object khi hết hạn rồi clear `storage_key`.
+File export giới hạn 5 MB, mã hóa bằng envelope encryption trong PostgreSQL theo ADR-0007. Download cần JWT, owner check và URL ký có TTL 60 giây sau khi xác thực lại mật khẩu. Worker xóa ciphertext cùng metadata mã hóa sau 24 giờ và xóa metadata request sau 30 ngày.
 
 ### 13.2 `deletion_requests`
 
 ```text
 id UUID PK
-user_id UUID FK users CASCADE
-status VARCHAR(24) CHECK REQUESTED/GRACE_PERIOD/PROCESSING/COMPLETED/CANCELLED/FAILED
+user_id UUID NULL FK users SET NULL
+subject_hash BYTEA
+status VARCHAR(20) CHECK GRACE_PERIOD/PROCESSING/COMPLETED/CANCELLED/FAILED
 requested_at TIMESTAMPTZ
 scheduled_for TIMESTAMPTZ
-started_at, completed_at, cancelled_at TIMESTAMPTZ NULL
-checkpoint JSONB
-last_error_code VARCHAR(80) NULL
+lease_expires_at, completed_at, cancelled_at TIMESTAMPTZ NULL
+attempt INTEGER
+checkpoint VARCHAR(32)
+last_error_code VARCHAR(60) NULL
 ```
 
 Unique partial: tối đa một request active/user. Checkpoint chỉ chứa tên bước và ID kỹ thuật, không chứa dữ liệu đã xóa.
+Request hoàn tất/hủy được giữ tối đa 365 ngày dưới dạng audit tối thiểu rồi được dọn.
 
 ### 13.3 `feedback`
 
 ```text
 id UUID PK
-user_id UUID NULL FK users SET NULL
+user_id UUID NOT NULL FK users CASCADE
 category VARCHAR(32)
-status VARCHAR(24)
+status VARCHAR(20)
 encrypted_message BYTEA
 message_key_version VARCHAR(32)
-app_version VARCHAR(40) NULL
+message_iv, message_wrapped_key BYTEA
 assigned_to UUID NULL FK users SET NULL
-created_at, updated_at, resolved_at TIMESTAMPTZ
+created_at, updated_at, resolved_at, expires_at TIMESTAMPTZ
+row_version BIGINT
 ```
 
 Không tự động đính kèm journal. Nếu user chủ động chia sẻ context, cần consent riêng và retention ngắn.
+Feedback hiện chỉ nhận từ tài khoản đã xác thực; khi xóa tài khoản, feedback bị xóa theo FK cascade. Retention thường tối đa 180 ngày.
 
 ## 14. Encryption matrix
 
@@ -810,7 +835,7 @@ SELECT * FROM journal_entries WHERE id = :entry_id;
 
 Admin metadata dùng projection/view riêng, không reuse entity/repository có khả năng decrypt journal.
 
-PostgreSQL Row Level Security là defense-in-depth cho phase hardening. Chưa bật trong MVP cho tới khi connection pooling có cơ chế set/reset user context được kiểm thử chắc chắn; cấu hình RLS sai có thể gây leak giữa request.
+V15 bật RLS **không có policy** và thu hồi grant của `anon`/`authenticated` trên các bảng `public` để chặn truy cập trực tiếp qua Supabase Data API. Backend kết nối bằng DB owner nên tiếp tục dùng owner-scoped query ở application; RLS này không thay thế owner check trong backend. Chưa triển khai per-user RLS dựa trên session context của connection pool; nếu sau này dùng DB role không phải owner/BYPASSRLS, cần policy và kiểm thử riêng trước khi chuyển kết nối.
 
 ## 16. Xóa và retention
 
@@ -871,15 +896,16 @@ V8__ai_analysis_and_jobs.sql
 V9__insights_and_reports.sql
 V10__selfcare.sql
 V11__knowledge_and_prompts.sql
-V12__exports_deletion_feedback.sql
-V13__seed_extended_admin_roles_permissions.sql
+V12__admin_roles_permissions.sql
+V13__knowledge_author_nullification.sql
+V14__exports_deletion_feedback.sql
 ```
 
 Quy tắc Flyway:
 
 - Migration đã merge/deploy không được sửa.
 - DDL mới có migration mới, kể cả sửa constraint/index.
-- V2 seed luôn role `USER` tối thiểu để registration hoạt động; V13 dự kiến bổ sung các admin role/permission đã ổn định.
+- V2 seed role `USER` tối thiểu để registration hoạt động; V12 bổ sung các admin role/permission. V13 cho phép null attribution FK khi xóa user; M7 tiếp tục ở V14.
 - Seed chỉ dành cho stable system codes/roles, không seed journal/user thật.
 - Index lớn production dùng kế hoạch online/concurrent riêng; `CREATE INDEX CONCURRENTLY` không chạy trong transaction Flyway mặc định.
 - Mỗi migration phải chạy được trên database rỗng và database có dữ liệu representative.

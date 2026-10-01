@@ -9,6 +9,8 @@ import java.util.UUID;
 public interface JournalTagStore {
     JournalTagView create(UUID userId, String name, String normalized, String color, Instant now);
     List<JournalTagView> list(UUID userId);
+    List<Link> links(UUID userId);
+    record Link(UUID journalEntryId, UUID tagId) {}
     boolean attach(UUID userId, UUID entryId, UUID tagId, Instant now);
     boolean detach(UUID userId, UUID entryId, UUID tagId);
 }

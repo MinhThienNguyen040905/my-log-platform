@@ -58,6 +58,9 @@ public class CheckinService {
         return store.list(userId, from, to);
     }
 
+    @Transactional(readOnly = true)
+    public List<CheckinView> exportAll(UUID userId) { return store.exportAll(userId); }
+
     private static boolean score(BigDecimal value) {
         return value == null || value.scale() <= 1 && value.compareTo(BigDecimal.ONE) >= 0
                 && value.compareTo(BigDecimal.TEN) <= 0;

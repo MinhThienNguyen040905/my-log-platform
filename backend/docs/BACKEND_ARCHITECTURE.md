@@ -502,6 +502,7 @@ DELETE /journal-entries/{entryId}
 PUT    /journal-entries/{entryId}/favorite
 DELETE /journal-entries/{entryId}/favorite
 POST   /journal-entries/{entryId}/analysis:retry
+GET    /journal-entries/{entryId}/analysis
 
 PUT    /check-ins/{localDate}
 GET    /check-ins?from=&to=
@@ -513,16 +514,25 @@ GET    /reports/{reportId}
 POST   /self-care/goals
 GET    /self-care/goals
 PATCH  /self-care/goals/{goalId}
-PUT    /self-care/goals/{goalId}/completions/{localDate}
+POST   /self-care/goals/{goalId}/habits
+PUT    /self-care/habits/{habitId}/completions/{localDate}
+DELETE /self-care/habits/{habitId}/completions/{localDate}
 
 GET    /journal-prompts?locale=vi
 POST   /exports
 GET    /exports/{exportId}
+POST   /exports/{exportId}:authorize-download
+GET    /exports/{exportId}/file?expires=...&signature=...
 POST   /account-deletion-requests
+POST   /account-deletion-requests/{requestId}:status
+POST   /account-deletion-requests/{requestId}:cancel
 POST   /feedback
+GET    /feedback/{feedbackId}
 ```
 
 ### 9.2 Admin API
+
+Các endpoint dưới đây gồm API đã triển khai và roadmap; M6 đã có user metadata/status, dashboard, knowledge version workflow và AI job vận hành; M7 thêm feedback admin. Gán role, prompt workflow, safety metrics và audit read API vẫn để mốc sau.
 
 ```text
 GET    /admin/users
@@ -533,8 +543,12 @@ PUT    /admin/users/{userId}/roles
 GET    /admin/dashboard
 
 POST   /admin/knowledge-items
-PATCH  /admin/knowledge-items/{itemId}
+GET    /admin/knowledge-items/{itemId}/versions/{version}
+POST   /admin/knowledge-items/{itemId}/versions
+PATCH  /admin/knowledge-items/{itemId}/versions/{version}
+POST   /admin/knowledge-items/{itemId}/versions/{version}:submit
 POST   /admin/knowledge-items/{itemId}/versions/{version}:approve
+POST   /admin/knowledge-items/{itemId}/versions/{version}:reject
 POST   /admin/knowledge-items/{itemId}/versions/{version}:archive
 POST   /admin/journal-prompts
 PATCH  /admin/journal-prompts/{promptId}
@@ -546,10 +560,14 @@ GET    /admin/safety/metrics
 PUT    /admin/safety/resources/{resourceId}
 GET    /admin/audit-logs
 GET    /admin/feedback
+GET    /admin/feedback/{feedbackId}
 PATCH  /admin/feedback/{feedbackId}
 ```
 
+M7 lưu artifact export mã hóa trong PostgreSQL theo ADR-0007 (tối đa 5 MB, TTL 24 giờ). Link tải tương đối có chữ ký 60 giây, vẫn cần header Bearer JWT hợp lệ và owner check; frontend tải bằng authenticated fetch rồi lưu blob, không mở link trần trong trình duyệt. API cấp link yêu cầu xác thực lại mật khẩu. Xóa tài khoản có grace period 7 ngày, hủy bằng email/mật khẩu và request ID vì session đã bị thu hồi. Worker dọn Cloudinary trước khi xóa hàng `users` theo cascade; khi Cloudinary không khả dụng mà còn asset, job giữ trạng thái retry. Feedback không tự đính kèm journal, message mã hóa và quyền admin `feedback:read`/`feedback:manage` được audit. PATCH admin feedback yêu cầu `If-Match` với `version` hiện tại, xung đột trả 409.
+
 Không có admin endpoint trả plaintext journal. Metadata chỉ gồm ID giảm định danh, status, timestamp, size và job state cần cho vận hành.
+M6 có user endpoint `GET /recommendations?topicCode=...` trả approved excerpts và citation, không sinh phản hồi AI.
 
 ### 9.3 Pagination và lỗi
 
@@ -645,19 +663,28 @@ Yêu cầu:
 
 ```java
 public interface JournalAnalyzer {
-    AnalysisOutput analyze(AnalysisInput input);
+    Result analyze(String title, String plainText);
 }
 
 public interface EmbeddingProvider {
-    EmbeddingVector embed(String sanitizedText);
+    float[] embed(String text);
 }
 
 public interface KnowledgeRetriever {
-    List<KnowledgeExcerpt> retrieve(RetrievalQuery query);
+    List<Passage> retrieve(String topicCode, String locale, int limit);
 }
 ```
 
 Provider adapter nằm trong infrastructure. Đổi model/provider không làm đổi domain/controller.
+
+M3 hiện dùng `FakeJournalAnalyzer` chỉ khi bật rõ trong local/test; mặc định provider unavailable và
+worker retry rồi đưa job vào DEAD mà không mất journal. `MYLOG_JOBS_ENABLED` mặc định false;
+V8 đã áp dụng lên Supabase nhưng worker chỉ nên bật khi môi trường và policy/provider phù hợp.
+Adapter thật và điều kiện dữ liệu theo ADR-0004 chưa được duyệt; không gửi
+journal sang provider khi chưa chốt. `EmbeddingProvider` chưa có adapter được duyệt.
+M6 đã có `KnowledgeRetriever` chỉ đọc chunk của version `APPROVED`, đúng locale và còn hiệu lực;
+recommendation API hiện trả nguyên văn excerpt kèm citation, chưa dùng LLM.
+Không đưa journal text vào retrieval request.
 
 ### 12.2 Structured output/provenance
 

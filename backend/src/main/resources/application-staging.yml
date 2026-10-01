@@ -1,4 +1,6 @@
 spring:
+  flyway:
+    enabled: ${MYLOG_FLYWAY_ENABLED:false}
   mail:
     host: ${MYLOG_MAIL_HOST}
     port: ${MYLOG_MAIL_PORT:587}
@@ -14,6 +16,13 @@ spring:
   data:
     redis:
       url: ${MYLOG_REDIS_URL}
+
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState,db
 
 mylog:
   identity:

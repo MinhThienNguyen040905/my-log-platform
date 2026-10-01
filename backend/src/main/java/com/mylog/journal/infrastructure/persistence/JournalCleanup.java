@@ -2,6 +2,7 @@ package com.mylog.journal.infrastructure.persistence;
 
 import com.mylog.journal.application.JournalStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +12,7 @@ import java.time.Duration;
 
 @Component
 @ConditionalOnProperty(prefix = "mylog.identity", name = "enabled", havingValue = "true")
+@ConditionalOnExpression("'${mylog.app-profile:all}' != 'api'")
 class JournalCleanup {
     private final JournalStore store;
     private final Clock clock;

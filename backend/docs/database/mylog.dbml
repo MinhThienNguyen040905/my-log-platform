@@ -292,9 +292,7 @@ Table analysis_emotions {
 Table analysis_topics {
   id uuid [pk]
   analysis_id uuid [not null, ref: > ai_analyses.id]
-  topic_code varchar(48)
-  encrypted_custom_label bytea
-  label_key_version varchar(32)
+  topic_code varchar(48) [not null]
   score numeric(6,5) [not null]
   rank smallint [not null]
 }
@@ -375,15 +373,22 @@ Table insights {
   period_end date [not null]
   timezone varchar(64) [not null]
   status varchar(24) [not null]
+  direction varchar(16)
   strength numeric(6,5)
   sample_size integer [not null]
   algorithm_version varchar(40) [not null]
   metrics_snapshot jsonb [not null]
   encrypted_narrative bytea
+  narrative_iv bytea
+  narrative_wrapped_key bytea
   narrative_key_version varchar(32)
   generated_by varchar(24) [not null]
   created_at timestamptz [not null]
   superseded_at timestamptz
+
+  indexes {
+    (user_id, insight_type, period_start, period_end, algorithm_version) [unique]
+  }
 }
 
 Table insight_evidence {
@@ -395,7 +400,7 @@ Table insight_evidence {
   metric_name varchar(48) [not null]
   metric_value numeric(12,4)
   weight numeric(6,5)
-  metadata jsonb
+  metadata jsonb [not null]
   created_at timestamptz [not null]
 }
 
@@ -411,10 +416,19 @@ Table reports {
   sample_size integer [not null]
   metrics_snapshot jsonb [not null]
   encrypted_narrative bytea
+  narrative_iv bytea
+  narrative_wrapped_key bytea
   narrative_key_version varchar(32)
+  generated_by varchar(24) [not null]
   model varchar(120)
   prompt_template_version varchar(40)
   safety_policy_version varchar(40)
+  attempt integer [not null, default: 0]
+  available_at timestamptz [not null]
+  locked_at timestamptz
+  locked_by varchar(120)
+  lease_expires_at timestamptz
+  last_error_code varchar(80)
   created_at timestamptz [not null]
   completed_at timestamptz
 
@@ -423,13 +437,31 @@ Table reports {
   }
 }
 
+Table report_evidence {
+  id uuid [pk]
+  report_id uuid [not null, ref: > reports.id]
+  insight_id uuid [ref: > insights.id]
+  source_type varchar(32) [not null]
+  source_id uuid
+  evidence_date date [not null]
+  metric_name varchar(48) [not null]
+  metric_value numeric(12,4)
+  metadata jsonb [not null]
+  created_at timestamptz [not null]
+}
+
 Table selfcare_goals {
   id uuid [pk]
   user_id uuid [not null, ref: > users.id]
   category varchar(32) [not null]
   encrypted_title bytea [not null]
+  title_iv bytea [not null]
+  title_wrapped_key bytea [not null]
+  title_key_version varchar(32) [not null]
   encrypted_description bytea
-  encryption_key_version varchar(32) [not null]
+  description_iv bytea
+  description_wrapped_key bytea
+  description_key_version varchar(32)
   status varchar(24) [not null]
   start_date date
   target_date date
@@ -444,11 +476,14 @@ Table habits {
   goal_id uuid [not null, ref: > selfcare_goals.id]
   user_id uuid [not null, ref: > users.id]
   encrypted_title bytea [not null]
-  encryption_key_version varchar(32) [not null]
-  target_value numeric(10,2)
-  unit varchar(32)
+  title_iv bytea [not null]
+  title_wrapped_key bytea [not null]
+  title_key_version varchar(32) [not null]
+  target_value numeric(10,2) [not null]
+  unit varchar(32) [not null]
   frequency_type varchar(24) [not null]
   frequency_config jsonb [not null]
+  timezone varchar(64) [not null]
   status varchar(24) [not null]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]
@@ -477,6 +512,7 @@ Table knowledge_items {
   locale varchar(10) [not null]
   source_name varchar(240) [not null]
   source_url text
+  owner_team varchar(80) [not null]
   status varchar(24) [not null]
   created_by uuid [ref: > users.id]
   created_at timestamptz [not null]
@@ -491,12 +527,16 @@ Table knowledge_versions {
   content text [not null]
   content_sha256 bytea [not null]
   status varchar(24) [not null]
+  review_notes text
+  chunk_strategy_version varchar(40) [not null]
   created_by uuid [ref: > users.id]
+  reviewed_by uuid [ref: > users.id]
   approved_by uuid [ref: > users.id]
   approved_at timestamptz
   effective_from timestamptz
   effective_to timestamptz
   created_at timestamptz [not null]
+  updated_at timestamptz [not null]
 
   indexes {
     (item_id, version) [unique]
@@ -532,6 +572,22 @@ Table knowledge_embeddings {
   }
 }
 
+Table journal_prompts {
+  id uuid [pk]
+  code varchar(80) [not null, unique]
+  locale varchar(10) [not null]
+  category varchar(48) [not null]
+  prompt_text text [not null]
+  status varchar(24) [not null]
+  display_order integer [not null, default: 0]
+  valid_from timestamptz
+  valid_to timestamptz
+  created_by uuid [ref: > users.id]
+  updated_by uuid [ref: > users.id]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
 Table outbox_events {
   id uuid [pk]
   aggregate_type varchar(40) [not null]
@@ -544,6 +600,8 @@ Table outbox_events {
   available_at timestamptz [not null]
   locked_at timestamptz
   locked_by varchar(120)
+  lease_expires_at timestamptz
+  last_error_code varchar(80)
   created_at timestamptz [not null]
   published_at timestamptz
 }
@@ -582,27 +640,59 @@ Table audit_logs {
 Table export_requests {
   id uuid [pk]
   user_id uuid [not null, ref: > users.id]
-  format varchar(16) [not null]
-  status varchar(24) [not null]
-  scope jsonb [not null]
-  storage_key varchar(512)
+  format varchar(8) [not null, note: 'CSV or PDF']
+  status varchar(16) [not null, note: 'PENDING, PROCESSING, READY, FAILED, EXPIRED']
+  encrypted_file bytea
+  file_iv bytea
+  file_wrapped_key bytea
+  file_key_version varchar(32)
   file_sha256 bytea
+  file_size_bytes bigint
   expires_at timestamptz
   attempt integer [not null, default: 0]
+  available_at timestamptz [not null]
+  lease_expires_at timestamptz
+  last_error_code varchar(60)
   created_at timestamptz [not null]
-  started_at timestamptz
   completed_at timestamptz
+
+  indexes {
+    user_id [unique, name: 'uq_export_active_user', note: 'Partial: PENDING, PROCESSING, READY']
+  }
 }
 
 Table deletion_requests {
   id uuid [pk]
-  user_id uuid [not null, ref: > users.id]
-  status varchar(24) [not null]
+  user_id uuid [ref: > users.id, note: 'ON DELETE SET NULL']
+  subject_hash bytea [not null]
+  status varchar(20) [not null, note: 'GRACE_PERIOD, PROCESSING, COMPLETED, CANCELLED, FAILED']
   requested_at timestamptz [not null]
   scheduled_for timestamptz [not null]
-  started_at timestamptz
+  lease_expires_at timestamptz
+  attempt integer [not null, default: 0]
+  checkpoint varchar(32) [not null]
+  last_error_code varchar(60)
   completed_at timestamptz
   cancelled_at timestamptz
-  checkpoint jsonb
-  last_error_code varchar(80)
+
+  indexes {
+    user_id [unique, name: 'uq_deletion_active_user', note: 'Partial: GRACE_PERIOD, PROCESSING, FAILED']
+  }
+}
+
+Table feedback {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id, note: 'ON DELETE CASCADE']
+  category varchar(32) [not null]
+  status varchar(20) [not null]
+  encrypted_message bytea [not null]
+  message_iv bytea [not null]
+  message_wrapped_key bytea [not null]
+  message_key_version varchar(32) [not null]
+  assigned_to uuid [ref: > users.id, note: 'ON DELETE SET NULL']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  resolved_at timestamptz
+  expires_at timestamptz [not null]
+  row_version bigint [not null, default: 0]
 }

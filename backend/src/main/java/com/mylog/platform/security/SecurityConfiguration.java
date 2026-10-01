@@ -4,11 +4,13 @@ import com.mylog.platform.config.MylogProperties;
 import com.mylog.identity.infrastructure.IdentityJwt;
 import com.mylog.identity.infrastructure.IdentityAuthenticationConverter;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -19,6 +21,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration(proxyBeanMethods = false)
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@EnableMethodSecurity
 class SecurityConfiguration {
 
     @Bean
@@ -31,12 +35,17 @@ class SecurityConfiguration {
             ObjectProvider<IdentityAuthenticationConverter> identityConverter
     ) throws Exception {
         boolean identityEnabled = properties.identity().enabled();
+        boolean workerOnly = "worker".equals(properties.appProfile());
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> {
                     authorize.requestMatchers("/actuator/health", "/actuator/health/**").permitAll();
+                    if (workerOnly) {
+                        authorize.anyRequest().denyAll();
+                        return;
+                    }
                     authorize.requestMatchers(HttpMethod.GET, "/api/v1/safety/resources").permitAll();
                     if (properties.openApi().enabled()) {
                         authorize.requestMatchers(
@@ -48,13 +57,25 @@ class SecurityConfiguration {
                     if (identityEnabled) {
                         authorize.requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
-                                "/api/v1/auth/email-verifications", "/api/v1/auth/email-verifications:confirm")
+                                "/api/v1/auth/email-verifications", "/api/v1/auth/email-verifications:confirm",
+                                "/api/v1/account-deletion-requests/*:cancel",
+                                "/api/v1/account-deletion-requests/*:status")
                                 .permitAll();
                         authorize.requestMatchers("/api/v1/auth/logout", "/api/v1/me", "/api/v1/me/**",
                                         "/api/v1/journal-entries", "/api/v1/journal-entries/**",
                                         "/api/v1/journal-tags", "/api/v1/journal-tags/**",
                                         "/api/v1/check-ins", "/api/v1/check-ins/**")
                                 .authenticated();
+                        authorize.requestMatchers("/api/v1/exports", "/api/v1/exports/**",
+                                "/api/v1/account-deletion-requests", "/api/v1/account-deletion-requests/**",
+                                "/api/v1/feedback", "/api/v1/feedback/**").authenticated();
+                        authorize.requestMatchers("/api/v1/dashboard", "/api/v1/insights",
+                                        "/api/v1/reports", "/api/v1/reports/**",
+                                        "/api/v1/self-care/goals", "/api/v1/self-care/goals/**",
+                                        "/api/v1/self-care/habits/**")
+                                .authenticated();
+                        authorize.requestMatchers("/api/v1/admin/**").authenticated();
+                        authorize.requestMatchers(HttpMethod.GET, "/api/v1/recommendations").authenticated();
                     }
                     authorize.anyRequest().denyAll();
                 })
@@ -62,6 +83,11 @@ class SecurityConfiguration {
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .requestCache(cache -> cache.disable());
+        http.headers(headers -> headers
+                .contentTypeOptions(Customizer.withDefaults())
+                .frameOptions(frame -> frame.deny())
+                .referrerPolicy(referrer -> referrer.policy(
+                        org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)));
         if (identityEnabled) {
             http.oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt
                     .decoder(identityJwt.getObject())

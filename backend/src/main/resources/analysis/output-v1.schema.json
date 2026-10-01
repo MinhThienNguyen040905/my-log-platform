@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mylog.local/schemas/analysis-output-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sentiment", "sentimentScore", "emotions", "topics", "reflection"],
+  "properties": {
+    "sentiment": {"enum": ["POSITIVE", "NEUTRAL", "NEGATIVE", "MIXED"]},
+    "sentimentScore": {"type": "number", "minimum": 0, "maximum": 1},
+    "emotions": {
+      "type": "array", "maxItems": 5,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["code", "score"],
+        "properties": {
+          "code": {"enum": ["JOY", "SADNESS", "ANGER", "FEAR", "CALM", "HOPE", "ANXIETY"]},
+          "score": {"type": "number", "minimum": 0, "maximum": 1}
+        }
+      }
+    },
+    "topics": {
+      "type": "array", "maxItems": 5,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["code", "score"],
+        "properties": {
+          "code": {"enum": ["WORK", "RELATIONSHIPS", "HEALTH", "SLEEP", "SELF_CARE", "OTHER"]},
+          "score": {"type": "number", "minimum": 0, "maximum": 1}
+        }
+      }
+    },
+    "reflection": {"type": "string", "minLength": 1, "maxLength": 2000}
+  }
+}

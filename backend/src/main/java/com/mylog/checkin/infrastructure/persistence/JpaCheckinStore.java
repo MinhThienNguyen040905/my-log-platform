@@ -86,6 +86,11 @@ class JpaCheckinStore implements CheckinStore {
                 .setParameter("from", from).setParameter("to", to).getResultList().stream().map(this::view).toList();
     }
 
+    @Override public List<CheckinView> exportAll(UUID userId) {
+        return em.createQuery("select c from DailyCheckin c where c.userId=:userId order by c.localDate desc", DailyCheckin.class)
+                .setParameter("userId", userId).getResultList().stream().map(this::view).toList();
+    }
+
     private Optional<DailyCheckin> locked(UUID userId, LocalDate date) {
         return em.createQuery("select c from DailyCheckin c where c.userId=:userId and c.localDate=:date", DailyCheckin.class)
                 .setParameter("userId", userId).setParameter("date", date)

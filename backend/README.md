@@ -49,6 +49,11 @@ MYLOG_ALLOWED_ORIGINS
 MYLOG_OPENAPI_ENABLED
 MYLOG_SWAGGER_UI_ENABLED
 MYLOG_CLOUDINARY_*
+MYLOG_JOBS_ENABLED
+MYLOG_JOBS_POLL_DELAY_MS
+MYLOG_AI_FAKE_ENABLED
+MYLOG_INSIGHTS_MINIMUM_SAMPLES
+MYLOG_REPORTS_ENABLED
 ```
 
 Database local có thể dùng Docker Compose; môi trường được triển khai dùng PostgreSQL do Supabase quản lý qua `MYLOG_DB_URL`, `MYLOG_DB_USERNAME` và `MYLOG_DB_PASSWORD`. Ảnh nhật ký dùng Cloudinary; bật adapter bằng `MYLOG_CLOUDINARY_ENABLED=true` sau khi điền credential server-side.
@@ -87,6 +92,19 @@ GET http://localhost:8080/internal/swagger-ui
 
 API docs mặc định bị tắt trong production.
 
+## M3 Outbox và AI analysis
+
+Flyway V8 tạo bảng job/analysis và bổ sung lease cho outbox; migration đã áp dụng lên Supabase.
+Worker mặc định tắt (`MYLOG_JOBS_ENABLED=false`). Chỉ bật khi môi trường có schema V8 và
+đã chốt classifier, safety policy cùng provider theo ADR-0003/0004. `MYLOG_AI_FAKE_ENABLED=true`
+chỉ phục vụ local/test với dữ liệu synthetic; adapter này tạo reflection cố định và không gọi mạng.
+
+Worker kiểm tra lại consent `AI_PROCESSING` và safety policy ngay lúc xử lý job. API đọc trạng thái
+và reflection: `GET /api/v1/journal-entries/{entryId}/analysis`; retry có cooldown 60 giây:
+`POST /api/v1/journal-entries/{entryId}/analysis:retry`. `GET` trả `status` kể cả khi reflection
+chưa sẵn sàng; client không nên chờ vô hạn. Các metric `mylog.outbox.*` và `mylog.ai.*` chỉ gồm
+metadata queue, kết quả, token, chi phí và độ trễ.
+
 ## M1 Identity, profile và consent
 
 Các endpoint M1 được bật trong profile `local`, `staging`, `prod`; profile `test` chỉ bật khi integration test yêu cầu. Luồng local:
@@ -116,6 +134,20 @@ Sau khi đăng nhập, gửi `Authorization: Bearer <accessToken>` cho các endp
 Safety ingress luôn chạy lúc tạo/sửa journal. Rule HIGH/CRITICAL đặt `analysisStatus=BLOCKED_BY_SAFETY`; nếu classifier không khả dụng thì trạng thái cũng bị chặn và outbox chỉ có ID/version cho lần screen lại. Chưa có classifier hoặc bộ nội dung/nguồn hỗ trợ được duyệt; các bản ghi `safety_resources` không được tự điền hotline. Frontend hiện là prototype dùng auth mock và `localStorage`; chưa kết nối API M1/M2.
 
 `GET /api/v1/safety/resources?locale=vi-VN&country=VN` là API công khai, chỉ trả nguồn hỗ trợ đã được duyệt, có `verified_at` và nguồn HTTPS. Frontend safety modal dùng `NEXT_PUBLIC_BACKEND_URL` để đọc API này (mặc định `http://localhost:8080` khi phát triển local) và chỉ hiện liên hệ khi API trả dữ liệu đã xác minh. Classifier trả mức rủi ro thấp cũng không mở ordinary analysis nếu `safety_policy_versions` chưa có policy `APPROVED` đang hiệu lực với rule version, classifier provider/version và ngưỡng confidence khớp. Hiện chưa có policy được duyệt nên API nguồn hỗ trợ trả danh sách rỗng và journal vẫn ở chế độ fail-safe.
+
+## M4 Dashboard, insight và report
+
+Flyway V9 đã áp dụng lên Supabase. Các API cần Bearer token: `GET /api/v1/dashboard?range=7d|30d|90d`,
+`GET /api/v1/insights?from=&to=&cursor=`, `GET /api/v1/reports?type=WEEKLY&cursor=` và
+`GET /api/v1/reports/{reportId}`. Dashboard dùng check-in của ngày trước, journal mới nhất làm
+fallback và kèm `source`; current journal streak đếm ngày có journal SAVED, không đếm check-in đơn lẻ.
+
+Insight sleep–mood chỉ xuất hiện khi đủ cặp dữ liệu (`MYLOG_INSIGHTS_MINIMUM_SAMPLES`, mặc định 7),
+có correlation strength, sample size và evidence cấu trúc; narrative không khẳng định nguyên nhân.
+Report tuần/tháng được scheduler enqueue theo timezone user, worker tạo snapshot bất biến và
+regenerate tạo version mới. `MYLOG_REPORTS_ENABLED` mặc định false; bật rõ khi cần scheduler/worker.
+Narrative hiện là template từ metric, chưa dùng provider AI. Testcontainers local đo dashboard 30 ngày
+trên 10.000 journal synthetic/user p95 45 ms (30 lần gọi sau warmup); cần đo lại trên staging.
 
 ## Supabase PostgreSQL
 
@@ -204,6 +236,17 @@ src/main/java/com/mylog/
 Mỗi module nghiệp vụ sẽ được phát triển theo `api/application/domain/infrastructure`. Các package rỗng hiện được giữ bằng `package-info.java` để thể hiện ranh giới ngay từ đầu.
 
 ## Trạng thái security ban đầu
+
+M8 release preparation: xem [`docs/M8_THREAT_MODEL.md`](docs/M8_THREAT_MODEL.md) và
+[`docs/M8_RELEASE_RUNBOOK.md`](docs/M8_RELEASE_RUNBOOK.md). Staging/prod mặc định không chạy
+Flyway trong từng app instance; cần migration process riêng trước rollout.
+Chạy image một lần với `--spring.profiles.active=staging,migrate` hoặc `prod,migrate`;
+profile `migrate` không mở HTTP, không chạy worker và thoát sau Flyway.
+`MYLOG_APP_PROFILE=api` ngăn scheduled worker, `worker` chỉ mở health HTTP,
+`all` dành cho local/test. Journal/tag writes được giới hạn 60 lần/15 phút/user,
+export creation 3 lần/ngày/user. Readiness staging/prod kiểm tra PostgreSQL;
+liveness không gọi provider ngoài. M8 chưa đạt release gate cho đến khi hoàn thành
+staging, restore drill và các phê duyệt privacy/safety.
 
 - Chỉ `/actuator/health` được truy cập công khai.
 - Mọi endpoint khác bị deny mặc định.

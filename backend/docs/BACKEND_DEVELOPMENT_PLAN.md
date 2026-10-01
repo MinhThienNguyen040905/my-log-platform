@@ -368,45 +368,46 @@ Asset có thể chuyển P2 nếu demo MVP không cần upload ảnh thật.
 
 ### Database
 
-- [ ] Hoàn tất outbox/job indexes từ V6.
-- [ ] `V8__ai_analysis_and_jobs.sql`.
-- [ ] Unique/idempotency constraints cho analysis version.
+- [x] Hoàn tất outbox/job indexes từ V6 (V8 bổ sung lease recovery và job claim).
+- [x] `V8__ai_analysis_and_jobs.sql` (đã kiểm thử PostgreSQL Testcontainers và áp dụng lên Supabase; ứng dụng khởi động, Hibernate validate thành công).
+- [x] Unique/idempotency constraints cho analysis version.
 
 ### JOB-001 — Transactional outbox (P0, L)
 
-- [ ] Publish event cùng transaction nghiệp vụ.
-- [ ] Claim bằng `FOR UPDATE SKIP LOCKED`.
-- [ ] Lease/lock timeout và worker recovery.
-- [ ] Exponential backoff + jitter.
-- [ ] Dead job và sanitized error.
-- [ ] Metrics queue depth/oldest age/success/error.
+- [x] Publish event cùng transaction nghiệp vụ.
+- [x] Claim bằng `FOR UPDATE SKIP LOCKED`.
+- [x] Lease/lock timeout và worker recovery.
+- [x] Exponential backoff + jitter.
+- [x] Dead job và sanitized error code.
+- [x] Metrics queue depth/oldest age/success/error.
 
 ### AI-001 — Provider ports/adapters (P0, L)
 
-- [ ] `JournalAnalyzer`, `EmbeddingProvider`, `KnowledgeRetriever` ports.
-- [ ] Fake deterministic provider cho local/test.
+- [x] `JournalAnalyzer`, `EmbeddingProvider`, `KnowledgeRetriever` ports.
+- [x] Fake deterministic `JournalAnalyzer` cho local/test, bật rõ bằng `MYLOG_AI_FAKE_ENABLED=true`.
 - [ ] Adapter provider thật có timeout, retry boundary và circuit breaker.
-- [ ] Không retry lỗi policy/schema vĩnh viễn.
-- [ ] Không log raw prompt/response.
+- [x] Không retry lỗi policy/schema vĩnh viễn.
+- [x] Không log raw prompt/response.
 
 ### AI-002 — Structured analysis (P0, L)
 
-- [ ] JSON schema cho sentiment/emotions/topics/reflection.
-- [ ] Validate enum/range/size.
+- [x] JSON schema cho sentiment/emotions/topics/reflection.
+- [x] Validate enum/range/size.
 - [ ] Output safety validation.
-- [ ] Encrypt narrative/entities; structured emotion/topic lưu riêng.
-- [ ] Lưu provider/model/prompt/policy/content version và usage.
+- [x] Encrypt reflection; structured emotion/topic lưu riêng. V8 chưa nhận extracted entities.
+- [x] Lưu provider/model/prompt/policy/content version và usage.
 
 ### AI-003 — Analysis lifecycle (P0, M)
 
-- [ ] `PENDING → ANALYZING → ANALYZED/ANALYSIS_FAILED`.
-- [ ] Edit journal tạo `ANALYSIS_OUTDATED`.
-- [ ] Kết quả job cũ thành `STALE`, không activate.
-- [ ] Retry endpoint idempotent và rate-limited.
+- [x] `PENDING → ANALYZING → ANALYZED/ANALYSIS_FAILED`.
+- [x] Edit journal tạo `ANALYSIS_OUTDATED`.
+- [x] Kết quả job cũ thành `STALE`, không activate.
+- [x] Retry endpoint idempotent và rate-limited.
 
 ```text
 POST /api/v1/journal-entries/{entryId}/analysis:retry
 GET  /api/v1/journal-entries/{entryId}
+GET  /api/v1/journal-entries/{entryId}/analysis
 ```
 
 ### AI-004 — Frontend status integration (P1, M)
@@ -418,6 +419,15 @@ GET  /api/v1/journal-entries/{entryId}
 
 ### Exit criteria M3
 
+Backend đã được kiểm thử với PostgreSQL Testcontainers cho fake provider, owner-scope,
+consent lúc worker chạy, retry, lease recovery và kết quả cũ; `JournalEntryChanged`/`JournalEntryDeleted`
+đánh dấu kết quả cũ `STALE` qua outbox. Fake chỉ dùng local/test. M3 chưa đạt exit criteria
+production: classifier/policy/safety content của M2 chưa được duyệt, provider thật và điều khoản
+dữ liệu chưa chốt, output safety validator mới là baseline, frontend vẫn dùng mock.
+`SafetyRescreenRequested` được retry có backoff khi classifier/policy chưa sẵn sàng,
+sau đó rescreen và enqueue analysis khi đủ điều kiện. `MYLOG_JOBS_ENABLED` mặc định false;
+bật worker khi môi trường đã được cấu hình và policy/provider phù hợp.
+
 - Demo end-to-end journal → safety → async analysis → reflection.
 - Tắt AI provider không làm mất journal/outbox event.
 - Worker chạy song song không tạo duplicate active analysis.
@@ -427,32 +437,32 @@ GET  /api/v1/journal-entries/{entryId}
 
 ### Database
 
-- [ ] `V9__insights_and_reports.sql`.
-- [ ] Evidence/index theo user và period.
+- [x] `V9__insights_and_reports.sql` (đã áp dụng Supabase schema v9, Hibernate validate thành công).
+- [x] Evidence/index theo user và period.
 
 ### INS-001 — Daily aggregate (P0, L)
 
-- [ ] Mood/stress/energy/sleep timeline theo timezone.
-- [ ] Top curated emotions/topics.
-- [ ] Journal streak với định nghĩa được test.
-- [ ] Daily check-in ưu tiên, journal fallback có source marker.
-- [ ] Query plan đạt mục tiêu trên synthetic dataset.
+- [x] Mood/stress/energy/sleep timeline theo timezone snapshot của user.
+- [x] Top curated emotions/topics từ active analysis.
+- [x] Journal streak với định nghĩa được test (ngày có journal SAVED; check-in đơn lẻ không tính; streak hiện tại có thể kết thúc hôm qua).
+- [x] Daily check-in ưu tiên, journal fallback có source marker.
+- [x] Dashboard 30 ngày trên 10.000 journal synthetic/user: local PostgreSQL Testcontainers p95 45 ms cho 30 lần gọi service sau warmup (môi trường staging vẫn cần đo lại).
 
 ### INS-002 — Evidence-backed insight (P0, L)
 
-- [ ] Minimum sample size cấu hình được.
-- [ ] Correlation không được mô tả như causation.
-- [ ] Lưu algorithm version, sample size, strength và evidence.
-- [ ] Không copy raw journal vào evidence.
-- [ ] Narrative chỉ diễn giải metric đã tính.
+- [x] Minimum sample size cấu hình được (`MYLOG_INSIGHTS_MINIMUM_SAMPLES`, mặc định 7).
+- [x] Correlation không được mô tả như causation.
+- [x] Lưu algorithm version, sample size, strength và evidence.
+- [x] Không copy raw journal vào evidence.
+- [x] Narrative RULE/STATISTICAL chỉ diễn giải metric đã tính; không gọi LLM.
 
 ### RPT-001 — Weekly/monthly report (P1, L)
 
-- [ ] Scheduler theo timezone user.
-- [ ] Unique key theo user/type/period.
-- [ ] Metrics snapshot bất biến.
+- [x] Scheduler theo timezone user.
+- [x] Unique key theo user/type/period/version; enqueue version 1 idempotent.
+- [x] Metrics snapshot bất biến.
 - [ ] AI narrative qua output safety.
-- [ ] Regenerate tạo version mới.
+- [x] Regenerate tạo version mới.
 
 ```text
 GET /api/v1/dashboard?range=7d|30d|90d
@@ -471,6 +481,14 @@ Các số trên là engineering target ban đầu, phải đo lại trên môi t
 
 ### Exit criteria M4
 
+Backend M4 đã có dashboard/insight/report API owner-scoped, scheduler và report worker có lease/retry.
+PostgreSQL Testcontainers kiểm tra check-in ưu tiên journal fallback, top curated code, sample/evidence,
+pagination, scheduler idempotent, regenerate và snapshot cũ bất biến. DST/calendar boundary có unit test.
+V9 đã áp dụng Supabase. Chưa đạt toàn bộ M4: p95 trên staging, journal list p95 và HTTP report
+enqueue chưa được đo; AI narrative qua output safety còn phụ thuộc provider và policy M3.
+Hiện report chỉ dùng narrative RULE từ structured metrics. `MYLOG_REPORTS_ENABLED` mặc định false,
+cần bật rõ khi muốn chạy scheduler/worker.
+
 - Dashboard không gọi LLM trong request path.
 - Mọi insight hiển thị được evidence/sample size.
 - Weekly report chạy idempotent qua scheduler.
@@ -480,10 +498,10 @@ Các số trên là engineering target ban đầu, phải đo lại trên môi t
 
 ### Database/API
 
-- [ ] `V10__selfcare.sql`.
-- [ ] Goal/habit text encrypted.
-- [ ] Completion unique theo habit/local date.
-- [ ] Ownership và optimistic locking.
+- [x] `V10__selfcare.sql`.
+- [x] Goal/habit text encrypted.
+- [x] Completion unique theo habit/local date.
+- [x] Ownership và optimistic locking cho goal update.
 
 ```text
 POST   /api/v1/self-care/goals
@@ -496,56 +514,61 @@ DELETE /api/v1/self-care/habits/{habitId}/completions/{localDate}
 
 ### Business rules
 
-- [ ] Goal nằm trong wellness scope, không treatment plan.
-- [ ] Completion idempotent.
-- [ ] Streak tính theo timezone và frequency config.
-- [ ] Correlation habit–mood chỉ xuất hiện khi đủ mẫu.
+- [ ] Goal nằm trong wellness scope, không treatment plan: đã có category allowlist và bộ lọc từ khóa cơ bản; cần policy/nội dung được duyệt và đánh giá các cách diễn đạt khác trước khi coi là bảo đảm đầy đủ.
+- [x] Completion idempotent.
+- [x] Streak tính theo timezone snapshot của habit và frequency config DAILY/WEEKLY.
+- [x] Liên hệ habit–mood chỉ xuất hiện khi mỗi nhóm có ít nhất 7 check-in có mood, trong cửa sổ 90 ngày.
 
 ### Exit criteria M5
 
-- Frontend có thể tạo goal, tick completion và xem progress.
-- Không double count completion.
-- Goal/habit của user khác luôn trả not found/forbidden theo contract.
+Backend M5 có API để tạo goal/habit, đánh dấu và bỏ completion, xem progress trong `GET /goals`.
+V10 đã áp dụng lên Supabase và Hibernate `ddl-auto=validate` khởi động thành công (2026-10-01).
+Frontend hiện chưa tích hợp các API này; vì vậy exit criterion end-to-end vẫn mở.
+Completion dùng `UNIQUE(habit_id, local_date)` và `PUT` upsert; gọi lặp không tăng số lượng.
+Goal/habit của user khác trả 404 qua truy vấn theo `user_id` và ID.
+M5 dùng timezone snapshot khi tạo habit; đổi timezone profile sau đó không đổi lịch của habit đã tạo.
+Chưa có API cập nhật habit, chỉ goal update dùng `If-Match` và version.
 
 ## 12. M6 — Knowledge base, RAG và admin
 
 ### Database
 
-- [ ] `V11__knowledge_and_prompts.sql`.
-- [ ] `V13__seed_extended_admin_roles_permissions.sql` cho content/safety/system/support/auditor.
+- [x] `V11__knowledge_and_prompts.sql`.
+- [x] `V12__admin_roles_permissions.sql` cho content/safety/system/support/auditor. Đổi số từ V13 dự kiến để Flyway không chạy vượt V12 của M7.
+- [x] `V13__knowledge_author_nullification.sql` để account deletion sau này có thể null attribution FK mà giữ approved content bất biến.
 
 ### KB-001 — Knowledge workflow (P1, L)
 
-- [ ] Draft → review → approve/reject/archive.
-- [ ] Version bất biến sau approve.
-- [ ] Checksum tránh chunk/embed lại nội dung không đổi.
-- [ ] Chỉ approver có permission phù hợp được publish.
-- [ ] Audit mọi approve/archive.
+- [x] Draft → review → approve/reject/archive.
+- [x] Version và chunk bất biến sau approve bằng DB trigger; archive giữ citation lịch sử.
+- [x] Checksum tránh chunk lại nội dung không đổi. Embedding chưa bật khi chưa chốt provider/model.
+- [x] Chỉ approver có `knowledge:review` được publish; không tự duyệt bản do mình tạo.
+- [x] Audit approve/archive bằng reason code, không ghi content.
 
 ### KB-002 — Chunk/embedding/retrieval (P1, L)
 
-- [ ] Chunk strategy có version.
-- [ ] Embedding model/dimension provenance.
+- [x] Chunk strategy có version (`paragraph-800-v1`).
+- [ ] Embedding model/dimension provenance: schema đã có, chưa có provider adapter đã duyệt để tạo vector.
 - [ ] Partial vector index sau khi chốt model.
-- [ ] Filter APPROVED + locale + effective date trước retrieval.
-- [ ] Citation tới knowledge version/chunk.
+- [x] Filter APPROVED + locale + effective date trước retrieval.
+- [x] Citation tới knowledge version/chunk.
 - [ ] Eval retrieval bằng curated queries.
 
 ### RAG-001 — Safe recommendation (P1, L)
 
-- [ ] Context minimization.
-- [ ] Chỉ dùng retrieved approved excerpts.
-- [ ] Structured response kèm citation.
+- [x] Context minimization: endpoint chỉ nhận topic code, không gửi journal ra ngoài.
+- [x] Endpoint hiện chỉ trả approved excerpts.
+- [x] Structured excerpt response kèm citation.
 - [ ] Safety validation sau generation.
-- [ ] Không tự tạo hotline/nguồn hỗ trợ.
+- [x] Không tự tạo hotline/nguồn hỗ trợ vì endpoint hiện không sinh nội dung.
 
 ### ADM-001 — Admin foundation (P0/P1, L)
 
-- [ ] Separate admin controllers/permissions.
-- [ ] User metadata view không có decrypt journal.
-- [ ] Suspend/restore account có reason + audit.
-- [ ] Job list/retry chỉ hiển thị sanitized error.
-- [ ] Aggregate dashboard có minimum cohort size.
+- [x] Separate admin controllers/permissions.
+- [x] User metadata view không có decrypt journal/email.
+- [x] Suspend/restore account có reason code + audit; suspend revoke sessions.
+- [x] Job list/retry chỉ hiển thị error code, không payload/summary; retry chỉ `DEAD/PROVIDER_UNAVAILABLE`.
+- [x] Aggregate dashboard có minimum cohort size 20 cho từng metric.
 
 ```text
 GET  /api/v1/admin/users
@@ -558,44 +581,50 @@ POST /api/v1/admin/ai-jobs/{jobId}:retry
 
 ### Exit criteria M6
 
-- Nội dung chưa approve không bao giờ được retrieve.
-- Admin thông thường không có code path giải mã journal.
-- Citation truy ngược đúng document version.
-- Permission matrix có test deny và allow.
+Backend M6 đã có workflow knowledge, retrieval approved theo topic/locale/effective date,
+metadata admin, suspend/restore, sanitized job list/retry và aggregate dashboard.
+V11–V13 đã áp dụng lên Supabase ngày 2026-10-01; Hibernate schema validation khởi động thành công.
+Test PostgreSQL xác nhận nội dung draft/review/archive không được retrieve, citation đúng version/chunk,
+DB chặn sửa version đã approve và permission matrix có cả deny/allow.
+Chưa có embedding provider/model được duyệt, vector index, curated retrieval eval hoặc generation/output safety validation;
+recommendation hiện chỉ trả nguyên văn approved excerpts, chưa phải RAG sinh nội dung.
 
 ## 13. M7 — Data rights, export và support
 
 ### Database
 
-- [ ] `V12__exports_deletion_feedback.sql`.
-- [ ] Partial unique cho active deletion/export theo policy.
+- [x] `V14__exports_deletion_feedback.sql` (đã kiểm tra bằng Flyway/Testcontainers và áp dụng lên Supabase ngày 2026-10-01; migration bất biến).
+- [x] Partial unique cho active deletion/export theo policy.
+- [x] `V15__restrict_direct_database_api_access.sql`: khóa grant Supabase client roles và bật RLS deny-all cho bảng `public`; đã kiểm chứng Testcontainers và 43 bảng trên Supabase ngày 2026-10-01.
 
 ### EXP-001 — Export (P0, L)
 
-- [ ] CSV machine-readable và PDF user-readable.
-- [ ] Export tạo async job.
-- [ ] File private/encrypted, signed URL ngắn hạn.
-- [ ] Expiry cleanup object + metadata.
-- [ ] Re-authentication trước download nếu policy yêu cầu.
+- [x] CSV machine-readable và PDF user-readable.
+- [x] Export tạo async job.
+- [x] File private/encrypted, signed URL ngắn hạn.
+- [x] Expiry cleanup artifact + metadata.
+- [x] Re-authentication trước download nếu policy yêu cầu.
 
 ### DEL-001 — Account deletion (P0, L)
 
-- [ ] Re-authenticate trước request.
-- [ ] Grace period/cancel.
-- [ ] Revoke session khi bắt đầu deletion.
-- [ ] Idempotent checkpoint worker.
+- [x] Re-authenticate trước request.
+- [x] Grace period/cancel.
+- [x] Revoke session khi bắt đầu deletion.
+- [x] Idempotent checkpoint worker.
 - [ ] Xóa DB, Cloudinary assets, cache và provider artifacts.
-- [ ] Audit tối thiểu/pseudonymous theo retention.
-- [ ] Test xác nhận không còn data user-owned.
+- [x] Audit tối thiểu/pseudonymous theo retention.
+- [x] Test xác nhận không còn data user-owned đã triển khai.
 
 ### FBK-001 — Feedback (P1, M)
 
-- [ ] Message encrypted.
-- [ ] Không auto-attach journal.
-- [ ] Workflow status/assignment.
-- [ ] Retention và audit truy cập.
+- [x] Message encrypted.
+- [x] Không auto-attach journal.
+- [x] Workflow status/assignment.
+- [x] Retention và audit truy cập.
 
 ### Exit criteria M7
+
+Backend M7 đã có API/worker cho CSV/PDF, xóa tài khoản và feedback. V14–V15 đã chạy qua Flyway trên PostgreSQL Testcontainers và áp dụng lên Supabase ngày 2026-10-01. V15 khóa truy cập trực tiếp qua Supabase Data API; kiểm tra thực tế 43 bảng ứng dụng đều bật RLS và `anon`/`authenticated` không có SELECT. Export hiện giới hạn 5 MB và gồm account/profile/consent/session metadata, journal kể cả soft-deleted, tag/link, check-in, analysis, insight, report, self-care kể cả giá trị habit completion và feedback qua application facades. Artifact mã hóa trong PostgreSQL theo ADR-0007, hết hạn sau 24 giờ; metadata request được dọn sau 30 ngày. Yêu cầu xóa có grace period 7 ngày, thu hồi session ngay, hủy bằng xác thực lại và worker retry/checkpoint; test mô phỏng lỗi cleanup rồi chạy lại. Deletion audit pseudonymous giữ tối đa 365 ngày, feedback giữ tối đa 180 ngày. Hiện chưa có adapter Redis cache hay AI provider artifact lưu dữ liệu user cần purge; khi thêm adapter mới phải nối cleanup tương ứng trước khi đánh dấu toàn bộ DEL-001 hoàn tất. Chưa kiểm chứng Cloudinary destroy bằng tài khoản thử nghiệm thực tế. Export/deletion worker bật mặc định khi identity được bật; có thể tắt bằng `MYLOG_EXPORTS_ENABLED=false` hoặc `MYLOG_DELETION_ENABLED=false` khi bảo trì.
 
 - User tải được dữ liệu của chính mình.
 - Signed URL hết hạn và không public object.
@@ -606,13 +635,13 @@ POST /api/v1/admin/ai-jobs/{jobId}:retry
 
 ### Security (P0)
 
-- [ ] Threat model cho auth, journal, admin, AI provider và Cloudinary.
+- [x] Threat model cho auth, journal, admin, AI provider và Cloudinary (`M8_THREAT_MODEL.md`; release blockers được ghi rõ).
 - [ ] Dependency/container scan không còn critical unresolved.
 - [ ] Authorization regression toàn endpoint.
-- [ ] Rate limit login, journal, analysis retry, export.
+- [x] Rate limit login, journal, analysis retry, export (journal/tag 60 writes/15 phút/user; export 3 requests/ngày/user; DB-backed HMAC subject).
 - [ ] Secret rotation drill.
-- [ ] Encryption key rotation test.
-- [ ] CORS và security headers review.
+- [x] Encryption key rotation test (`SensitiveDataCipherTest` đọc payload khóa cũ bằng keyring mới; `IdentityJwtTest` xác minh JWT bằng public key cũ).
+- [x] CORS và security headers review (exact configured origins; nosniff, DENY frame, no-referrer; cần xác nhận origin HTTPS thật ở staging).
 - [ ] Admin MFA hoặc ghi rõ giới hạn nếu demo local.
 
 ### Privacy/safety (P0)
@@ -621,7 +650,7 @@ POST /api/v1/admin/ai-jobs/{jobId}:retry
 - [ ] Provider retention/opt-out được xác nhận.
 - [ ] Safety eval đạt threshold đã chốt.
 - [ ] Crisis resources được duyệt và có verified timestamp.
-- [ ] Consent withdrawal chặn future AI processing.
+- [x] Consent withdrawal chặn future AI processing (PostgreSQL integration test thu hồi sau enqueue, trước worker).
 - [ ] Backup retention phù hợp deletion policy.
 
 ### Reliability/performance (P0/P1)
@@ -636,13 +665,15 @@ POST /api/v1/admin/ai-jobs/{jobId}:retry
 ### Deployment (P1)
 
 - [ ] Staging dùng synthetic data.
-- [ ] API/worker chạy profile riêng.
-- [ ] Readiness kiểm tra dependency cần thiết; liveness không phụ thuộc provider ngoài.
-- [ ] Flyway chạy một lần có kiểm soát trước rollout app.
-- [ ] Rollback application không rollback destructive migration.
+- [ ] API/worker chạy profile riêng (`MYLOG_APP_PROFILE=api|worker` đã có trong code; staging deployment chưa kiểm chứng).
+- [ ] Readiness kiểm tra dependency cần thiết; liveness không phụ thuộc provider ngoài (đã cấu hình DB ở staging/prod, chưa kiểm chứng deployment).
+- [ ] Flyway chạy một lần có kiểm soát trước rollout app (`migrate` profile đã chạy trên PostgreSQL tách biệt, exit 0/V15; chưa chạy staging).
+- [x] Runbook rollback application không rollback destructive migration (`M8_RELEASE_RUNBOOK.md`; chưa diễn tập).
 - [ ] Dashboard/alert cho HTTP, DB, queue, AI và safety dependency.
 
 ### Exit criteria M8
+
+M8 chưa đạt exit criteria release. Đã bổ sung quota ghi journal/export, tách HTTP worker và lịch xử lý trên API instance, security headers, readiness DB ở staging/prod, migration-only profile, threat model và runbook. Migration-only profile đã áp dụng V1–V15 và thoát mã 0 trên PostgreSQL/pgvector 17 tách biệt; chưa chạy staging. Các đánh giá security, safety, restore, performance và phê duyệt bên ngoài còn mở; không phát hành production dựa trên checklist này.
 
 - Demo script end-to-end chạy ổn định trên staging.
 - Không còn P0 bug mở.

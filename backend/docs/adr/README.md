@@ -10,6 +10,8 @@ Các quyết định nền tảng của backend **mylog** được ghi lại dư
 | [0004](0004-ai-provider-and-data-handling.md) | Provider-neutral AI và data minimization | Accepted |
 | [0005](0005-private-object-storage.md) | Private S3-compatible object storage | Superseded by ADR-0006 |
 | [0006](0006-cloudinary-image-storage.md) | Cloudinary for journal image storage | Accepted |
+| [0007](0007-encrypted-database-export-artifacts.md) | Encrypted temporary export artifacts in PostgreSQL | Accepted |
+| [0008](0008-backend-only-database-api.md) | Backend-only access to application tables | Accepted |
 
 ## Quy ước
 
