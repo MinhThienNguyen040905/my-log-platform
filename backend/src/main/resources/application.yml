@@ -40,6 +40,11 @@ management:
 
 mylog:
   app-profile: ${MYLOG_APP_PROFILE:all}
+  jobs:
+    enabled: ${MYLOG_JOBS_ENABLED:false}
+    poll-delay-ms: ${MYLOG_JOBS_POLL_DELAY_MS:2000}
+  ai:
+    fake-enabled: ${MYLOG_AI_FAKE_ENABLED:false}
   identity:
     enabled: false
   web:

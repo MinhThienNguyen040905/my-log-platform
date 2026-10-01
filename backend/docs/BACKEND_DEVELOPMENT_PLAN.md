@@ -368,45 +368,46 @@ Asset có thể chuyển P2 nếu demo MVP không cần upload ảnh thật.
 
 ### Database
 
-- [ ] Hoàn tất outbox/job indexes từ V6.
-- [ ] `V8__ai_analysis_and_jobs.sql`.
-- [ ] Unique/idempotency constraints cho analysis version.
+- [x] Hoàn tất outbox/job indexes từ V6 (V8 bổ sung lease recovery và job claim).
+- [x] `V8__ai_analysis_and_jobs.sql` (đã kiểm thử PostgreSQL Testcontainers và áp dụng lên Supabase; ứng dụng khởi động, Hibernate validate thành công).
+- [x] Unique/idempotency constraints cho analysis version.
 
 ### JOB-001 — Transactional outbox (P0, L)
 
-- [ ] Publish event cùng transaction nghiệp vụ.
-- [ ] Claim bằng `FOR UPDATE SKIP LOCKED`.
-- [ ] Lease/lock timeout và worker recovery.
-- [ ] Exponential backoff + jitter.
-- [ ] Dead job và sanitized error.
-- [ ] Metrics queue depth/oldest age/success/error.
+- [x] Publish event cùng transaction nghiệp vụ.
+- [x] Claim bằng `FOR UPDATE SKIP LOCKED`.
+- [x] Lease/lock timeout và worker recovery.
+- [x] Exponential backoff + jitter.
+- [x] Dead job và sanitized error code.
+- [x] Metrics queue depth/oldest age/success/error.
 
 ### AI-001 — Provider ports/adapters (P0, L)
 
-- [ ] `JournalAnalyzer`, `EmbeddingProvider`, `KnowledgeRetriever` ports.
-- [ ] Fake deterministic provider cho local/test.
+- [x] `JournalAnalyzer`, `EmbeddingProvider`, `KnowledgeRetriever` ports.
+- [x] Fake deterministic `JournalAnalyzer` cho local/test, bật rõ bằng `MYLOG_AI_FAKE_ENABLED=true`.
 - [ ] Adapter provider thật có timeout, retry boundary và circuit breaker.
-- [ ] Không retry lỗi policy/schema vĩnh viễn.
-- [ ] Không log raw prompt/response.
+- [x] Không retry lỗi policy/schema vĩnh viễn.
+- [x] Không log raw prompt/response.
 
 ### AI-002 — Structured analysis (P0, L)
 
-- [ ] JSON schema cho sentiment/emotions/topics/reflection.
-- [ ] Validate enum/range/size.
+- [x] JSON schema cho sentiment/emotions/topics/reflection.
+- [x] Validate enum/range/size.
 - [ ] Output safety validation.
-- [ ] Encrypt narrative/entities; structured emotion/topic lưu riêng.
-- [ ] Lưu provider/model/prompt/policy/content version và usage.
+- [x] Encrypt reflection; structured emotion/topic lưu riêng. V8 chưa nhận extracted entities.
+- [x] Lưu provider/model/prompt/policy/content version và usage.
 
 ### AI-003 — Analysis lifecycle (P0, M)
 
-- [ ] `PENDING → ANALYZING → ANALYZED/ANALYSIS_FAILED`.
-- [ ] Edit journal tạo `ANALYSIS_OUTDATED`.
-- [ ] Kết quả job cũ thành `STALE`, không activate.
-- [ ] Retry endpoint idempotent và rate-limited.
+- [x] `PENDING → ANALYZING → ANALYZED/ANALYSIS_FAILED`.
+- [x] Edit journal tạo `ANALYSIS_OUTDATED`.
+- [x] Kết quả job cũ thành `STALE`, không activate.
+- [x] Retry endpoint idempotent và rate-limited.
 
 ```text
 POST /api/v1/journal-entries/{entryId}/analysis:retry
 GET  /api/v1/journal-entries/{entryId}
+GET  /api/v1/journal-entries/{entryId}/analysis
 ```
 
 ### AI-004 — Frontend status integration (P1, M)
@@ -417,6 +418,15 @@ GET  /api/v1/journal-entries/{entryId}
 - [ ] P2: SSE notification khi analysis hoàn tất.
 
 ### Exit criteria M3
+
+Backend đã được kiểm thử với PostgreSQL Testcontainers cho fake provider, owner-scope,
+consent lúc worker chạy, retry, lease recovery và kết quả cũ; `JournalEntryChanged`/`JournalEntryDeleted`
+đánh dấu kết quả cũ `STALE` qua outbox. Fake chỉ dùng local/test. M3 chưa đạt exit criteria
+production: classifier/policy/safety content của M2 chưa được duyệt, provider thật và điều khoản
+dữ liệu chưa chốt, output safety validator mới là baseline, frontend vẫn dùng mock.
+`SafetyRescreenRequested` được retry có backoff khi classifier/policy chưa sẵn sàng,
+sau đó rescreen và enqueue analysis khi đủ điều kiện. `MYLOG_JOBS_ENABLED` mặc định false;
+bật worker khi môi trường đã được cấu hình và policy/provider phù hợp.
 
 - Demo end-to-end journal → safety → async analysis → reflection.
 - Tắt AI provider không làm mất journal/outbox event.

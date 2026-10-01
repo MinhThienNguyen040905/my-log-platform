@@ -292,9 +292,7 @@ Table analysis_emotions {
 Table analysis_topics {
   id uuid [pk]
   analysis_id uuid [not null, ref: > ai_analyses.id]
-  topic_code varchar(48)
-  encrypted_custom_label bytea
-  label_key_version varchar(32)
+  topic_code varchar(48) [not null]
   score numeric(6,5) [not null]
   rank smallint [not null]
 }
@@ -544,6 +542,8 @@ Table outbox_events {
   available_at timestamptz [not null]
   locked_at timestamptz
   locked_by varchar(120)
+  lease_expires_at timestamptz
+  last_error_code varchar(80)
   created_at timestamptz [not null]
   published_at timestamptz
 }

@@ -76,7 +76,7 @@ class JpaJournalStore implements JournalStore {
                     j.moodCode=:moodCode, j.moodScore=:moodScore, j.stressScore=:stressScore,
                     j.energyScore=:energyScore, j.sleepMinutes=:sleepMinutes,
                     j.riskLevel=:riskLevel, j.analysisStatus=:analysisStatus,
-                    j.contentVersion=:contentVersion, j.updatedAt=:updatedAt,
+                    j.contentVersion=:contentVersion, j.latestAnalysisId=null, j.updatedAt=:updatedAt,
                     j.rowVersion=j.rowVersion+1
                 where j.id=:id and j.userId=:userId and j.deletedAt is null and j.rowVersion=:expectedVersion
                 """)
@@ -126,6 +126,34 @@ class JpaJournalStore implements JournalStore {
                 """).setParameter("now", now).setParameter("entryId", entryId)
                 .setParameter("userId", userId).setParameter("expectedVersion", expectedVersion).executeUpdate();
         entityManager.flush();
+        entityManager.clear();
+        return changed == 1;
+    }
+
+    @Override public boolean transitionAnalysis(UUID userId, UUID entryId, int contentVersion,
+                                                List<String> from, String to, UUID analysisId, Instant now) {
+        int changed = entityManager.createQuery("""
+                update JournalEntry j set j.analysisStatus=:to, j.latestAnalysisId=:analysisId,
+                    j.updatedAt=:now, j.rowVersion=j.rowVersion+1
+                where j.id=:entryId and j.userId=:userId and j.deletedAt is null
+                  and j.contentVersion=:contentVersion and j.analysisStatus in :from
+                """).setParameter("to", to).setParameter("analysisId", analysisId)
+                .setParameter("now", now).setParameter("entryId", entryId).setParameter("userId", userId)
+                .setParameter("contentVersion", contentVersion).setParameter("from", from).executeUpdate();
+        entityManager.clear();
+        return changed == 1;
+    }
+
+    @Override public boolean applyRescreen(UUID userId, UUID entryId, int contentVersion,
+                                           String riskLevel, String analysisStatus, Instant now) {
+        int changed = entityManager.createQuery("""
+                update JournalEntry j set j.riskLevel=:riskLevel, j.analysisStatus=:analysisStatus,
+                    j.updatedAt=:now, j.rowVersion=j.rowVersion+1
+                where j.id=:entryId and j.userId=:userId and j.deletedAt is null
+                    and j.contentVersion=:contentVersion and j.analysisStatus='BLOCKED_BY_SAFETY'
+                """).setParameter("riskLevel", riskLevel).setParameter("analysisStatus", analysisStatus)
+                .setParameter("now", now).setParameter("entryId", entryId).setParameter("userId", userId)
+                .setParameter("contentVersion", contentVersion).executeUpdate();
         entityManager.clear();
         return changed == 1;
     }

@@ -502,6 +502,7 @@ DELETE /journal-entries/{entryId}
 PUT    /journal-entries/{entryId}/favorite
 DELETE /journal-entries/{entryId}/favorite
 POST   /journal-entries/{entryId}/analysis:retry
+GET    /journal-entries/{entryId}/analysis
 
 PUT    /check-ins/{localDate}
 GET    /check-ins?from=&to=
@@ -645,19 +646,26 @@ Yêu cầu:
 
 ```java
 public interface JournalAnalyzer {
-    AnalysisOutput analyze(AnalysisInput input);
+    Result analyze(String title, String plainText);
 }
 
 public interface EmbeddingProvider {
-    EmbeddingVector embed(String sanitizedText);
+    float[] embed(String text);
 }
 
 public interface KnowledgeRetriever {
-    List<KnowledgeExcerpt> retrieve(RetrievalQuery query);
+    List<Passage> retrieve(String topicCode, int limit);
 }
 ```
 
 Provider adapter nằm trong infrastructure. Đổi model/provider không làm đổi domain/controller.
+
+M3 hiện dùng `FakeJournalAnalyzer` chỉ khi bật rõ trong local/test; mặc định provider unavailable và
+worker retry rồi đưa job vào DEAD mà không mất journal. `MYLOG_JOBS_ENABLED` mặc định false;
+V8 đã áp dụng lên Supabase nhưng worker chỉ nên bật khi môi trường và policy/provider phù hợp.
+Adapter thật và điều kiện dữ liệu theo ADR-0004 chưa được duyệt; không gửi
+journal sang provider khi chưa chốt. `EmbeddingProvider` và `KnowledgeRetriever` mới là ports,
+chưa tham gia pipeline M3.
 
 ### 12.2 Structured output/provenance
 

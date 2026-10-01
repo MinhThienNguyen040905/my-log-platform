@@ -32,7 +32,7 @@ import java.util.UUID;
 
 @Service
 @ConditionalOnProperty(prefix = "mylog.identity", name = "enabled", havingValue = "true")
-public class JournalService {
+public class JournalService implements JournalAnalysisAccess {
     private final JournalStore store;
     private final JournalContentCipher cipher;
     private final SafetyScreeningUseCase screening;
@@ -123,6 +123,7 @@ public class JournalService {
                 old.contentVersion() + 1, old.rowVersion() + 1, old.createdAt(), now, null);
         if (!store.update(next, expectedVersion)) throw new ConflictException("Nhật ký đã được cập nhật ở nơi khác.");
         safetyEvents.record(userId, entryId, decision, now);
+        outbox.publish("JOURNAL_ENTRY", entryId, "JournalEntryChanged", next.contentVersion(), now);
         publish(entryId, next.contentVersion(), decision, now);
         return view(next);
     }
@@ -140,6 +141,73 @@ public class JournalService {
     public JournalEntryView favorite(UUID userId, UUID entryId, boolean favorite) {
         if (!store.setFavorite(userId, entryId, favorite, clock.instant())) throw notFound();
         return get(userId, entryId);
+    }
+
+    @Override @Transactional(readOnly = true)
+    public Input load(UUID userId, UUID entryId, int contentVersion) {
+        return store.find(userId, entryId).filter(e -> e.contentVersion() == contentVersion
+                        && ("PENDING".equals(e.analysisStatus()) || "ANALYZING".equals(e.analysisStatus())
+                        || "ANALYSIS_OUTDATED".equals(e.analysisStatus())))
+                .map(e -> {
+                    JournalPayload data = payload(e);
+                    return new Input(userId, entryId, contentVersion, data.title(), data.plainText());
+                }).orElse(null);
+    }
+
+    @Override @Transactional
+    public boolean start(UUID userId, UUID entryId, int contentVersion, Instant now) {
+        return store.transitionAnalysis(userId, entryId, contentVersion,
+                List.of("PENDING", "ANALYSIS_OUTDATED", "ANALYSIS_FAILED", "ANALYZING"),
+                "ANALYZING", null, now);
+    }
+
+    @Override @Transactional
+    public boolean activate(UUID userId, UUID entryId, int contentVersion, UUID analysisId, Instant now) {
+        return store.transitionAnalysis(userId, entryId, contentVersion,
+                List.of("ANALYZING"), "ANALYZED", analysisId, now);
+    }
+
+    @Override @Transactional
+    public void fail(UUID userId, UUID entryId, int contentVersion, Instant now) {
+        store.transitionAnalysis(userId, entryId, contentVersion,
+                List.of("ANALYZING"), "ANALYSIS_FAILED", null, now);
+    }
+
+    @Override @Transactional
+    public void block(UUID userId, UUID entryId, int contentVersion, Instant now) {
+        store.transitionAnalysis(userId, entryId, contentVersion,
+                List.of("PENDING", "ANALYSIS_OUTDATED", "ANALYZING", "ANALYSIS_FAILED"),
+                "BLOCKED_BY_SAFETY", null, now);
+    }
+
+    @Override @Transactional
+    public void cancel(UUID userId, UUID entryId, int contentVersion, Instant now) {
+        store.transitionAnalysis(userId, entryId, contentVersion,
+                List.of("PENDING", "ANALYSIS_OUTDATED", "ANALYZING", "ANALYSIS_FAILED"),
+                "NOT_REQUESTED", null, now);
+    }
+
+    @Override @Transactional
+    public boolean retry(UUID userId, UUID entryId, int contentVersion, Instant now) {
+        return store.transitionAnalysis(userId, entryId, contentVersion,
+                List.of("ANALYSIS_FAILED", "NOT_REQUESTED"), "PENDING", null, now);
+    }
+
+    @Transactional
+    public boolean rescreen(UUID userId, UUID entryId, int contentVersion) {
+        JournalEntrySnapshot entry = store.find(userId, entryId).orElse(null);
+        if (entry == null || entry.contentVersion() != contentVersion
+                || !"BLOCKED_BY_SAFETY".equals(entry.analysisStatus())) return true;
+        JournalPayload data = payload(entry);
+        SafetyDecision decision = screening.screen(data.title() + "\n" + data.plainText());
+        if ("FAIL_SAFE".equals(decision.decision())) return false;
+        Instant now = clock.instant();
+        if (!store.applyRescreen(userId, entryId, contentVersion, decision.riskLevel().name(),
+                decision.permitsOrdinaryAnalysis() ? "PENDING" : "BLOCKED_BY_SAFETY", now)) return true;
+        safetyEvents.record(userId, entryId, decision, now);
+        if (decision.permitsOrdinaryAnalysis())
+            outbox.publish("JOURNAL_ENTRY", entryId, "JournalEntrySubmitted", contentVersion, now);
+        return true;
     }
 
     private void publish(UUID id, int contentVersion, SafetyDecision decision, Instant now) {

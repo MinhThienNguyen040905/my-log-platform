@@ -370,16 +370,15 @@ analysis_emotions(
 analysis_topics(
   id UUID PK,
   analysis_id UUID FK ai_analyses CASCADE,
-  topic_code VARCHAR(48) NULL,
-  encrypted_custom_label BYTEA NULL,
-  label_key_version VARCHAR(32) NULL,
+  topic_code VARCHAR(48) NOT NULL,
   score NUMERIC(6,5),
   rank SMALLINT,
-  CHECK ((topic_code IS NOT NULL) <> (encrypted_custom_label IS NOT NULL))
+  UNIQUE (analysis_id, topic_code),
+  UNIQUE (analysis_id, rank)
 )
 ```
 
-Chỉ curated `emotion_code/topic_code` được dùng trực tiếp cho aggregate. Custom label và extracted entity nằm trong encrypted output để giảm rò rỉ.
+V8 chỉ nhận curated `emotion_code/topic_code` để aggregate. Nếu sau này hỗ trợ custom label hoặc extracted entity, phải mã hóa trong output và thêm migration mới; V8 chưa có các cột custom label.
 
 ### 6.3 `ai_jobs`
 
@@ -660,15 +659,17 @@ aggregate_id UUID
 event_type VARCHAR(120)
 event_version SMALLINT
 payload JSONB                 -- ID/version only
-status VARCHAR(24) CHECK PENDING/PROCESSING/PUBLISHED/FAILED
+status VARCHAR(24) CHECK PENDING/PROCESSING/PUBLISHED/FAILED/DEAD
 attempt INTEGER
 available_at TIMESTAMPTZ
 locked_at TIMESTAMPTZ NULL
 locked_by VARCHAR(120) NULL
+lease_expires_at TIMESTAMPTZ NULL
+last_error_code VARCHAR(80) NULL
 created_at, published_at TIMESTAMPTZ
 ```
 
-Index partial `(available_at, created_at) WHERE status IN ('PENDING','FAILED')`. Insert cùng transaction với aggregate.
+Index partial `(available_at, created_at) WHERE status IN ('PENDING','FAILED')` và `(lease_expires_at) WHERE status = 'PROCESSING'` (V8). Insert cùng transaction với aggregate.
 
 ### 12.2 `idempotency_keys`
 

@@ -26,6 +26,8 @@ class OutboxEvent {
     @Column(name = "available_at", nullable = false) Instant availableAt;
     @Column(name = "locked_at") Instant lockedAt;
     @Column(name = "locked_by") String lockedBy;
+    @Column(name = "lease_expires_at") Instant leaseExpiresAt;
+    @Column(name = "last_error_code") String lastErrorCode;
     @Column(name = "created_at", nullable = false) Instant createdAt;
     @Column(name = "published_at") Instant publishedAt;
 }

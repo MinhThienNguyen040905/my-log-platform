@@ -49,6 +49,9 @@ MYLOG_ALLOWED_ORIGINS
 MYLOG_OPENAPI_ENABLED
 MYLOG_SWAGGER_UI_ENABLED
 MYLOG_CLOUDINARY_*
+MYLOG_JOBS_ENABLED
+MYLOG_JOBS_POLL_DELAY_MS
+MYLOG_AI_FAKE_ENABLED
 ```
 
 Database local có thể dùng Docker Compose; môi trường được triển khai dùng PostgreSQL do Supabase quản lý qua `MYLOG_DB_URL`, `MYLOG_DB_USERNAME` và `MYLOG_DB_PASSWORD`. Ảnh nhật ký dùng Cloudinary; bật adapter bằng `MYLOG_CLOUDINARY_ENABLED=true` sau khi điền credential server-side.
@@ -86,6 +89,19 @@ GET http://localhost:8080/internal/swagger-ui
 ```
 
 API docs mặc định bị tắt trong production.
+
+## M3 Outbox và AI analysis
+
+Flyway V8 tạo bảng job/analysis và bổ sung lease cho outbox; migration đã áp dụng lên Supabase.
+Worker mặc định tắt (`MYLOG_JOBS_ENABLED=false`). Chỉ bật khi môi trường có schema V8 và
+đã chốt classifier, safety policy cùng provider theo ADR-0003/0004. `MYLOG_AI_FAKE_ENABLED=true`
+chỉ phục vụ local/test với dữ liệu synthetic; adapter này tạo reflection cố định và không gọi mạng.
+
+Worker kiểm tra lại consent `AI_PROCESSING` và safety policy ngay lúc xử lý job. API đọc trạng thái
+và reflection: `GET /api/v1/journal-entries/{entryId}/analysis`; retry có cooldown 60 giây:
+`POST /api/v1/journal-entries/{entryId}/analysis:retry`. `GET` trả `status` kể cả khi reflection
+chưa sẵn sàng; client không nên chờ vô hạn. Các metric `mylog.outbox.*` và `mylog.ai.*` chỉ gồm
+metadata queue, kết quả, token, chi phí và độ trễ.
 
 ## M1 Identity, profile và consent
 
