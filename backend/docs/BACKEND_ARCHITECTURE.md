@@ -527,6 +527,8 @@ POST   /feedback
 
 ### 9.2 Admin API
 
+Các endpoint dưới đây là roadmap; M6 đã triển khai user metadata/status, dashboard, knowledge version workflow và AI job vận hành. Gán role, prompt workflow, safety metrics và audit read API vẫn để mốc sau.
+
 ```text
 GET    /admin/users
 GET    /admin/users/{userId}/metadata
@@ -536,8 +538,12 @@ PUT    /admin/users/{userId}/roles
 GET    /admin/dashboard
 
 POST   /admin/knowledge-items
-PATCH  /admin/knowledge-items/{itemId}
+GET    /admin/knowledge-items/{itemId}/versions/{version}
+POST   /admin/knowledge-items/{itemId}/versions
+PATCH  /admin/knowledge-items/{itemId}/versions/{version}
+POST   /admin/knowledge-items/{itemId}/versions/{version}:submit
 POST   /admin/knowledge-items/{itemId}/versions/{version}:approve
+POST   /admin/knowledge-items/{itemId}/versions/{version}:reject
 POST   /admin/knowledge-items/{itemId}/versions/{version}:archive
 POST   /admin/journal-prompts
 PATCH  /admin/journal-prompts/{promptId}
@@ -553,6 +559,7 @@ PATCH  /admin/feedback/{feedbackId}
 ```
 
 Không có admin endpoint trả plaintext journal. Metadata chỉ gồm ID giảm định danh, status, timestamp, size và job state cần cho vận hành.
+M6 có user endpoint `GET /recommendations?topicCode=...` trả approved excerpts và citation, không sinh phản hồi AI.
 
 ### 9.3 Pagination và lỗi
 
@@ -656,7 +663,7 @@ public interface EmbeddingProvider {
 }
 
 public interface KnowledgeRetriever {
-    List<Passage> retrieve(String topicCode, int limit);
+    List<Passage> retrieve(String topicCode, String locale, int limit);
 }
 ```
 
@@ -666,8 +673,10 @@ M3 hiện dùng `FakeJournalAnalyzer` chỉ khi bật rõ trong local/test; mặ
 worker retry rồi đưa job vào DEAD mà không mất journal. `MYLOG_JOBS_ENABLED` mặc định false;
 V8 đã áp dụng lên Supabase nhưng worker chỉ nên bật khi môi trường và policy/provider phù hợp.
 Adapter thật và điều kiện dữ liệu theo ADR-0004 chưa được duyệt; không gửi
-journal sang provider khi chưa chốt. `EmbeddingProvider` và `KnowledgeRetriever` mới là ports,
-chưa tham gia pipeline M3.
+journal sang provider khi chưa chốt. `EmbeddingProvider` chưa có adapter được duyệt.
+M6 đã có `KnowledgeRetriever` chỉ đọc chunk của version `APPROVED`, đúng locale và còn hiệu lực;
+recommendation API hiện trả nguyên văn excerpt kèm citation, chưa dùng LLM.
+Không đưa journal text vào retrieval request.
 
 ### 12.2 Structured output/provenance
 

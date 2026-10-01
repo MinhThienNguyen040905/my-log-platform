@@ -584,7 +584,7 @@ knowledge_items(
   id UUID PK, slug VARCHAR(160) UNIQUE,
   topic_code VARCHAR(48), locale VARCHAR(10),
   source_name VARCHAR(240), source_url TEXT,
-  owner_team VARCHAR(80), status VARCHAR(24),
+  owner_team VARCHAR(80), status VARCHAR(24) CHECK ACTIVE/ARCHIVED,
   created_by UUID FK users SET NULL,
   created_at, updated_at TIMESTAMPTZ
 )
@@ -594,15 +594,19 @@ knowledge_versions(
   version INTEGER, title VARCHAR(300), content TEXT,
   content_sha256 BYTEA,
   status VARCHAR(24), review_notes TEXT,
+  chunk_strategy_version VARCHAR(40),
   created_by UUID FK users SET NULL,
+  reviewed_by UUID FK users SET NULL,
   approved_by UUID FK users SET NULL,
   approved_at, effective_from, effective_to TIMESTAMPTZ,
-  created_at TIMESTAMPTZ,
+  created_at, updated_at TIMESTAMPTZ,
   UNIQUE (item_id, version)
 )
 ```
 
 Knowledge content là nội dung công khai/đã kiểm duyệt, không phải journal nên không cần journal encryption. Nếu nguồn có license hạn chế, lưu reference và excerpt theo chính sách bản quyền.
+V11 dùng trigger để giữ title/content/checksum/provenance của bản APPROVED/ARCHIVED bất biến.
+Chỉ cho phép chuyển APPROVED → ARCHIVED; archive không xóa version/chunk để citation cũ còn truy được.
 
 ### 10.2 Chunk và embedding
 
@@ -884,15 +888,16 @@ V8__ai_analysis_and_jobs.sql
 V9__insights_and_reports.sql
 V10__selfcare.sql
 V11__knowledge_and_prompts.sql
-V12__exports_deletion_feedback.sql
-V13__seed_extended_admin_roles_permissions.sql
+V12__admin_roles_permissions.sql
+V13__knowledge_author_nullification.sql
+V14__exports_deletion_feedback.sql
 ```
 
 Quy tắc Flyway:
 
 - Migration đã merge/deploy không được sửa.
 - DDL mới có migration mới, kể cả sửa constraint/index.
-- V2 seed luôn role `USER` tối thiểu để registration hoạt động; V13 dự kiến bổ sung các admin role/permission đã ổn định.
+- V2 seed role `USER` tối thiểu để registration hoạt động; V12 bổ sung các admin role/permission. V13 cho phép null attribution FK khi xóa user; M7 tiếp tục ở V14.
 - Seed chỉ dành cho stable system codes/roles, không seed journal/user thật.
 - Index lớn production dùng kế hoạch online/concurrent riêng; `CREATE INDEX CONCURRENTLY` không chạy trong transaction Flyway mặc định.
 - Mỗi migration phải chạy được trên database rỗng và database có dữ liệu representative.

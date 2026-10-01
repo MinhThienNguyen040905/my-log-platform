@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @Configuration(proxyBeanMethods = false)
+@EnableMethodSecurity
 class SecurityConfiguration {
 
     @Bean
@@ -60,6 +62,8 @@ class SecurityConfiguration {
                                         "/api/v1/self-care/goals", "/api/v1/self-care/goals/**",
                                         "/api/v1/self-care/habits/**")
                                 .authenticated();
+                        authorize.requestMatchers("/api/v1/admin/**").authenticated();
+                        authorize.requestMatchers(HttpMethod.GET, "/api/v1/recommendations").authenticated();
                     }
                     authorize.anyRequest().denyAll();
                 })

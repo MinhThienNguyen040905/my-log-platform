@@ -533,41 +533,42 @@ Chưa có API cập nhật habit, chỉ goal update dùng `If-Match` và version
 
 ### Database
 
-- [ ] `V11__knowledge_and_prompts.sql`.
-- [ ] `V13__seed_extended_admin_roles_permissions.sql` cho content/safety/system/support/auditor.
+- [x] `V11__knowledge_and_prompts.sql`.
+- [x] `V12__admin_roles_permissions.sql` cho content/safety/system/support/auditor. Đổi số từ V13 dự kiến để Flyway không chạy vượt V12 của M7.
+- [x] `V13__knowledge_author_nullification.sql` để account deletion sau này có thể null attribution FK mà giữ approved content bất biến.
 
 ### KB-001 — Knowledge workflow (P1, L)
 
-- [ ] Draft → review → approve/reject/archive.
-- [ ] Version bất biến sau approve.
-- [ ] Checksum tránh chunk/embed lại nội dung không đổi.
-- [ ] Chỉ approver có permission phù hợp được publish.
-- [ ] Audit mọi approve/archive.
+- [x] Draft → review → approve/reject/archive.
+- [x] Version và chunk bất biến sau approve bằng DB trigger; archive giữ citation lịch sử.
+- [x] Checksum tránh chunk lại nội dung không đổi. Embedding chưa bật khi chưa chốt provider/model.
+- [x] Chỉ approver có `knowledge:review` được publish; không tự duyệt bản do mình tạo.
+- [x] Audit approve/archive bằng reason code, không ghi content.
 
 ### KB-002 — Chunk/embedding/retrieval (P1, L)
 
-- [ ] Chunk strategy có version.
-- [ ] Embedding model/dimension provenance.
+- [x] Chunk strategy có version (`paragraph-800-v1`).
+- [ ] Embedding model/dimension provenance: schema đã có, chưa có provider adapter đã duyệt để tạo vector.
 - [ ] Partial vector index sau khi chốt model.
-- [ ] Filter APPROVED + locale + effective date trước retrieval.
-- [ ] Citation tới knowledge version/chunk.
+- [x] Filter APPROVED + locale + effective date trước retrieval.
+- [x] Citation tới knowledge version/chunk.
 - [ ] Eval retrieval bằng curated queries.
 
 ### RAG-001 — Safe recommendation (P1, L)
 
-- [ ] Context minimization.
-- [ ] Chỉ dùng retrieved approved excerpts.
-- [ ] Structured response kèm citation.
+- [x] Context minimization: endpoint chỉ nhận topic code, không gửi journal ra ngoài.
+- [x] Endpoint hiện chỉ trả approved excerpts.
+- [x] Structured excerpt response kèm citation.
 - [ ] Safety validation sau generation.
-- [ ] Không tự tạo hotline/nguồn hỗ trợ.
+- [x] Không tự tạo hotline/nguồn hỗ trợ vì endpoint hiện không sinh nội dung.
 
 ### ADM-001 — Admin foundation (P0/P1, L)
 
-- [ ] Separate admin controllers/permissions.
-- [ ] User metadata view không có decrypt journal.
-- [ ] Suspend/restore account có reason + audit.
-- [ ] Job list/retry chỉ hiển thị sanitized error.
-- [ ] Aggregate dashboard có minimum cohort size.
+- [x] Separate admin controllers/permissions.
+- [x] User metadata view không có decrypt journal/email.
+- [x] Suspend/restore account có reason code + audit; suspend revoke sessions.
+- [x] Job list/retry chỉ hiển thị error code, không payload/summary; retry chỉ `DEAD/PROVIDER_UNAVAILABLE`.
+- [x] Aggregate dashboard có minimum cohort size 20 cho từng metric.
 
 ```text
 GET  /api/v1/admin/users
@@ -580,16 +581,19 @@ POST /api/v1/admin/ai-jobs/{jobId}:retry
 
 ### Exit criteria M6
 
-- Nội dung chưa approve không bao giờ được retrieve.
-- Admin thông thường không có code path giải mã journal.
-- Citation truy ngược đúng document version.
-- Permission matrix có test deny và allow.
+Backend M6 đã có workflow knowledge, retrieval approved theo topic/locale/effective date,
+metadata admin, suspend/restore, sanitized job list/retry và aggregate dashboard.
+V11–V13 đã áp dụng lên Supabase ngày 2026-10-01; Hibernate schema validation khởi động thành công.
+Test PostgreSQL xác nhận nội dung draft/review/archive không được retrieve, citation đúng version/chunk,
+DB chặn sửa version đã approve và permission matrix có cả deny/allow.
+Chưa có embedding provider/model được duyệt, vector index, curated retrieval eval hoặc generation/output safety validation;
+recommendation hiện chỉ trả nguyên văn approved excerpts, chưa phải RAG sinh nội dung.
 
 ## 13. M7 — Data rights, export và support
 
 ### Database
 
-- [ ] `V12__exports_deletion_feedback.sql`.
+- [ ] `V14__exports_deletion_feedback.sql` (đổi số dự kiến sau V13 knowledge FK guard).
 - [ ] Partial unique cho active deletion/export theo policy.
 
 ### EXP-001 — Export (P0, L)

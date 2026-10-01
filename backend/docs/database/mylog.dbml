@@ -512,6 +512,7 @@ Table knowledge_items {
   locale varchar(10) [not null]
   source_name varchar(240) [not null]
   source_url text
+  owner_team varchar(80) [not null]
   status varchar(24) [not null]
   created_by uuid [ref: > users.id]
   created_at timestamptz [not null]
@@ -526,12 +527,16 @@ Table knowledge_versions {
   content text [not null]
   content_sha256 bytea [not null]
   status varchar(24) [not null]
+  review_notes text
+  chunk_strategy_version varchar(40) [not null]
   created_by uuid [ref: > users.id]
+  reviewed_by uuid [ref: > users.id]
   approved_by uuid [ref: > users.id]
   approved_at timestamptz
   effective_from timestamptz
   effective_to timestamptz
   created_at timestamptz [not null]
+  updated_at timestamptz [not null]
 
   indexes {
     (item_id, version) [unique]
@@ -565,6 +570,22 @@ Table knowledge_embeddings {
   indexes {
     (chunk_id, provider, model, model_version) [unique]
   }
+}
+
+Table journal_prompts {
+  id uuid [pk]
+  code varchar(80) [not null, unique]
+  locale varchar(10) [not null]
+  category varchar(48) [not null]
+  prompt_text text [not null]
+  status varchar(24) [not null]
+  display_order integer [not null, default: 0]
+  valid_from timestamptz
+  valid_to timestamptz
+  created_by uuid [ref: > users.id]
+  updated_by uuid [ref: > users.id]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
 }
 
 Table outbox_events {
