@@ -521,13 +521,18 @@ DELETE /self-care/habits/{habitId}/completions/{localDate}
 GET    /journal-prompts?locale=vi
 POST   /exports
 GET    /exports/{exportId}
+POST   /exports/{exportId}:authorize-download
+GET    /exports/{exportId}/file?expires=...&signature=...
 POST   /account-deletion-requests
+POST   /account-deletion-requests/{requestId}:status
+POST   /account-deletion-requests/{requestId}:cancel
 POST   /feedback
+GET    /feedback/{feedbackId}
 ```
 
 ### 9.2 Admin API
 
-Các endpoint dưới đây là roadmap; M6 đã triển khai user metadata/status, dashboard, knowledge version workflow và AI job vận hành. Gán role, prompt workflow, safety metrics và audit read API vẫn để mốc sau.
+Các endpoint dưới đây gồm API đã triển khai và roadmap; M6 đã có user metadata/status, dashboard, knowledge version workflow và AI job vận hành; M7 thêm feedback admin. Gán role, prompt workflow, safety metrics và audit read API vẫn để mốc sau.
 
 ```text
 GET    /admin/users
@@ -555,8 +560,11 @@ GET    /admin/safety/metrics
 PUT    /admin/safety/resources/{resourceId}
 GET    /admin/audit-logs
 GET    /admin/feedback
+GET    /admin/feedback/{feedbackId}
 PATCH  /admin/feedback/{feedbackId}
 ```
+
+M7 lưu artifact export mã hóa trong PostgreSQL theo ADR-0007 (tối đa 5 MB, TTL 24 giờ). Link tải tương đối có chữ ký 60 giây, vẫn cần header Bearer JWT hợp lệ và owner check; frontend tải bằng authenticated fetch rồi lưu blob, không mở link trần trong trình duyệt. API cấp link yêu cầu xác thực lại mật khẩu. Xóa tài khoản có grace period 7 ngày, hủy bằng email/mật khẩu và request ID vì session đã bị thu hồi. Worker dọn Cloudinary trước khi xóa hàng `users` theo cascade; khi Cloudinary không khả dụng mà còn asset, job giữ trạng thái retry. Feedback không tự đính kèm journal, message mã hóa và quyền admin `feedback:read`/`feedback:manage` được audit. PATCH admin feedback yêu cầu `If-Match` với `version` hiện tại, xung đột trả 409.
 
 Không có admin endpoint trả plaintext journal. Metadata chỉ gồm ID giảm định danh, status, timestamp, size và job state cần cho vận hành.
 M6 có user endpoint `GET /recommendations?topicCode=...` trả approved excerpts và citation, không sinh phản hồi AI.

@@ -27,6 +27,7 @@ public interface SelfCareStore {
     Optional<Habit> habit(UUID userId, UUID id);
     List<Habit> habits(UUID userId, UUID goalId);
     List<Completion> completions(UUID userId, UUID habitId, LocalDate from, LocalDate to);
+    List<Completion> exportAllCompletions(UUID userId);
     void putCompletion(Completion completion);
     void deleteCompletion(UUID userId, UUID habitId, LocalDate date);
 }

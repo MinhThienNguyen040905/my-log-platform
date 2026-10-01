@@ -1,6 +1,7 @@
 package com.mylog.analysis.application;
 
 import com.mylog.journal.application.JournalAnalysisAccess;
+import com.mylog.identity.application.IdentityService;
 import com.mylog.safety.application.SafetyAnalysisPermission;
 import com.mylog.user.application.UserProfileUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -17,6 +18,7 @@ public class AnalysisJobHandler {
     public enum Outcome { SUCCEEDED, STALE, POLICY_BLOCKED, CONSENT_REQUIRED }
 
     private final JournalAnalysisAccess journal;
+    private final IdentityService identity;
     private final UserProfileUseCase users;
     private final SafetyAnalysisPermission safety;
     private final JournalAnalyzer analyzer;
@@ -24,10 +26,10 @@ public class AnalysisJobHandler {
     private final TransactionTemplate tx;
     private final Clock clock;
 
-    public AnalysisJobHandler(JournalAnalysisAccess journal, UserProfileUseCase users,
+    public AnalysisJobHandler(JournalAnalysisAccess journal, IdentityService identity, UserProfileUseCase users,
                               SafetyAnalysisPermission safety, JournalAnalyzer analyzer,
                               AnalysisStore store, TransactionTemplate tx, Clock clock) {
-        this.journal = journal; this.users = users; this.safety = safety; this.analyzer = analyzer;
+        this.journal = journal; this.identity=identity; this.users = users; this.safety = safety; this.analyzer = analyzer;
         this.store = store; this.tx = tx; this.clock = clock;
     }
 
@@ -42,7 +44,7 @@ public class AnalysisJobHandler {
     }
 
     private Preparation prepare(UUID userId, UUID entryId, int version) {
-        if (!users.isConsentGranted(userId, "AI_PROCESSING")) {
+        if (!identity.isActive(userId) || !users.isConsentGranted(userId, "AI_PROCESSING")) {
             journal.cancel(userId, entryId, version, clock.instant());
             return new Preparation(null, Outcome.CONSENT_REQUIRED);
         }
@@ -59,7 +61,7 @@ public class AnalysisJobHandler {
     private Outcome finish(UUID jobId, String workerId, UUID userId, UUID entryId, int version,
                            JournalAnalyzer.Result result, long latency) {
         if (!store.ownsLease(jobId, workerId, clock.instant())) return Outcome.STALE;
-        boolean consent = users.isConsentGranted(userId, "AI_PROCESSING");
+        boolean consent = identity.isActive(userId) && users.isConsentGranted(userId, "AI_PROCESSING");
         boolean permitted = safety.permits(userId, entryId);
         if (!consent) {
             journal.cancel(userId, entryId, version, clock.instant());

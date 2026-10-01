@@ -83,6 +83,13 @@ public class JournalService implements JournalAnalysisAccess {
     public JournalEntryView get(UUID userId, UUID entryId) { return view(require(userId, entryId)); }
 
     @Transactional(readOnly = true)
+    public List<JournalEntryView> exportAll(UUID userId) {
+        List<JournalEntrySnapshot> entries=store.exportAll(userId,10001);
+        if (entries.size()>10000) throw new IllegalStateException("Export row limit exceeded");
+        return entries.stream().map(this::view).toList();
+    }
+
+    @Transactional(readOnly = true)
     public JournalPage list(UUID userId, LocalDate from, LocalDate to, UUID tagId, Boolean favorite,
                             String cursor, int pageSize) {
         if (pageSize < 1 || pageSize > 100 || from != null && to != null && from.isAfter(to))

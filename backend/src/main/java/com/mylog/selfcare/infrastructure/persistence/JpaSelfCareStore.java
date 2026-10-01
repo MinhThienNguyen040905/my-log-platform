@@ -83,6 +83,10 @@ class JpaSelfCareStore implements SelfCareStore {
                 .setParameter("user", userId).setParameter("habit", habitId).setParameter("from", from)
                 .setParameter("to", to).getResultList().stream().map(this::completion).toList();
     }
+    @Override public List<Completion> exportAllCompletions(UUID userId) {
+        return em.createQuery("select c from HabitCompletion c where c.userId=:user order by c.localDate",HabitCompletion.class)
+                .setParameter("user",userId).getResultList().stream().map(this::completion).toList();
+    }
     public void putCompletion(Completion completion) {
         em.createNativeQuery("insert into habit_completions (id, habit_id, user_id, local_date, value, source, created_at, updated_at) "
                         + "values (:id, :habit, :user, :date, :value, :source, :now, :now) "

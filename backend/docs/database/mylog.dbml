@@ -640,27 +640,59 @@ Table audit_logs {
 Table export_requests {
   id uuid [pk]
   user_id uuid [not null, ref: > users.id]
-  format varchar(16) [not null]
-  status varchar(24) [not null]
-  scope jsonb [not null]
-  storage_key varchar(512)
+  format varchar(8) [not null, note: 'CSV or PDF']
+  status varchar(16) [not null, note: 'PENDING, PROCESSING, READY, FAILED, EXPIRED']
+  encrypted_file bytea
+  file_iv bytea
+  file_wrapped_key bytea
+  file_key_version varchar(32)
   file_sha256 bytea
+  file_size_bytes bigint
   expires_at timestamptz
   attempt integer [not null, default: 0]
+  available_at timestamptz [not null]
+  lease_expires_at timestamptz
+  last_error_code varchar(60)
   created_at timestamptz [not null]
-  started_at timestamptz
   completed_at timestamptz
+
+  indexes {
+    user_id [unique, name: 'uq_export_active_user', note: 'Partial: PENDING, PROCESSING, READY']
+  }
 }
 
 Table deletion_requests {
   id uuid [pk]
-  user_id uuid [not null, ref: > users.id]
-  status varchar(24) [not null]
+  user_id uuid [ref: > users.id, note: 'ON DELETE SET NULL']
+  subject_hash bytea [not null]
+  status varchar(20) [not null, note: 'GRACE_PERIOD, PROCESSING, COMPLETED, CANCELLED, FAILED']
   requested_at timestamptz [not null]
   scheduled_for timestamptz [not null]
-  started_at timestamptz
+  lease_expires_at timestamptz
+  attempt integer [not null, default: 0]
+  checkpoint varchar(32) [not null]
+  last_error_code varchar(60)
   completed_at timestamptz
   cancelled_at timestamptz
-  checkpoint jsonb
-  last_error_code varchar(80)
+
+  indexes {
+    user_id [unique, name: 'uq_deletion_active_user', note: 'Partial: GRACE_PERIOD, PROCESSING, FAILED']
+  }
+}
+
+Table feedback {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id, note: 'ON DELETE CASCADE']
+  category varchar(32) [not null]
+  status varchar(20) [not null]
+  encrypted_message bytea [not null]
+  message_iv bytea [not null]
+  message_wrapped_key bytea [not null]
+  message_key_version varchar(32) [not null]
+  assigned_to uuid [ref: > users.id, note: 'ON DELETE SET NULL']
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+  resolved_at timestamptz
+  expires_at timestamptz [not null]
+  row_version bigint [not null, default: 0]
 }

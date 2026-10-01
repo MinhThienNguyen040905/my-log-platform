@@ -7,6 +7,7 @@ import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.platform.web.ResourceNotFoundException;
 import com.mylog.selfcare.application.query.GoalView;
 import com.mylog.selfcare.application.query.HabitView;
+import com.mylog.selfcare.application.query.HabitCompletionView;
 import com.mylog.selfcare.application.query.MoodAssociationView;
 import com.mylog.selfcare.domain.HabitSchedule;
 import com.mylog.selfcare.domain.HabitMoodAssociation;
@@ -60,6 +61,12 @@ public class SelfCareService {
 
     @Transactional(readOnly = true)
     public List<GoalView> goals(UUID userId) { return store.goals(userId).stream().map(this::view).toList(); }
+
+    @Transactional(readOnly = true)
+    public List<HabitCompletionView> exportCompletions(UUID userId) {
+        return store.exportAllCompletions(userId).stream().map(c -> new HabitCompletionView(c.id(),c.habitId(),
+                c.localDate(),c.value(),c.source(),c.createdAt(),c.updatedAt())).toList();
+    }
 
     @Transactional
     public GoalView updateGoal(UUID userId, UUID goalId, String title, String description,

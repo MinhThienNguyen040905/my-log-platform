@@ -68,6 +68,13 @@ class JpaJournalStore implements JournalStore {
         return entries.stream().map(this::snapshot).toList();
     }
 
+    @Override public List<JournalEntrySnapshot> exportAll(UUID userId, int limit) {
+        return entityManager.createQuery("""
+                select j from JournalEntry j where j.userId=:user order by j.occurredAt desc, j.id desc
+                """,JournalEntry.class).setParameter("user",userId).setMaxResults(limit)
+                .getResultList().stream().map(this::snapshot).toList();
+    }
+
     @Override public boolean update(JournalEntrySnapshot entry, long expectedVersion) {
         int changed = entityManager.createQuery("""
                 update JournalEntry j set j.encryptedPayload=:ciphertext, j.payloadIv=:iv,

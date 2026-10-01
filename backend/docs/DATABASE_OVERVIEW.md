@@ -387,7 +387,7 @@ id UUID PK
 job_type VARCHAR(40)
 aggregate_type VARCHAR(40)
 aggregate_id UUID
-user_id UUID NULL FK users CASCADE
+user_id UUID NOT NULL FK users CASCADE
 status VARCHAR(24)
 priority SMALLINT DEFAULT 100
 attempt INTEGER DEFAULT 0
@@ -748,49 +748,57 @@ Không lưu secret/API key. Chỉ lưu feature/policy config không bí mật v�
 ```text
 id UUID PK
 user_id UUID FK users CASCADE
-format VARCHAR(16) CHECK CSV/PDF/JSON
-status VARCHAR(24)
-scope JSONB
-storage_key VARCHAR(512) NULL
+format VARCHAR(8) CHECK CSV/PDF
+status VARCHAR(16) CHECK PENDING/PROCESSING/READY/FAILED/EXPIRED
+encrypted_file, file_iv, file_wrapped_key BYTEA NULL
+file_key_version VARCHAR(32) NULL
 file_sha256 BYTEA NULL
+file_size_bytes BIGINT NULL
 expires_at TIMESTAMPTZ NULL
 attempt INTEGER
-last_error_code VARCHAR(80) NULL
-created_at, started_at, completed_at TIMESTAMPTZ
+available_at TIMESTAMPTZ
+lease_expires_at TIMESTAMPTZ NULL
+last_error_code VARCHAR(60) NULL
+created_at, completed_at TIMESTAMPTZ
 ```
 
-File export mã hóa/private, signed URL sinh khi download. Cleanup xóa object khi hết hạn rồi clear `storage_key`.
+File export giới hạn 5 MB, mã hóa bằng envelope encryption trong PostgreSQL theo ADR-0007. Download cần JWT, owner check và URL ký có TTL 60 giây sau khi xác thực lại mật khẩu. Worker xóa ciphertext cùng metadata mã hóa sau 24 giờ và xóa metadata request sau 30 ngày.
 
 ### 13.2 `deletion_requests`
 
 ```text
 id UUID PK
-user_id UUID FK users CASCADE
-status VARCHAR(24) CHECK REQUESTED/GRACE_PERIOD/PROCESSING/COMPLETED/CANCELLED/FAILED
+user_id UUID NULL FK users SET NULL
+subject_hash BYTEA
+status VARCHAR(20) CHECK GRACE_PERIOD/PROCESSING/COMPLETED/CANCELLED/FAILED
 requested_at TIMESTAMPTZ
 scheduled_for TIMESTAMPTZ
-started_at, completed_at, cancelled_at TIMESTAMPTZ NULL
-checkpoint JSONB
-last_error_code VARCHAR(80) NULL
+lease_expires_at, completed_at, cancelled_at TIMESTAMPTZ NULL
+attempt INTEGER
+checkpoint VARCHAR(32)
+last_error_code VARCHAR(60) NULL
 ```
 
 Unique partial: tối đa một request active/user. Checkpoint chỉ chứa tên bước và ID kỹ thuật, không chứa dữ liệu đã xóa.
+Request hoàn tất/hủy được giữ tối đa 365 ngày dưới dạng audit tối thiểu rồi được dọn.
 
 ### 13.3 `feedback`
 
 ```text
 id UUID PK
-user_id UUID NULL FK users SET NULL
+user_id UUID NOT NULL FK users CASCADE
 category VARCHAR(32)
-status VARCHAR(24)
+status VARCHAR(20)
 encrypted_message BYTEA
 message_key_version VARCHAR(32)
-app_version VARCHAR(40) NULL
+message_iv, message_wrapped_key BYTEA
 assigned_to UUID NULL FK users SET NULL
-created_at, updated_at, resolved_at TIMESTAMPTZ
+created_at, updated_at, resolved_at, expires_at TIMESTAMPTZ
+row_version BIGINT
 ```
 
 Không tự động đính kèm journal. Nếu user chủ động chia sẻ context, cần consent riêng và retention ngắn.
+Feedback hiện chỉ nhận từ tài khoản đã xác thực; khi xóa tài khoản, feedback bị xóa theo FK cascade. Retention thường tối đa 180 ngày.
 
 ## 14. Encryption matrix
 
@@ -827,7 +835,7 @@ SELECT * FROM journal_entries WHERE id = :entry_id;
 
 Admin metadata dùng projection/view riêng, không reuse entity/repository có khả năng decrypt journal.
 
-PostgreSQL Row Level Security là defense-in-depth cho phase hardening. Chưa bật trong MVP cho tới khi connection pooling có cơ chế set/reset user context được kiểm thử chắc chắn; cấu hình RLS sai có thể gây leak giữa request.
+V15 bật RLS **không có policy** và thu hồi grant của `anon`/`authenticated` trên các bảng `public` để chặn truy cập trực tiếp qua Supabase Data API. Backend kết nối bằng DB owner nên tiếp tục dùng owner-scoped query ở application; RLS này không thay thế owner check trong backend. Chưa triển khai per-user RLS dựa trên session context của connection pool; nếu sau này dùng DB role không phải owner/BYPASSRLS, cần policy và kiểm thử riêng trước khi chuyển kết nối.
 
 ## 16. Xóa và retention
 

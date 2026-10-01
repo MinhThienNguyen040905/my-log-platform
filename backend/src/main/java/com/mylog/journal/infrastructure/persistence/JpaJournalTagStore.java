@@ -53,6 +53,16 @@ class JpaJournalTagStore implements JournalTagStore {
                 .setParameter("userId", userId).getResultList().stream().map(this::view).toList();
     }
 
+    @Override public List<Link> links(UUID userId) {
+        List<?> rows=em.createNativeQuery("""
+                SELECT jt.journal_entry_id, jt.tag_id FROM journal_entry_tags jt
+                JOIN journal_entries j ON j.id=jt.journal_entry_id
+                WHERE j.user_id=:user
+                """).setParameter("user",userId).getResultList();
+        return rows.stream().map(value -> (Object[]) value)
+                .map(row -> new Link((UUID)row[0],(UUID)row[1])).toList();
+    }
+
     @Override public boolean attach(UUID userId, UUID entryId, UUID tagId, Instant now) {
         if (!lockOwnedEntry(userId, entryId) || !ownsTag(userId, tagId)) return false;
         Number count = (Number) em.createNativeQuery("select count(*) from journal_entry_tags where journal_entry_id=?1")

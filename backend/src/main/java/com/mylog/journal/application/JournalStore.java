@@ -11,6 +11,7 @@ public interface JournalStore {
     Optional<JournalEntrySnapshot> find(UUID userId, UUID entryId);
     List<JournalEntrySnapshot> list(UUID userId, LocalDate from, LocalDate to, UUID tagId,
                                     Boolean favorite, Instant cursorTime, UUID cursorId, int limit);
+    List<JournalEntrySnapshot> exportAll(UUID userId, int limit);
     boolean update(JournalEntrySnapshot entry, long expectedVersion);
     boolean setFavorite(UUID userId, UUID entryId, boolean favorite, Instant now);
     boolean softDelete(UUID userId, UUID entryId, long expectedVersion, Instant now);

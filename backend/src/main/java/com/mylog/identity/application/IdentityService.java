@@ -155,6 +155,11 @@ public class IdentityService {
         return store.sessions(userId).stream().map(s -> new SessionSummary(s.id(), s.deviceName(),
                 s.createdAt(), s.lastUsedAt(), s.expiresAt())).toList();
     }
+    @Transactional(readOnly = true)
+    public List<SessionSummary> exportSessions(UUID userId) {
+        return store.allSessions(userId).stream().map(s -> new SessionSummary(s.id(),s.deviceName(),
+                s.createdAt(),s.lastUsedAt(),s.expiresAt())).toList();
+    }
 
     @Transactional public void revokeSession(UUID userId, UUID sessionId) {
         if (store.sessions(userId).stream().noneMatch(s -> s.id().equals(sessionId)))
@@ -168,6 +173,47 @@ public class IdentityService {
         Instant now = clock.instant();
         store.revokeOtherSessions(userId, currentSession, now);
         store.audit(userId, "OTHER_SESSIONS_REVOKED", currentSession, now);
+    }
+
+    @Transactional(readOnly = true)
+    public void reauthenticate(UUID userId, String password) {
+        Account account = store.accountById(userId).orElseThrow(InvalidCredentialsException::new);
+        if (!"ACTIVE".equals(account.status()) || password == null
+                || !passwords.matches(password, account.passwordHash())) throw new InvalidCredentialsException();
+    }
+
+    @Transactional(readOnly = true)
+    public String exportEmail(UUID userId) {
+        Account account = store.accountById(userId).orElseThrow(InvalidCredentialsException::new);
+        return cipher.decrypt("users.email", userId, userId, account.email());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isActive(UUID userId) {
+        return store.accountById(userId).map(account -> "ACTIVE".equals(account.status())).orElse(false);
+    }
+
+    @Transactional(noRollbackFor = InvalidCredentialsException.class)
+    public UUID authenticateForCancellation(String email, String password, String remoteAddress) {
+        Instant now = clock.instant();
+        String normalized = normalizeEmail(email);
+        rate("deletion-cancel-ip:" + remoteAddress, now, 10);
+        rate("deletion-cancel-email:" + normalized, now, 5);
+        Account account = store.accountByEmailHash(cipher.lookupHash(normalized)).orElse(null);
+        if (account == null) { passwords.matches(password, DUMMY_HASH); throw new InvalidCredentialsException(); }
+        if (!"DELETION_PENDING".equals(account.status()) || password == null
+                || !passwords.matches(password, account.passwordHash())) throw new InvalidCredentialsException();
+        return account.id();
+    }
+
+    @Transactional
+    public void beginDeletion(UUID userId) {
+        store.setStatus(userId, "DELETION_PENDING", clock.instant());
+        store.revokeAllSessions(userId, "ACCOUNT_DELETION", clock.instant());
+    }
+
+    @Transactional public void cancelDeletion(UUID userId) {
+        store.setStatus(userId, "ACTIVE", clock.instant());
     }
 
     private void sendVerification(UUID id, String email, Instant now) {

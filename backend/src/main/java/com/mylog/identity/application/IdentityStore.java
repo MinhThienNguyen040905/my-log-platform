@@ -20,6 +20,7 @@ public interface IdentityStore {
     void setLoginFailure(UUID userId, int failures, Instant lockedUntil, Instant now);
     void setLoginSuccess(UUID userId, Instant now);
     void activate(UUID userId, Instant now);
+    void setStatus(UUID userId, String status, Instant now);
     void changePassword(UUID userId, String hash, Instant now);
     void assignUserRole(UUID userId, Instant now);
     List<String> roles(UUID userId);
@@ -29,6 +30,7 @@ public interface IdentityStore {
     Optional<Session> sessionForUsedToken(byte[] tokenHash);
     Optional<Session> sessionById(UUID sessionId);
     List<Session> sessions(UUID userId);
+    List<Session> allSessions(UUID userId);
     void rotate(UUID sessionId, byte[] oldHash, byte[] newHash, Instant expiresAt, Instant now);
     void revokeFamily(UUID familyId, String reason, Instant now);
     void revokeSession(UUID userId, UUID sessionId, String reason, Instant now);

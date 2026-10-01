@@ -51,6 +51,14 @@ mylog:
     enabled: ${MYLOG_REPORTS_ENABLED:false}
     poll-delay-ms: ${MYLOG_REPORTS_POLL_DELAY_MS:5000}
     schedule-delay-ms: ${MYLOG_REPORTS_SCHEDULE_DELAY_MS:3600000}
+  exports:
+    enabled: ${MYLOG_EXPORTS_ENABLED:true}
+    poll-delay-ms: ${MYLOG_EXPORTS_POLL_DELAY_MS:5000}
+  deletion:
+    enabled: ${MYLOG_DELETION_ENABLED:true}
+    poll-delay-ms: ${MYLOG_DELETION_POLL_DELAY_MS:5000}
+  feedback:
+    retention-delay-ms: ${MYLOG_FEEDBACK_RETENTION_DELAY_MS:86400000}
   identity:
     enabled: false
   web:

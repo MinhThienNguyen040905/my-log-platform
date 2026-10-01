@@ -91,6 +91,14 @@ class IdentityRepository implements IdentityStore {
         }
     }
 
+    @Override public void setStatus(UUID id, String status, Instant now) {
+        User user = entityManager.find(User.class, id);
+        if (user == null) throw new IllegalStateException("Account missing");
+        user.status = status;
+        user.updatedAt = now;
+        user.rowVersion++;
+    }
+
     @Override public void changePassword(UUID id, String hash, Instant now) {
         User user = entityManager.find(User.class, id);
         user.passwordHash = hash;
@@ -162,6 +170,10 @@ class IdentityRepository implements IdentityStore {
                 """, AuthSession.class).setParameter("userId", userId).setParameter("now", clock.instant())
                 .getResultStream().map(this::session).toList();
     }
+    @Override public List<Session> allSessions(UUID userId) {
+        return entityManager.createQuery("select s from AuthSession s where s.userId=:user order by s.createdAt desc",AuthSession.class)
+                .setParameter("user",userId).getResultList().stream().map(this::session).toList();
+    }
 
     @Override public void rotate(UUID sessionId, byte[] oldHash, byte[] newHash, Instant expiry, Instant now) {
         AuthRefreshHistory history = new AuthRefreshHistory();
@@ -204,6 +216,7 @@ class IdentityRepository implements IdentityStore {
     }
 
     @Override public void revokeAllSessions(UUID userId, String reason, Instant now) {
+        entityManager.flush();
         entityManager.createQuery("""
                 update AuthSession s set s.revokedAt=:now, s.revokeReason=:reason
                 where s.userId=:userId and s.revokedAt is null

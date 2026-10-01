@@ -26,11 +26,21 @@ class JpaAnalysisQueries implements AnalysisQueries {
 
     @Override @Transactional(readOnly = true)
     public AnalysisView get(UUID userId, UUID entryId) {
+        return load(userId,entryId,false);
+    }
+
+    @Override
+    public AnalysisView exportRetained(UUID userId, UUID entryId) {
+        return load(userId,entryId,true);
+    }
+
+    private AnalysisView load(UUID userId,UUID entryId,boolean includeDeleted) {
         @SuppressWarnings("unchecked")
         List<Object[]> rows = em.createNativeQuery("""
                 SELECT content_version, analysis_status, latest_analysis_id FROM journal_entries
-                WHERE id=?1 AND user_id=?2 AND deleted_at IS NULL
-                """).setParameter(1, entryId).setParameter(2, userId).getResultList();
+                WHERE id=?1 AND user_id=?2 AND (?3 OR deleted_at IS NULL)
+                """).setParameter(1, entryId).setParameter(2, userId)
+                .setParameter(3,includeDeleted).getResultList();
         if (rows.isEmpty()) throw new ResourceNotFoundException("Không tìm thấy nhật ký.");
         Object[] row = rows.getFirst();
         int version = ((Number) row[0]).intValue();

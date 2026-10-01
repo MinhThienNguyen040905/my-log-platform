@@ -593,35 +593,38 @@ recommendation hiện chỉ trả nguyên văn approved excerpts, chưa phải R
 
 ### Database
 
-- [ ] `V14__exports_deletion_feedback.sql` (đổi số dự kiến sau V13 knowledge FK guard).
-- [ ] Partial unique cho active deletion/export theo policy.
+- [x] `V14__exports_deletion_feedback.sql` (đã kiểm tra bằng Flyway/Testcontainers và áp dụng lên Supabase ngày 2026-10-01; migration bất biến).
+- [x] Partial unique cho active deletion/export theo policy.
+- [x] `V15__restrict_direct_database_api_access.sql`: khóa grant Supabase client roles và bật RLS deny-all cho bảng `public`; đã kiểm chứng Testcontainers và 43 bảng trên Supabase ngày 2026-10-01.
 
 ### EXP-001 — Export (P0, L)
 
-- [ ] CSV machine-readable và PDF user-readable.
-- [ ] Export tạo async job.
-- [ ] File private/encrypted, signed URL ngắn hạn.
-- [ ] Expiry cleanup object + metadata.
-- [ ] Re-authentication trước download nếu policy yêu cầu.
+- [x] CSV machine-readable và PDF user-readable.
+- [x] Export tạo async job.
+- [x] File private/encrypted, signed URL ngắn hạn.
+- [x] Expiry cleanup artifact + metadata.
+- [x] Re-authentication trước download nếu policy yêu cầu.
 
 ### DEL-001 — Account deletion (P0, L)
 
-- [ ] Re-authenticate trước request.
-- [ ] Grace period/cancel.
-- [ ] Revoke session khi bắt đầu deletion.
-- [ ] Idempotent checkpoint worker.
+- [x] Re-authenticate trước request.
+- [x] Grace period/cancel.
+- [x] Revoke session khi bắt đầu deletion.
+- [x] Idempotent checkpoint worker.
 - [ ] Xóa DB, Cloudinary assets, cache và provider artifacts.
-- [ ] Audit tối thiểu/pseudonymous theo retention.
-- [ ] Test xác nhận không còn data user-owned.
+- [x] Audit tối thiểu/pseudonymous theo retention.
+- [x] Test xác nhận không còn data user-owned đã triển khai.
 
 ### FBK-001 — Feedback (P1, M)
 
-- [ ] Message encrypted.
-- [ ] Không auto-attach journal.
-- [ ] Workflow status/assignment.
-- [ ] Retention và audit truy cập.
+- [x] Message encrypted.
+- [x] Không auto-attach journal.
+- [x] Workflow status/assignment.
+- [x] Retention và audit truy cập.
 
 ### Exit criteria M7
+
+Backend M7 đã có API/worker cho CSV/PDF, xóa tài khoản và feedback. V14–V15 đã chạy qua Flyway trên PostgreSQL Testcontainers và áp dụng lên Supabase ngày 2026-10-01. V15 khóa truy cập trực tiếp qua Supabase Data API; kiểm tra thực tế 43 bảng ứng dụng đều bật RLS và `anon`/`authenticated` không có SELECT. Export hiện giới hạn 5 MB và gồm account/profile/consent/session metadata, journal kể cả soft-deleted, tag/link, check-in, analysis, insight, report, self-care kể cả giá trị habit completion và feedback qua application facades. Artifact mã hóa trong PostgreSQL theo ADR-0007, hết hạn sau 24 giờ; metadata request được dọn sau 30 ngày. Yêu cầu xóa có grace period 7 ngày, thu hồi session ngay, hủy bằng xác thực lại và worker retry/checkpoint; test mô phỏng lỗi cleanup rồi chạy lại. Deletion audit pseudonymous giữ tối đa 365 ngày, feedback giữ tối đa 180 ngày. Hiện chưa có adapter Redis cache hay AI provider artifact lưu dữ liệu user cần purge; khi thêm adapter mới phải nối cleanup tương ứng trước khi đánh dấu toàn bộ DEL-001 hoàn tất. Chưa kiểm chứng Cloudinary destroy bằng tài khoản thử nghiệm thực tế. Export/deletion worker bật mặc định khi identity được bật; có thể tắt bằng `MYLOG_EXPORTS_ENABLED=false` hoặc `MYLOG_DELETION_ENABLED=false` khi bảo trì.
 
 - User tải được dữ liệu của chính mình.
 - Signed URL hết hạn và không public object.

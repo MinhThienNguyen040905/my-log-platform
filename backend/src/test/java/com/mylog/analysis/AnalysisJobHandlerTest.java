@@ -4,6 +4,7 @@ import com.mylog.analysis.application.AnalysisJobHandler;
 import com.mylog.analysis.application.AnalysisStore;
 import com.mylog.analysis.application.JournalAnalyzer;
 import com.mylog.journal.application.JournalAnalysisAccess;
+import com.mylog.identity.application.IdentityService;
 import com.mylog.safety.application.SafetyAnalysisPermission;
 import com.mylog.user.application.UserProfileUseCase;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +24,7 @@ import static org.mockito.Mockito.*;
 
 class AnalysisJobHandlerTest {
     private final JournalAnalysisAccess journal = mock(JournalAnalysisAccess.class);
+    private final IdentityService identity=mock(IdentityService.class);
     private final UserProfileUseCase users = mock(UserProfileUseCase.class);
     private final SafetyAnalysisPermission safety = mock(SafetyAnalysisPermission.class);
     private final JournalAnalyzer analyzer = mock(JournalAnalyzer.class);
@@ -37,7 +39,8 @@ class AnalysisJobHandlerTest {
     @BeforeEach void setup() {
         when(tx.execute(any())).thenAnswer(call ->
                 ((org.springframework.transaction.support.TransactionCallback<?>) call.getArgument(0)).doInTransaction(null));
-        handler = new AnalysisJobHandler(journal, users, safety, analyzer, store, tx, clock);
+        when(identity.isActive(userId)).thenReturn(true);
+        handler = new AnalysisJobHandler(journal, identity, users, safety, analyzer, store, tx, clock);
     }
 
     @Test void noConsentMeansNoDecryptionOrProviderCall() {
@@ -61,6 +64,13 @@ class AnalysisJobHandlerTest {
                 handler.process(jobId, "worker", userId, entryId, 1));
         verify(store, never()).save(any(), any(), any(), anyInt(), any(), any(), anyLong(), anyBoolean(), any());
         verify(journal).cancel(eq(userId), eq(entryId), eq(1), any());
+    }
+
+    @Test void deletionPendingSkipsProvider() {
+        when(identity.isActive(userId)).thenReturn(false);
+        assertEquals(AnalysisJobHandler.Outcome.CONSENT_REQUIRED,
+                handler.process(jobId,"worker",userId,entryId,1));
+        verifyNoInteractions(analyzer);
     }
 
     @Test void failedActivationMarksCompletedAnalysisStale() {

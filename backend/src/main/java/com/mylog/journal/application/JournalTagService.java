@@ -34,6 +34,9 @@ public class JournalTagService {
     @Transactional(readOnly = true)
     public List<JournalTagView> list(UUID userId) { return store.list(userId); }
 
+    @Transactional(readOnly = true)
+    public List<JournalTagStore.Link> exportLinks(UUID userId) { return store.links(userId); }
+
     @Transactional
     public void attach(UUID userId, UUID entryId, UUID tagId) {
         if (!store.attach(userId, entryId, tagId, clock.instant()))
