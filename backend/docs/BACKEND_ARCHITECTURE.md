@@ -514,7 +514,9 @@ GET    /reports/{reportId}
 POST   /self-care/goals
 GET    /self-care/goals
 PATCH  /self-care/goals/{goalId}
-PUT    /self-care/goals/{goalId}/completions/{localDate}
+POST   /self-care/goals/{goalId}/habits
+PUT    /self-care/habits/{habitId}/completions/{localDate}
+DELETE /self-care/habits/{habitId}/completions/{localDate}
 
 GET    /journal-prompts?locale=vi
 POST   /exports

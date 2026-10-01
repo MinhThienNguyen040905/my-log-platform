@@ -455,8 +455,13 @@ Table selfcare_goals {
   user_id uuid [not null, ref: > users.id]
   category varchar(32) [not null]
   encrypted_title bytea [not null]
+  title_iv bytea [not null]
+  title_wrapped_key bytea [not null]
+  title_key_version varchar(32) [not null]
   encrypted_description bytea
-  encryption_key_version varchar(32) [not null]
+  description_iv bytea
+  description_wrapped_key bytea
+  description_key_version varchar(32)
   status varchar(24) [not null]
   start_date date
   target_date date
@@ -471,11 +476,14 @@ Table habits {
   goal_id uuid [not null, ref: > selfcare_goals.id]
   user_id uuid [not null, ref: > users.id]
   encrypted_title bytea [not null]
-  encryption_key_version varchar(32) [not null]
-  target_value numeric(10,2)
-  unit varchar(32)
+  title_iv bytea [not null]
+  title_wrapped_key bytea [not null]
+  title_key_version varchar(32) [not null]
+  target_value numeric(10,2) [not null]
+  unit varchar(32) [not null]
   frequency_type varchar(24) [not null]
   frequency_config jsonb [not null]
+  timezone varchar(64) [not null]
   status varchar(24) [not null]
   created_at timestamptz [not null]
   updated_at timestamptz [not null]

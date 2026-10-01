@@ -56,7 +56,9 @@ class SecurityConfiguration {
                                         "/api/v1/check-ins", "/api/v1/check-ins/**")
                                 .authenticated();
                         authorize.requestMatchers("/api/v1/dashboard", "/api/v1/insights",
-                                        "/api/v1/reports", "/api/v1/reports/**")
+                                        "/api/v1/reports", "/api/v1/reports/**",
+                                        "/api/v1/self-care/goals", "/api/v1/self-care/goals/**",
+                                        "/api/v1/self-care/habits/**")
                                 .authenticated();
                     }
                     authorize.anyRequest().denyAll();

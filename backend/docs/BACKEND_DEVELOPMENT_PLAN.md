@@ -498,10 +498,10 @@ cần bật rõ khi muốn chạy scheduler/worker.
 
 ### Database/API
 
-- [ ] `V10__selfcare.sql`.
-- [ ] Goal/habit text encrypted.
-- [ ] Completion unique theo habit/local date.
-- [ ] Ownership và optimistic locking.
+- [x] `V10__selfcare.sql`.
+- [x] Goal/habit text encrypted.
+- [x] Completion unique theo habit/local date.
+- [x] Ownership và optimistic locking cho goal update.
 
 ```text
 POST   /api/v1/self-care/goals
@@ -514,16 +514,20 @@ DELETE /api/v1/self-care/habits/{habitId}/completions/{localDate}
 
 ### Business rules
 
-- [ ] Goal nằm trong wellness scope, không treatment plan.
-- [ ] Completion idempotent.
-- [ ] Streak tính theo timezone và frequency config.
-- [ ] Correlation habit–mood chỉ xuất hiện khi đủ mẫu.
+- [ ] Goal nằm trong wellness scope, không treatment plan: đã có category allowlist và bộ lọc từ khóa cơ bản; cần policy/nội dung được duyệt và đánh giá các cách diễn đạt khác trước khi coi là bảo đảm đầy đủ.
+- [x] Completion idempotent.
+- [x] Streak tính theo timezone snapshot của habit và frequency config DAILY/WEEKLY.
+- [x] Liên hệ habit–mood chỉ xuất hiện khi mỗi nhóm có ít nhất 7 check-in có mood, trong cửa sổ 90 ngày.
 
 ### Exit criteria M5
 
-- Frontend có thể tạo goal, tick completion và xem progress.
-- Không double count completion.
-- Goal/habit của user khác luôn trả not found/forbidden theo contract.
+Backend M5 có API để tạo goal/habit, đánh dấu và bỏ completion, xem progress trong `GET /goals`.
+V10 đã áp dụng lên Supabase và Hibernate `ddl-auto=validate` khởi động thành công (2026-10-01).
+Frontend hiện chưa tích hợp các API này; vì vậy exit criterion end-to-end vẫn mở.
+Completion dùng `UNIQUE(habit_id, local_date)` và `PUT` upsert; gọi lặp không tăng số lượng.
+Goal/habit của user khác trả 404 qua truy vấn theo `user_id` và ID.
+M5 dùng timezone snapshot khi tạo habit; đổi timezone profile sau đó không đổi lịch của habit đã tạo.
+Chưa có API cập nhật habit, chỉ goal update dùng `If-Match` và version.
 
 ## 12. M6 — Knowledge base, RAG và admin
 

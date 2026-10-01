@@ -527,8 +527,13 @@ id UUID PK
 user_id UUID FK users CASCADE
 category VARCHAR(32) CHECK SLEEP/MINDFULNESS/EXERCISE/SOCIAL/CUSTOM
 encrypted_title BYTEA
+title_iv BYTEA
+title_wrapped_key BYTEA
+title_key_version VARCHAR(32)
 encrypted_description BYTEA NULL
-encryption_key_version VARCHAR(32)
+description_iv BYTEA NULL
+description_wrapped_key BYTEA NULL
+description_key_version VARCHAR(32) NULL
 status VARCHAR(24) CHECK ACTIVE/PAUSED/COMPLETED/ARCHIVED
 start_date, target_date DATE NULL
 created_at, updated_at, completed_at TIMESTAMPTZ
@@ -543,9 +548,10 @@ habits(
   goal_id UUID FK selfcare_goals CASCADE,
   user_id UUID FK users CASCADE,
   encrypted_title BYTEA,
-  encryption_key_version VARCHAR(32),
+  title_iv BYTEA, title_wrapped_key BYTEA, title_key_version VARCHAR(32),
   target_value NUMERIC(10,2), unit VARCHAR(32),
   frequency_type VARCHAR(24), frequency_config JSONB,
+  timezone VARCHAR(64),
   status VARCHAR(24), created_at, updated_at TIMESTAMPTZ,
   row_version BIGINT
 )
@@ -563,6 +569,11 @@ habit_completions(
 ```
 
 Giữ `user_id` ở completion để ownership query không phải join nhiều tầng và hỗ trợ partition/cleanup.
+
+V10 dùng FK ghép `(goal_id, user_id)` và `(habit_id, user_id)` để database bảo đảm cùng owner.
+Text của goal/habit được mã hóa bằng envelope encryption; mỗi field có IV, wrapped key và key version riêng.
+`frequency_config` chứa `daysOfWeek` (ISO 1–7) cho WEEKLY, hoặc danh sách rỗng cho DAILY.
+`timezone` trên habit là snapshot khi tạo để ngày completion và streak giữ cùng một lịch.
 
 ## 10. Knowledge base và RAG
 
