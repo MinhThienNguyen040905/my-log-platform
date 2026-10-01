@@ -437,32 +437,32 @@ bật worker khi môi trường đã được cấu hình và policy/provider ph
 
 ### Database
 
-- [ ] `V9__insights_and_reports.sql`.
-- [ ] Evidence/index theo user và period.
+- [x] `V9__insights_and_reports.sql` (đã áp dụng Supabase schema v9, Hibernate validate thành công).
+- [x] Evidence/index theo user và period.
 
 ### INS-001 — Daily aggregate (P0, L)
 
-- [ ] Mood/stress/energy/sleep timeline theo timezone.
-- [ ] Top curated emotions/topics.
-- [ ] Journal streak với định nghĩa được test.
-- [ ] Daily check-in ưu tiên, journal fallback có source marker.
-- [ ] Query plan đạt mục tiêu trên synthetic dataset.
+- [x] Mood/stress/energy/sleep timeline theo timezone snapshot của user.
+- [x] Top curated emotions/topics từ active analysis.
+- [x] Journal streak với định nghĩa được test (ngày có journal SAVED; check-in đơn lẻ không tính; streak hiện tại có thể kết thúc hôm qua).
+- [x] Daily check-in ưu tiên, journal fallback có source marker.
+- [x] Dashboard 30 ngày trên 10.000 journal synthetic/user: local PostgreSQL Testcontainers p95 45 ms cho 30 lần gọi service sau warmup (môi trường staging vẫn cần đo lại).
 
 ### INS-002 — Evidence-backed insight (P0, L)
 
-- [ ] Minimum sample size cấu hình được.
-- [ ] Correlation không được mô tả như causation.
-- [ ] Lưu algorithm version, sample size, strength và evidence.
-- [ ] Không copy raw journal vào evidence.
-- [ ] Narrative chỉ diễn giải metric đã tính.
+- [x] Minimum sample size cấu hình được (`MYLOG_INSIGHTS_MINIMUM_SAMPLES`, mặc định 7).
+- [x] Correlation không được mô tả như causation.
+- [x] Lưu algorithm version, sample size, strength và evidence.
+- [x] Không copy raw journal vào evidence.
+- [x] Narrative RULE/STATISTICAL chỉ diễn giải metric đã tính; không gọi LLM.
 
 ### RPT-001 — Weekly/monthly report (P1, L)
 
-- [ ] Scheduler theo timezone user.
-- [ ] Unique key theo user/type/period.
-- [ ] Metrics snapshot bất biến.
+- [x] Scheduler theo timezone user.
+- [x] Unique key theo user/type/period/version; enqueue version 1 idempotent.
+- [x] Metrics snapshot bất biến.
 - [ ] AI narrative qua output safety.
-- [ ] Regenerate tạo version mới.
+- [x] Regenerate tạo version mới.
 
 ```text
 GET /api/v1/dashboard?range=7d|30d|90d
@@ -480,6 +480,14 @@ GET /api/v1/reports/{reportId}
 Các số trên là engineering target ban đầu, phải đo lại trên môi trường staging.
 
 ### Exit criteria M4
+
+Backend M4 đã có dashboard/insight/report API owner-scoped, scheduler và report worker có lease/retry.
+PostgreSQL Testcontainers kiểm tra check-in ưu tiên journal fallback, top curated code, sample/evidence,
+pagination, scheduler idempotent, regenerate và snapshot cũ bất biến. DST/calendar boundary có unit test.
+V9 đã áp dụng Supabase. Chưa đạt toàn bộ M4: p95 trên staging, journal list p95 và HTTP report
+enqueue chưa được đo; AI narrative qua output safety còn phụ thuộc provider và policy M3.
+Hiện report chỉ dùng narrative RULE từ structured metrics. `MYLOG_REPORTS_ENABLED` mặc định false,
+cần bật rõ khi muốn chạy scheduler/worker.
 
 - Dashboard không gọi LLM trong request path.
 - Mọi insight hiển thị được evidence/sample size.

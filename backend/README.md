@@ -52,6 +52,8 @@ MYLOG_CLOUDINARY_*
 MYLOG_JOBS_ENABLED
 MYLOG_JOBS_POLL_DELAY_MS
 MYLOG_AI_FAKE_ENABLED
+MYLOG_INSIGHTS_MINIMUM_SAMPLES
+MYLOG_REPORTS_ENABLED
 ```
 
 Database local có thể dùng Docker Compose; môi trường được triển khai dùng PostgreSQL do Supabase quản lý qua `MYLOG_DB_URL`, `MYLOG_DB_USERNAME` và `MYLOG_DB_PASSWORD`. Ảnh nhật ký dùng Cloudinary; bật adapter bằng `MYLOG_CLOUDINARY_ENABLED=true` sau khi điền credential server-side.
@@ -132,6 +134,20 @@ Sau khi đăng nhập, gửi `Authorization: Bearer <accessToken>` cho các endp
 Safety ingress luôn chạy lúc tạo/sửa journal. Rule HIGH/CRITICAL đặt `analysisStatus=BLOCKED_BY_SAFETY`; nếu classifier không khả dụng thì trạng thái cũng bị chặn và outbox chỉ có ID/version cho lần screen lại. Chưa có classifier hoặc bộ nội dung/nguồn hỗ trợ được duyệt; các bản ghi `safety_resources` không được tự điền hotline. Frontend hiện là prototype dùng auth mock và `localStorage`; chưa kết nối API M1/M2.
 
 `GET /api/v1/safety/resources?locale=vi-VN&country=VN` là API công khai, chỉ trả nguồn hỗ trợ đã được duyệt, có `verified_at` và nguồn HTTPS. Frontend safety modal dùng `NEXT_PUBLIC_BACKEND_URL` để đọc API này (mặc định `http://localhost:8080` khi phát triển local) và chỉ hiện liên hệ khi API trả dữ liệu đã xác minh. Classifier trả mức rủi ro thấp cũng không mở ordinary analysis nếu `safety_policy_versions` chưa có policy `APPROVED` đang hiệu lực với rule version, classifier provider/version và ngưỡng confidence khớp. Hiện chưa có policy được duyệt nên API nguồn hỗ trợ trả danh sách rỗng và journal vẫn ở chế độ fail-safe.
+
+## M4 Dashboard, insight và report
+
+Flyway V9 đã áp dụng lên Supabase. Các API cần Bearer token: `GET /api/v1/dashboard?range=7d|30d|90d`,
+`GET /api/v1/insights?from=&to=&cursor=`, `GET /api/v1/reports?type=WEEKLY&cursor=` và
+`GET /api/v1/reports/{reportId}`. Dashboard dùng check-in của ngày trước, journal mới nhất làm
+fallback và kèm `source`; current journal streak đếm ngày có journal SAVED, không đếm check-in đơn lẻ.
+
+Insight sleep–mood chỉ xuất hiện khi đủ cặp dữ liệu (`MYLOG_INSIGHTS_MINIMUM_SAMPLES`, mặc định 7),
+có correlation strength, sample size và evidence cấu trúc; narrative không khẳng định nguyên nhân.
+Report tuần/tháng được scheduler enqueue theo timezone user, worker tạo snapshot bất biến và
+regenerate tạo version mới. `MYLOG_REPORTS_ENABLED` mặc định false; bật rõ khi cần scheduler/worker.
+Narrative hiện là template từ metric, chưa dùng provider AI. Testcontainers local đo dashboard 30 ngày
+trên 10.000 journal synthetic/user p95 45 ms (30 lần gọi sau warmup); cần đo lại trên staging.
 
 ## Supabase PostgreSQL
 

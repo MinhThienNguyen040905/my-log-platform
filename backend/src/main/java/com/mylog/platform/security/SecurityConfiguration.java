@@ -55,6 +55,9 @@ class SecurityConfiguration {
                                         "/api/v1/journal-tags", "/api/v1/journal-tags/**",
                                         "/api/v1/check-ins", "/api/v1/check-ins/**")
                                 .authenticated();
+                        authorize.requestMatchers("/api/v1/dashboard", "/api/v1/insights",
+                                        "/api/v1/reports", "/api/v1/reports/**")
+                                .authenticated();
                     }
                     authorize.anyRequest().denyAll();
                 })

@@ -373,15 +373,22 @@ Table insights {
   period_end date [not null]
   timezone varchar(64) [not null]
   status varchar(24) [not null]
+  direction varchar(16)
   strength numeric(6,5)
   sample_size integer [not null]
   algorithm_version varchar(40) [not null]
   metrics_snapshot jsonb [not null]
   encrypted_narrative bytea
+  narrative_iv bytea
+  narrative_wrapped_key bytea
   narrative_key_version varchar(32)
   generated_by varchar(24) [not null]
   created_at timestamptz [not null]
   superseded_at timestamptz
+
+  indexes {
+    (user_id, insight_type, period_start, period_end, algorithm_version) [unique]
+  }
 }
 
 Table insight_evidence {
@@ -393,7 +400,7 @@ Table insight_evidence {
   metric_name varchar(48) [not null]
   metric_value numeric(12,4)
   weight numeric(6,5)
-  metadata jsonb
+  metadata jsonb [not null]
   created_at timestamptz [not null]
 }
 
@@ -409,16 +416,38 @@ Table reports {
   sample_size integer [not null]
   metrics_snapshot jsonb [not null]
   encrypted_narrative bytea
+  narrative_iv bytea
+  narrative_wrapped_key bytea
   narrative_key_version varchar(32)
+  generated_by varchar(24) [not null]
   model varchar(120)
   prompt_template_version varchar(40)
   safety_policy_version varchar(40)
+  attempt integer [not null, default: 0]
+  available_at timestamptz [not null]
+  locked_at timestamptz
+  locked_by varchar(120)
+  lease_expires_at timestamptz
+  last_error_code varchar(80)
   created_at timestamptz [not null]
   completed_at timestamptz
 
   indexes {
     (user_id, report_type, period_start, version) [unique]
   }
+}
+
+Table report_evidence {
+  id uuid [pk]
+  report_id uuid [not null, ref: > reports.id]
+  insight_id uuid [ref: > insights.id]
+  source_type varchar(32) [not null]
+  source_id uuid
+  evidence_date date [not null]
+  metric_name varchar(48) [not null]
+  metric_value numeric(12,4)
+  metadata jsonb [not null]
+  created_at timestamptz [not null]
 }
 
 Table selfcare_goals {

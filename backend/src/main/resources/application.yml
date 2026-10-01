@@ -45,6 +45,12 @@ mylog:
     poll-delay-ms: ${MYLOG_JOBS_POLL_DELAY_MS:2000}
   ai:
     fake-enabled: ${MYLOG_AI_FAKE_ENABLED:false}
+  insights:
+    minimum-samples: ${MYLOG_INSIGHTS_MINIMUM_SAMPLES:7}
+  reports:
+    enabled: ${MYLOG_REPORTS_ENABLED:false}
+    poll-delay-ms: ${MYLOG_REPORTS_POLL_DELAY_MS:5000}
+    schedule-delay-ms: ${MYLOG_REPORTS_SCHEDULE_DELAY_MS:3600000}
   identity:
     enabled: false
   web:

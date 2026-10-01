@@ -487,6 +487,7 @@ sample_size INTEGER CHECK >= 0
 algorithm_version VARCHAR(40)
 metrics_snapshot JSONB
 encrypted_narrative BYTEA NULL
+narrative_iv, narrative_wrapped_key BYTEA NULL
 narrative_key_version VARCHAR(32) NULL
 generated_by VARCHAR(24) CHECK RULE/STATISTICAL/AI_ASSISTED
 created_at, superseded_at TIMESTAMPTZ
@@ -513,9 +514,9 @@ Không copy journal text vào evidence.
 
 ### 8.3 `reports` và `report_evidence`
 
-`reports` gồm user, `report_type` (`WEEKLY`, `MONTHLY`), period, timezone, version, status, sample size, metrics snapshot, encrypted narrative, model/prompt/policy version và timestamps. Unique `(user_id, report_type, period_start, version)`.
+`reports` gồm user, `report_type` (`WEEKLY`, `MONTHLY`), period, timezone, version, status (`PENDING`, `PROCESSING`, `READY`, `FAILED`, `DEAD`), sample size, metrics snapshot, encrypted narrative với IV/wrapped key, model/prompt/policy version, lease/attempt và timestamps. Unique `(user_id, report_type, period_start, version)`. V9 dùng narrative `RULE` từ structured metric; AI narrative chưa bật khi output safety và provider M3 chưa được duyệt.
 
-`report_evidence` liên kết report với `insight_id` hoặc structured metric. Không nhúng raw journal.
+`report_evidence` liên kết report với `insight_id` hoặc structured metric. Không nhúng raw journal. Scheduler theo timezone user tạo version 1 của tuần/tháng đã khép; worker claim bằng lease và version cũ không bị sửa khi regenerate.
 
 ## 9. Self-care
 
