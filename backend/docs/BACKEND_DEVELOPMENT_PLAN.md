@@ -53,17 +53,13 @@ Kế hoạch này biến blueprint kiến trúc thành các increment có thể 
 - [x] Testcontainers configuration.
 - [x] Backend architecture và database blueprint.
 - [x] M1 backend: identity/profile/consent API, V2–V4 migrations và PostgreSQL integration tests.
+- [x] M2–M7 đã có entity/repository adapter theo feature, API và migration tương ứng; xem checklist từng milestone để biết phần còn mở.
+- [x] JPA entity và class khóa ghép nằm trong `<feature>/infrastructure/persistence/entity/`; adapter nằm trong `<feature>/infrastructure/persistence/`.
 
-### Chưa triển khai
+### Còn mở trước release
 
-- [ ] Entity/repository nghiệp vụ ngoài identity/user.
-- [ ] Journal/check-in API.
-- [ ] Mã hóa journal cấp application.
-- [ ] Safety engine.
-- [ ] Outbox/job worker.
-- [ ] AI provider/RAG.
-- [ ] Dashboard/insight/report.
-- [ ] Admin/export/account deletion.
+- [ ] Duyệt nội dung safety/nguồn hỗ trợ thật và kiểm chứng provider/classifier theo policy.
+- [ ] Hoàn tất frontend integration, staging/restore drill và các release gate M8; xem checklist từng milestone và `M8_RELEASE_RUNBOOK.md`.
 
 ## 4. Milestone tổng quan
 
