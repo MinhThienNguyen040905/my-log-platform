@@ -1,5 +1,7 @@
 package com.mylog.journal.infrastructure.persistence;
 
+import com.mylog.journal.infrastructure.persistence.entity.JournalEntry;
+
 import com.mylog.journal.application.JournalEntrySnapshot;
 import com.mylog.journal.application.JournalStore;
 import com.mylog.platform.crypto.SensitiveDataCipher;

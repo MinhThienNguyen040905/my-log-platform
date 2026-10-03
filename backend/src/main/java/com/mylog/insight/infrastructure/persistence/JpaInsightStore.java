@@ -1,5 +1,8 @@
 package com.mylog.insight.infrastructure.persistence;
 
+import com.mylog.insight.infrastructure.persistence.entity.Insight;
+import com.mylog.insight.infrastructure.persistence.entity.InsightEvidence;
+
 import com.mylog.insight.application.InsightStore;
 import com.mylog.insight.application.query.InsightEvidenceView;
 import com.mylog.insight.application.query.InsightPage;

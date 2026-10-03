@@ -1,5 +1,9 @@
 package com.mylog.analysis.infrastructure.persistence;
 
+import com.mylog.analysis.infrastructure.persistence.entity.AiAnalysis;
+import com.mylog.analysis.infrastructure.persistence.entity.AnalysisEmotion;
+import com.mylog.analysis.infrastructure.persistence.entity.AnalysisTopic;
+
 import com.mylog.analysis.application.AnalysisQueries;
 import com.mylog.analysis.application.query.AnalysisView;
 import com.mylog.platform.crypto.SensitiveDataCipher;

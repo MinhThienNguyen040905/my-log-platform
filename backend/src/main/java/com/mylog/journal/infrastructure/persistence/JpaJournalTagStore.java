@@ -1,5 +1,8 @@
 package com.mylog.journal.infrastructure.persistence;
 
+import com.mylog.journal.infrastructure.persistence.entity.JournalEntryTag;
+import com.mylog.journal.infrastructure.persistence.entity.JournalTag;
+
 import com.mylog.journal.application.JournalContentCipher;
 import com.mylog.journal.application.JournalTagStore;
 import com.mylog.journal.application.query.JournalTagView;

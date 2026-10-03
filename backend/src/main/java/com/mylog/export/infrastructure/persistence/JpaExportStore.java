@@ -1,5 +1,7 @@
 package com.mylog.export.infrastructure.persistence;
 
+import com.mylog.export.infrastructure.persistence.entity.ExportRequest;
+
 import com.mylog.export.application.ExportStore;
 import com.mylog.export.application.query.ExportView;
 import com.mylog.platform.crypto.SensitiveDataCipher;

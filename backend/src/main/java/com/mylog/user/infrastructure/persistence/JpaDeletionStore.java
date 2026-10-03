@@ -1,5 +1,7 @@
 package com.mylog.user.infrastructure.persistence;
 
+import com.mylog.user.infrastructure.persistence.entity.DeletionRequest;
+
 import com.mylog.user.application.DeletionStore;
 import com.mylog.user.application.query.DeletionView;
 import jakarta.persistence.EntityManager;

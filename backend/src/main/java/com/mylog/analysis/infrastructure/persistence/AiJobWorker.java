@@ -1,5 +1,7 @@
 package com.mylog.analysis.infrastructure.persistence;
 
+import com.mylog.analysis.infrastructure.persistence.entity.AiJob;
+
 import com.mylog.analysis.application.AnalysisJobHandler;
 import com.mylog.analysis.application.AnalysisOutputValidator;
 import io.micrometer.core.instrument.MeterRegistry;

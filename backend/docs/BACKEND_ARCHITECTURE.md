@@ -200,10 +200,12 @@ journal/
 │   └── exception/JournalEntryNotFound.java
 └── infrastructure/
     ├── persistence/
-    │   ├── JournalEntryRecord.java
-    │   ├── SpringDataJournalRepository.java
-    │   ├── JpaJournalEntryRepository.java
-    │   └── JournalPersistenceMapper.java
+    │   ├── entity/
+    │   │   ├── JournalEntry.java
+    │   │   ├── JournalTag.java
+    │   │   └── JournalEntryTagId.java
+    │   ├── JpaJournalStore.java
+    │   └── JpaJournalTagStore.java
     ├── crypto/AesGcmJournalContentCipher.java
     └── event/OutboxJournalEventPublisher.java
 ```
@@ -275,8 +277,8 @@ JPA model → Domain/Projection → Response DTO → JSON
 
 Khác biệt quan trọng so với mô hình ba layer đơn giản:
 
-- JPA/Hibernate là cách truy cập PostgreSQL thống nhất trong production code. M1 `identity`/`user` dùng entity và `EntityManager` trong `infrastructure/persistence`; adapter ánh xạ entity sang record của application port. Các module tiếp theo cũng đặt entity và adapter tại đây. Có thể dùng native SQL qua JPA cho thao tác đặc thù PostgreSQL hoặc cần tính nguyên tử như `ON CONFLICT`, `DISTINCT ON`, `FOR UPDATE SKIP LOCKED`; kiểm thử các câu SQL đó trên PostgreSQL thật.
-- Class JPA dùng tên ngắn theo đối tượng (`User`, `AuthSession`, `UserProfile`) trong package `infrastructure/persistence`, không thêm hậu tố `Entity`. Nếu trùng tên với domain model, dùng tên thể hiện rõ vai trò như `JournalEntryRecord`. Biến trong repository đặt theo dữ liệu đang xử lý (`user`, `session`, `profile`), không đặt chung là `entity`.
+- JPA/Hibernate là cách truy cập PostgreSQL thống nhất trong production code. Đặt entity và class khóa ghép `@IdClass` trong `infrastructure/persistence/entity/`; adapter/repository ở `infrastructure/persistence/` ánh xạ entity sang record của application port. Có thể dùng native SQL qua JPA cho thao tác đặc thù PostgreSQL hoặc cần tính nguyên tử như `ON CONFLICT`, `DISTINCT ON`, `FOR UPDATE SKIP LOCKED`; kiểm thử các câu SQL đó trên PostgreSQL thật.
+- Class JPA dùng tên ngắn theo đối tượng (`User`, `AuthSession`, `UserProfile`) trong package `infrastructure/persistence/entity`, không thêm hậu tố `Entity`. Package con là package Java riêng nên class và field được repository truy cập trực tiếp cần có visibility phù hợp; không cho tầng API/application hoặc module khác phụ thuộc vào entity. Biến trong repository đặt theo dữ liệu đang xử lý (`user`, `session`, `profile`), không đặt chung là `entity`.
 - Flyway migration là nguồn schema thực thi; Hibernate `ddl-auto=validate` chỉ kiểm tra ánh xạ, không tạo/sửa bảng. Không sửa migration đã áp dụng lên Supabase; thay đổi schema dùng migration mới. Không trả entity trực tiếp qua API.
 - Mặc định bản ghi độc lập dùng `id UUID` do application tạo. Bảng nối chỉ biểu diễn một cặp quan hệ có thể dùng khóa ghép; quan hệ một–một có thể dùng FK làm PK; bảng trạng thái một dòng theo subject có thể dùng subject key. Khi thêm surrogate `id`, vẫn giữ `UNIQUE` trên khóa nghiệp vụ cần lookup/chống trùng. Ví dụ `auth_refresh_history` dùng `id UUID` từ V4 và `UNIQUE(token_hash)` để phát hiện token dùng lại; không dùng `byte[]` làm JPA `@Id` cho bản ghi này.
 - `Service` được gọi là application service/use case và chỉ điều phối một nghiệp vụ cụ thể.
