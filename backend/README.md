@@ -208,32 +208,24 @@ Build container:
 docker build -t mylog-backend:local .
 ```
 
-## Cấu trúc ban đầu
+## Cấu trúc module hiện tại
 
 ```text
-src/main/java/com/mylog/
-├── MylogApplication.java
-├── identity/
-├── user/
-├── journal/
-├── checkin/
-├── safety/
-├── analysis/
-├── insight/
-├── reporting/
-├── selfcare/
-├── knowledge/
-├── prompt/
-├── export/
-├── admin/
-├── audit/
-├── feedback/
-└── platform/
-    ├── config/
-    └── security/
+src/main/java/com/mylog/<feature>/
+├── api/
+│   ├── request/
+│   └── response/
+├── application/
+│   ├── command/
+│   └── query/
+├── domain/                         # chỉ khi feature cần domain type riêng
+└── infrastructure/
+    └── persistence/
+        ├── entity/                 # @Entity và @IdClass
+        └── Jpa<Feature>Store.java  # adapter/repository, ví dụ JpaJournalStore
 ```
 
-Mỗi module nghiệp vụ sẽ được phát triển theo `api/application/domain/infrastructure`. Các package rỗng hiện được giữ bằng `package-info.java` để thể hiện ranh giới ngay từ đầu.
+Mỗi feature chỉ tạo những package cần thiết. Entity nằm trong `persistence/entity/`; adapter JPA nằm trực tiếp trong `persistence/` và chỉ module sở hữu được dùng entity của mình. Tách file/package không làm đổi bảng PostgreSQL; Flyway vẫn quản lý schema. Xem [kiến trúc backend](docs/BACKEND_ARCHITECTURE.md) để biết chiều phụ thuộc và ví dụ `journal`.
 
 ## Trạng thái security ban đầu
 
