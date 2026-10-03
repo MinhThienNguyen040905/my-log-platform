@@ -1,5 +1,7 @@
 package com.mylog.analysis.infrastructure.persistence;
 
+import com.mylog.analysis.infrastructure.persistence.entity.AiJob;
+
 import com.mylog.analysis.application.AnalysisRetryStore;
 import jakarta.persistence.EntityManager;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

@@ -169,7 +169,7 @@ Không cần chốt model AI cuối cùng để làm journal; cần chốt provi
 - ADR đã được chốt tại `docs/adr/` với trạng thái `Accepted`.
 - `mvn test` và `mvn verify` chạy contract, security, request-context, redaction, UUIDv7 và architecture tests.
 - Integration test dùng PostgreSQL/pgvector và Redis Testcontainers; tự chạy khi Docker khả dụng và được CI bắt buộc bằng Docker daemon.
-- CI kiểm tra Flyway naming, secret bằng Gitleaks, dependency bằng OWASP Dependency-Check, xuất OpenAPI artifact và build container.
+- CI kiểm tra Flyway naming, secret bằng Gitleaks, dependency bằng OSV Scanner (Maven POM), xuất OpenAPI artifact và build container.
 - OpenAPI chỉ bật theo cấu hình; profile production tắt API docs/Swagger UI và dùng structured JSON logging.
 - `.env` local được Git ignore; repository chỉ lưu `.env.example` không chứa secret thật.
 
@@ -268,7 +268,7 @@ POST  /api/v1/me/onboarding:complete
 
 ### Bằng chứng và giới hạn M1 backend
 
-- Persistence M1 dùng JPA entity và `EntityManager` trong `identity`/`user` `infrastructure/persistence`, với native SQL qua JPA cho rate-limit upsert và truy vấn consent mới nhất. Flyway V2–V4 vẫn là schema nguồn; Hibernate chỉ `validate`.
+- Persistence M1 dùng JPA entity trong `identity`/`user` `infrastructure/persistence/entity`, adapter `EntityManager` trong `infrastructure/persistence`, với native SQL qua JPA cho rate-limit upsert và truy vấn consent mới nhất. Flyway V2–V4 vẫn là schema nguồn; Hibernate chỉ `validate`.
 - Flyway V2–V4, register → email verification → login → profile/consent → refresh/reuse chạy qua PostgreSQL Testcontainers. Test có registration race, account pending/suspended, ownership session, ciphertext/tokens, log redaction và key rotation. OpenAPI artifact được xuất từ context bật M1, có các endpoint identity/profile.
 - BCrypt cost 12 được chọn sau benchmark local ngày 2026-09-30 (Java 25 trên máy phát triển): trung bình khoảng 264 ms cho một cặp encode + verify; cost 10 khoảng 70 ms, cost 11 khoảng 131 ms. Cần đo lại trên hạ tầng triển khai trước release.
 - Local email verification gửi đến Mailpit (`docker compose up -d mailpit`, UI cổng 8025). Production cần SMTP và khóa do secret manager cung cấp; không dùng fallback local.

@@ -1,5 +1,8 @@
 package com.mylog.checkin.infrastructure.persistence;
 
+import com.mylog.checkin.infrastructure.persistence.entity.CheckinActivity;
+import com.mylog.checkin.infrastructure.persistence.entity.DailyCheckin;
+
 import com.mylog.checkin.application.CheckinStore;
 import com.mylog.checkin.application.command.PutCheckinCommand;
 import com.mylog.checkin.application.query.CheckinView;

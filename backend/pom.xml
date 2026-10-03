@@ -31,6 +31,10 @@
 		<archunit.version>1.5.1</archunit.version>
 		<springdoc.version>3.1.1</springdoc.version>
 		<dependency-check.version>13.0.0</dependency-check.version>
+		<!-- Security patches ahead of the next Spring Boot 4.1 maintenance BOM. -->
+		<jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+		<jackson-bom.version>3.1.7</jackson-bom.version>
+		<tomcat.version>11.0.25</tomcat.version>
 		<cloudinary.version>2.5.0</cloudinary.version>
 	</properties>
 	<dependencies>

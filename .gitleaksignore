@@ -1,0 +1,6 @@
+# Historical synthetic test fixtures already present on main.
+# Keep each exception scoped to its original commit, file, rule and line.
+c5e9329df205beb507af0adc990b77a375cd243a:backend/src/test/java/com/mylog/outbox/OutboxMessagingIT.java:generic-api-key:64
+179a077d71d2e7991d54f4dec2e7e75f00e13494:backend/src/test/java/com/mylog/journal/JournalApiIT.java:generic-api-key:43
+f649bfa38287b5d2d659810fd12f90c031b1a93c:backend/src/test/java/com/mylog/identity/IdentityApiIT.java:generic-api-key:46
+68ae8d2b664141b5560e59348cf931896a67a64b:backend/src/test/resources/application-integration-test.yml:generic-api-key:20

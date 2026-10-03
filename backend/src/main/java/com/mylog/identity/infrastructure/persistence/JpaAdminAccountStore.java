@@ -1,5 +1,9 @@
 package com.mylog.identity.infrastructure.persistence;
 
+import com.mylog.identity.infrastructure.persistence.entity.AuditLog;
+import com.mylog.identity.infrastructure.persistence.entity.AuthSession;
+import com.mylog.identity.infrastructure.persistence.entity.User;
+
 import com.mylog.identity.application.AdminAccountStore;
 import com.mylog.platform.id.IdGenerator;
 import jakarta.persistence.EntityManager;

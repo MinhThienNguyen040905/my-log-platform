@@ -1,5 +1,8 @@
 package com.mylog.reporting.infrastructure.persistence;
 
+import com.mylog.reporting.infrastructure.persistence.entity.Report;
+import com.mylog.reporting.infrastructure.persistence.entity.ReportEvidence;
+
 import com.mylog.platform.crypto.SensitiveDataCipher;
 import com.mylog.platform.id.IdGenerator;
 import com.mylog.platform.web.InvalidRequestException;

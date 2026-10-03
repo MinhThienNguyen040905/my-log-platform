@@ -1,5 +1,9 @@
 package com.mylog.knowledge.infrastructure.persistence;
 
+import com.mylog.knowledge.infrastructure.persistence.entity.KnowledgeChunk;
+import com.mylog.knowledge.infrastructure.persistence.entity.KnowledgeItem;
+import com.mylog.knowledge.infrastructure.persistence.entity.KnowledgeVersion;
+
 import com.mylog.knowledge.application.KnowledgeStore;
 import com.mylog.platform.id.IdGenerator;
 import jakarta.persistence.EntityManager;

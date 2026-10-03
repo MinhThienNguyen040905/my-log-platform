@@ -1,5 +1,7 @@
 package com.mylog.safety.infrastructure.persistence;
 
+import com.mylog.safety.infrastructure.persistence.entity.SafetyResource;
+
 import com.mylog.safety.application.SafetyResourceCatalog;
 import com.mylog.safety.application.query.SafetyResourceView;
 import jakarta.persistence.EntityManager;

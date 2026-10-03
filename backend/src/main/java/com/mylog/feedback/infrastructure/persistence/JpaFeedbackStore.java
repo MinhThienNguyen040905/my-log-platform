@@ -1,5 +1,7 @@
 package com.mylog.feedback.infrastructure.persistence;
 
+import com.mylog.feedback.infrastructure.persistence.entity.Feedback;
+
 import com.mylog.feedback.application.FeedbackStore;
 import com.mylog.feedback.application.query.FeedbackView;
 import com.mylog.platform.crypto.SensitiveDataCipher;

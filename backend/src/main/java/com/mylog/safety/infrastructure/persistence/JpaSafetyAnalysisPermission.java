@@ -1,5 +1,7 @@
 package com.mylog.safety.infrastructure.persistence;
 
+import com.mylog.safety.infrastructure.persistence.entity.SafetyEvent;
+
 import com.mylog.safety.application.SafetyAnalysisPermission;
 import com.mylog.safety.application.SafetyPolicyGate;
 import jakarta.persistence.EntityManager;

@@ -1,5 +1,7 @@
 package com.mylog.analysis.infrastructure.persistence;
 
+import com.mylog.analysis.infrastructure.persistence.entity.AiJob;
+
 import com.mylog.analysis.application.AdminJobStore;
 import com.mylog.platform.id.IdGenerator;
 import jakarta.persistence.EntityManager;

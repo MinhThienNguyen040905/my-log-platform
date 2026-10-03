@@ -1,5 +1,8 @@
 package com.mylog.selfcare.infrastructure.persistence;
 
+import com.mylog.selfcare.infrastructure.persistence.entity.HabitCompletion;
+import com.mylog.selfcare.infrastructure.persistence.entity.SelfCareGoal;
+
 import com.mylog.platform.crypto.SensitiveDataCipher.Encrypted;
 import com.mylog.selfcare.application.SelfCareStore;
 import jakarta.persistence.EntityManager;
@@ -60,7 +63,7 @@ class JpaSelfCareStore implements SelfCareStore {
         return changed == 1;
     }
     public void createHabit(Habit habit) {
-        com.mylog.selfcare.infrastructure.persistence.Habit row = new com.mylog.selfcare.infrastructure.persistence.Habit();
+        com.mylog.selfcare.infrastructure.persistence.entity.Habit row = new com.mylog.selfcare.infrastructure.persistence.entity.Habit();
         row.id = habit.id(); row.goalId = habit.goalId(); row.userId = habit.userId();
         row.encryptedTitle = habit.title().ciphertext(); row.titleIv = habit.title().iv();
         row.titleWrappedKey = habit.title().wrappedKey(); row.titleKeyVersion = habit.title().keyVersion();
@@ -70,11 +73,11 @@ class JpaSelfCareStore implements SelfCareStore {
         em.persist(row);
     }
     public Optional<Habit> habit(UUID userId, UUID id) {
-        return em.createQuery("select h from Habit h where h.userId=:user and h.id=:id", com.mylog.selfcare.infrastructure.persistence.Habit.class)
+        return em.createQuery("select h from Habit h where h.userId=:user and h.id=:id", com.mylog.selfcare.infrastructure.persistence.entity.Habit.class)
                 .setParameter("user", userId).setParameter("id", id).getResultStream().findFirst().map(this::habit);
     }
     public List<Habit> habits(UUID userId, UUID goalId) {
-        return em.createQuery("select h from Habit h where h.userId=:user and h.goalId=:goal order by h.createdAt, h.id", com.mylog.selfcare.infrastructure.persistence.Habit.class)
+        return em.createQuery("select h from Habit h where h.userId=:user and h.goalId=:goal order by h.createdAt, h.id", com.mylog.selfcare.infrastructure.persistence.entity.Habit.class)
                 .setParameter("user", userId).setParameter("goal", goalId).getResultList().stream().map(this::habit).toList();
     }
     public List<Completion> completions(UUID userId, UUID habitId, LocalDate from, LocalDate to) {
@@ -110,7 +113,7 @@ class JpaSelfCareStore implements SelfCareStore {
                         g.descriptionWrappedKey, g.descriptionKeyVersion), g.status, g.startDate, g.targetDate,
                 g.createdAt, g.updatedAt, g.completedAt, g.rowVersion);
     }
-    private Habit habit(com.mylog.selfcare.infrastructure.persistence.Habit h) {
+    private Habit habit(com.mylog.selfcare.infrastructure.persistence.entity.Habit h) {
         return new Habit(h.id, h.goalId, h.userId,
                 new Encrypted(h.encryptedTitle, h.titleIv, h.titleWrappedKey, h.titleKeyVersion), h.targetValue,
                 h.unit, h.frequencyType, h.frequencyConfig, h.timezone, h.status, h.createdAt, h.updatedAt, h.rowVersion);

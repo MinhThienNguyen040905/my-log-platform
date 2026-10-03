@@ -25,4 +25,10 @@ class ModuleArchitectureTest {
             .that().resideInAPackage("..api..")
             .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
             .allowEmptyShould(true);
+
+    @ArchTest
+    static final ArchRule jpa_entities_stay_with_persistence_adapters = noClasses()
+            .that().resideOutsideOfPackage("..infrastructure.persistence..")
+            .should().dependOnClassesThat().resideInAPackage("..infrastructure.persistence.entity..")
+            .allowEmptyShould(true);
 }

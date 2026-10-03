@@ -1,5 +1,7 @@
 package com.mylog.safety.infrastructure.persistence;
 
+import com.mylog.safety.infrastructure.persistence.entity.SafetyEvent;
+
 import com.mylog.platform.crypto.SensitiveDataCipher;
 import com.mylog.platform.id.IdGenerator;
 import com.mylog.safety.application.SafetyDecision;

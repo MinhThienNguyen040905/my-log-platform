@@ -1,5 +1,16 @@
 package com.mylog.identity.infrastructure.persistence;
 
+import com.mylog.identity.infrastructure.persistence.entity.AuditLog;
+import com.mylog.identity.infrastructure.persistence.entity.AuthActionToken;
+import com.mylog.identity.infrastructure.persistence.entity.AuthRateLimit;
+import com.mylog.identity.infrastructure.persistence.entity.AuthRefreshHistory;
+import com.mylog.identity.infrastructure.persistence.entity.AuthSession;
+import com.mylog.identity.infrastructure.persistence.entity.Permission;
+import com.mylog.identity.infrastructure.persistence.entity.Role;
+import com.mylog.identity.infrastructure.persistence.entity.RolePermission;
+import com.mylog.identity.infrastructure.persistence.entity.User;
+import com.mylog.identity.infrastructure.persistence.entity.UserRole;
+
 import com.mylog.identity.application.IdentityStore;
 import com.mylog.platform.crypto.SensitiveDataCipher;
 import com.mylog.platform.id.IdGenerator;

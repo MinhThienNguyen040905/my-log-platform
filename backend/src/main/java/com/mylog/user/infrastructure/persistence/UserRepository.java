@@ -1,5 +1,8 @@
 package com.mylog.user.infrastructure.persistence;
 
+import com.mylog.user.infrastructure.persistence.entity.UserConsent;
+import com.mylog.user.infrastructure.persistence.entity.UserProfile;
+
 import com.mylog.platform.crypto.SensitiveDataCipher;
 import com.mylog.user.application.UserStore;
 import jakarta.persistence.EntityManager;

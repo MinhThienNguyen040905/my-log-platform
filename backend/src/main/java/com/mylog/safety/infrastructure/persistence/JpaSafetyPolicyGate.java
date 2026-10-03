@@ -1,5 +1,7 @@
 package com.mylog.safety.infrastructure.persistence;
 
+import com.mylog.safety.infrastructure.persistence.entity.SafetyPolicyVersion;
+
 import com.mylog.safety.application.SafetyPolicyGate;
 import jakarta.persistence.EntityManager;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
