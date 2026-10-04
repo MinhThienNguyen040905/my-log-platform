@@ -12,6 +12,7 @@ Các quyết định nền tảng của backend **mylog** được ghi lại dư
 | [0006](0006-cloudinary-image-storage.md) | Cloudinary for journal image storage | Accepted |
 | [0007](0007-encrypted-database-export-artifacts.md) | Encrypted temporary export artifacts in PostgreSQL | Accepted |
 | [0008](0008-backend-only-database-api.md) | Backend-only access to application tables | Accepted |
+| [0009](0009-hybrid-ai-inference.md) | Hybrid AI inference and separate safety model training | Accepted |
 
 ## Quy ước
 

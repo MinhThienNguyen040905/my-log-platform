@@ -59,4 +59,14 @@ class SafetyScreeningCorpusTest {
         assertEquals("ALLOW", result.decision());
         assertEquals("approved-v1", result.policyVersion());
     }
+
+    @Test void moderateCannotEnterUnconstrainedReflectionFlow() {
+        RiskClassifier classifier = text -> Optional.of(new RiskClassifier.Classification(
+                "example", "v1", RiskLevel.MODERATE, new BigDecimal("0.98")));
+        var withApproval = new SafetyScreeningService(classifier,
+                (rule, provider, version, confidence, at) -> Optional.of("approved-v1"), CLOCK);
+        var result = withApproval.screen("A synthetic moderate case");
+        assertEquals("CONSTRAIN", result.decision());
+        assertFalse(result.permitsOrdinaryAnalysis());
+    }
 }

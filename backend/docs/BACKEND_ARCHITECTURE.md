@@ -320,9 +320,11 @@ Nhờ vậy thao tác lưu journal không thất bại chỉ vì AI chậm hoặ
     - lưu risk level và safety event tối thiểu;
     - không enqueue reflection/recommendation thường;
     - trả safety response đã kiểm duyệt.
-5b. NORMAL/LOW (MODERATE theo policy):
+5b. NORMAL/LOW khi policy cho phép:
     - commit journal + outbox trong cùng transaction;
     - trả 201 với analysisStatus=PENDING.
+5c. MODERATE/CONSTRAIN: lưu bài nhưng chặn ordinary reflection cho tới khi có luồng
+    phản hồi có ràng buộc riêng được duyệt.
 6. Worker claim event bằng SELECT ... FOR UPDATE SKIP LOCKED.
 7. Giải mã đúng entry cần thiết, tối thiểu hóa context, gọi AI.
 8. Validate JSON schema và chạy output safety check.
@@ -674,11 +676,13 @@ public interface KnowledgeRetriever {
 
 Provider adapter nằm trong infrastructure. Đổi model/provider không làm đổi domain/controller.
 
-M3 hiện dùng `FakeJournalAnalyzer` chỉ khi bật rõ trong local/test; mặc định provider unavailable và
-worker retry rồi đưa job vào DEAD mà không mất journal. `MYLOG_JOBS_ENABLED` mặc định false;
-V8 đã áp dụng lên Supabase nhưng worker chỉ nên bật khi môi trường và policy/provider phù hợp.
-Adapter thật và điều kiện dữ liệu theo ADR-0004 chưa được duyệt; không gửi
-journal sang provider khi chưa chốt. `EmbeddingProvider` chưa có adapter được duyệt.
+M3 có `FakeJournalAnalyzer` chỉ khi bật rõ trong local/test; mặc định provider unavailable và
+worker retry rồi đưa job vào DEAD mà không mất journal. ADR-0009 bổ sung HTTP adapter cho
+classifier nội bộ và Chat Completions adapter cho `JournalAnalyzer`, đều tắt theo mặc định.
+`MYLOG_JOBS_ENABLED` mặc định false; V8 đã áp dụng lên Supabase nhưng worker chỉ nên bật khi
+môi trường, safety policy, output eval và điều kiện dữ liệu/provider theo ADR-0004 được duyệt.
+`MODERATE/CONSTRAIN` hiện bị chặn khỏi reflection thông thường cho tới khi có luồng riêng.
+`EmbeddingProvider` chưa có adapter được duyệt.
 M6 đã có `KnowledgeRetriever` chỉ đọc chunk của version `APPROVED`, đúng locale và còn hiệu lực;
 recommendation API hiện trả nguyên văn excerpt kèm citation, chưa dùng LLM.
 Không đưa journal text vào retrieval request.

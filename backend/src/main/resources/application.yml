@@ -48,6 +48,20 @@ mylog:
     poll-delay-ms: ${MYLOG_JOBS_POLL_DELAY_MS:2000}
   ai:
     fake-enabled: ${MYLOG_AI_FAKE_ENABLED:false}
+    provider: ${MYLOG_AI_PROVIDER:none}
+    endpoint: ${MYLOG_AI_ENDPOINT:https://api.openai.com/v1/chat/completions}
+    model: ${MYLOG_AI_MODEL:}
+    api-key: ${MYLOG_AI_API_KEY:}
+    timeout-ms: ${MYLOG_AI_TIMEOUT_MS:30000}
+    input-usd-per-million: ${MYLOG_AI_INPUT_USD_PER_MILLION:0}
+    output-usd-per-million: ${MYLOG_AI_OUTPUT_USD_PER_MILLION:0}
+    provider-data-approved: ${MYLOG_AI_PROVIDER_DATA_APPROVED:false}
+    output-safety-approved: ${MYLOG_AI_OUTPUT_SAFETY_APPROVED:false}
+  safety:
+    classifier:
+      url: ${MYLOG_SAFETY_CLASSIFIER_URL:}
+      token: ${MYLOG_SAFETY_CLASSIFIER_TOKEN:}
+      timeout-ms: ${MYLOG_SAFETY_CLASSIFIER_TIMEOUT_MS:2000}
   insights:
     minimum-samples: ${MYLOG_INSIGHTS_MINIMUM_SAMPLES:7}
   reports:

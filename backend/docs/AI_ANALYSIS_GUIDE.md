@@ -6,8 +6,8 @@ Tài liệu này giải thích **code đang có**, đồng thời chỉ rõ ph�
 
 | Phần | Câu hỏi nó trả lời | Hiện trạng |
 |---|---|---|
-| **Safety screening** | Nội dung này có được đi vào phân tích/phản hồi thông thường không? | Có rule, classifier port và policy gate. Classifier mặc định unavailable; rule và nội dung hỗ trợ chưa được duyệt. |
-| **Journal analysis** | Bài viết có sentiment, emotion, topic gì; reflection nào có thể hiển thị? | Có outbox, job, lưu kết quả, API và fake analyzer cho local/test. Chưa có provider thật được duyệt. |
+| **Safety screening** | Nội dung này có được đi vào phân tích/phản hồi thông thường không? | Có rule, classifier port, HTTP adapter cho model nội bộ và policy gate. Classifier mặc định unavailable; model/rule/nội dung hỗ trợ chưa được duyệt. |
+| **Journal analysis** | Bài viết có sentiment, emotion, topic gì; reflection nào có thể hiển thị? | Có outbox, job, lưu kết quả, API, fake analyzer và adapter Chat Completions có API key. Provider thật chưa được duyệt và adapter mặc định tắt. |
 | **Insight, dashboard, report** | Dữ liệu nhiều ngày cho thấy mẫu quan sát nào? | Backend tính từ check-in, chỉ số và analysis có cấu trúc; report narrative hiện là câu dựng theo dữ liệu, không gọi LLM trên request path. |
 | **Knowledge/recommendation, RAG** | Có nguồn kiến thức đã duyệt phù hợp topic/locale không? | Có workflow duyệt, chunk, retrieval và citation. API hiện trả excerpt nguyên văn; chưa có embedding provider, semantic ranking hay LLM generation. |
 
@@ -51,7 +51,8 @@ flowchart TD
     B --> C[Safety: rule → classifier → policy đã duyệt]
     C --> D[Encrypt và lưu journal + safety event]
     D --> E{Decision}
-    E -->|ALLOW hoặc CONSTRAIN| F[Outbox: JournalEntrySubmitted]
+    E -->|ALLOW| F[Outbox: JournalEntrySubmitted]
+    E -->|CONSTRAIN| H
     E -->|FAIL_SAFE| G[Outbox: SafetyRescreenRequested]
     E -->|HIGH/CRITICAL| H[Chặn analysis thông thường]
     F --> I[OutboxWorker]
@@ -69,7 +70,7 @@ flowchart TD
 
 1. `JournalService.create` kiểm tra request và idempotency key; lấy plain text từ TipTap JSON để screen, sau đó mã hóa payload nhật ký.
 2. `SafetyScreeningService` kiểm tra rule tiếng Việt/Anh, gọi `RiskClassifier`, rồi tìm policy `APPROVED` đúng rule/provider/version/confidence. `HIGH/CRITICAL` đi vào safety flow; classifier lỗi hoặc policy chưa sẵn sàng thành `FAIL_SAFE`.
-3. Cùng một transaction ghi `journal_entries`, safety event tối thiểu và outbox event thích hợp. `ALLOW`/`CONSTRAIN` tạo `JournalEntrySubmitted`; `FAIL_SAFE` tạo `SafetyRescreenRequested`; rủi ro cao không tạo job reflection thông thường. Outbox chỉ mang entry ID và `contentVersion`, không mang văn bản nhật ký.
+3. Cùng một transaction ghi `journal_entries`, safety event tối thiểu và outbox event thích hợp. Chỉ `ALLOW` tạo `JournalEntrySubmitted`; `FAIL_SAFE` tạo `SafetyRescreenRequested`; `CONSTRAIN` và rủi ro cao không tạo job reflection thông thường. Outbox chỉ mang entry ID và `contentVersion`, không mang văn bản nhật ký.
 4. API trả kết quả lưu trước khi phân tích xong. `analysisStatus` ban đầu có thể là `PENDING` hoặc `BLOCKED_BY_SAFETY`; trạng thái lưu bài viết và trạng thái phân tích là hai thứ riêng.
 
 ### 3.2 Sau request: hai tầng xử lý nền
@@ -89,7 +90,7 @@ Mỗi lần sửa nội dung/metadata ảnh hưởng phân tích, `contentVersio
 | Decision | Tác động hiện tại |
 |---|---|
 | `ALLOW` | Có thể enqueue analysis thông thường. |
-| `CONSTRAIN` | Code hiện cho enqueue, nhưng vẫn phụ thuộc policy đã duyệt; response phù hợp hơn còn cần hoàn thiện. |
+| `CONSTRAIN` | Lưu bài nhưng chặn reflection thông thường; luồng phản hồi có ràng buộc riêng còn cần thiết kế và duyệt. |
 | `SAFETY_FLOW` (`HIGH/CRITICAL`) | Không enqueue reflection thông thường; dùng luồng/nội dung hỗ trợ đã duyệt. |
 | `FAIL_SAFE` | Vẫn lưu nhật ký, chặn analysis và yêu cầu rescreen. |
 
@@ -136,13 +137,30 @@ Hiện code đã có workflow duyệt/chunk và [`ApprovedKnowledgeRetriever`](.
 
 ## 8. Cấu hình, demo và giới hạn hiện tại
 
+ADR-0009 tách **training** khỏi **inference**. [`safety-model/train.py`](../../safety-model/train.py)
+nhận hai CSV đã được phép dùng và được gắn nhãn, tạo artifact/manifest chưa phê duyệt;
+[`safety-model/serve.py`](../../safety-model/serve.py) chỉ phục vụ artifact đã duyệt qua
+private endpoint. Backend gọi endpoint bằng `HttpRiskClassifier` trong bước screening đồng bộ,
+với timeout tối đa 10 giây và mặc định 2 giây. Nếu service lỗi, journal vẫn lưu và kết quả là
+`FAIL_SAFE`. Không có luồng tự động trích journal production làm dữ liệu train.
+
+Adapter `OpenAiJournalAnalyzer` chỉ tồn tại ở worker khi `MYLOG_AI_PROVIDER=openai` và hai
+cờ phê duyệt dữ liệu provider/output safety được bật rõ. Nó không được gọi trong transaction
+PostgreSQL. Mô hình safety nội bộ, model tạo reflection qua API key và embedding cho RAG là
+ba trách nhiệm khác nhau; hiện embedding vẫn để mở. Xem [ADR-0009](adr/0009-hybrid-ai-inference.md).
+Kế hoạch chi tiết cho model team sẽ train nằm ở [SAFETY_CLASSIFIER_MODEL_PLAN.md](SAFETY_CLASSIFIER_MODEL_PLAN.md).
+
 | Cấu hình | Mặc định | Ý nghĩa |
 |---|---|---|
 | `MYLOG_JOBS_ENABLED` | `false` | Bật outbox/AI job worker khi môi trường và policy phù hợp. |
 | `MYLOG_AI_FAKE_ENABLED` | `false` | `true` dùng analyzer cố định cho local/test; không gọi mạng. |
+| `MYLOG_AI_PROVIDER` | `none` | `openai` bật adapter Chat Completions trong worker; cần model, API key và provider approval. |
+| `MYLOG_AI_INPUT_USD_PER_MILLION`, `MYLOG_AI_OUTPUT_USD_PER_MILLION` | `0` | Khi bật provider phải cấu hình giá dương của model để tính chi phí ước lượng từ token usage. |
+| `MYLOG_AI_PROVIDER_DATA_APPROVED`, `MYLOG_AI_OUTPUT_SAFETY_APPROVED` | `false` | Cả hai phải được bật sau khi có hồ sơ duyệt; thiếu một trong hai thì cấu hình provider bị từ chối. |
+| `MYLOG_SAFETY_CLASSIFIER_URL` | rỗng | HTTPS endpoint nội bộ `/classify`; rỗng dùng classifier unavailable. |
 | `MYLOG_APP_PROFILE` | `all` | `api` không chạy scheduled workers; `worker` dành cho xử lý nền. |
 
-`JournalAnalyzer` mặc định là [`UnavailableJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/UnavailableJournalAnalyzer.java). [`FakeJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/FakeJournalAnalyzer.java) chỉ trả kết quả mẫu cố định; bật fake không có nghĩa safety policy tự được duyệt. Hai flag trên **không đủ** để tạo luồng AI production: classifier, policy, safety content, provider thật và điều khoản xử lý dữ liệu đều cần được kiểm chứng. Hiện frontend còn các phần mock và chưa hoàn tất trải nghiệm status/retry của M3.
+`JournalAnalyzer` mặc định là [`UnavailableJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/UnavailableJournalAnalyzer.java). [`FakeJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/FakeJournalAnalyzer.java) chỉ trả kết quả mẫu cố định. Adapter [`OpenAiJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/OpenAiJournalAnalyzer.java) gửi title/plain text tối thiểu qua HTTPS khi được bật rõ (HTTP chỉ cho loopback local/test), yêu cầu JSON schema, không gửi ID/email và không log raw request/response. API key chỉ có ở worker; `store=false` không thay thế việc thẩm định retention/no-training/region của provider. Backend còn có [`HttpRiskClassifier`](../src/main/java/com/mylog/safety/infrastructure/HttpRiskClassifier.java) cho model nội bộ; pipeline train/inference mẫu ở [`safety-model`](../../safety-model/README.md). Bật adapter **không đồng nghĩa với được phê duyệt production**. Chưa có model classifier được duyệt, policy/safety content hoàn chỉnh, output safety eval hoặc provider data-handling sign-off. Frontend còn các phần mock và chưa hoàn tất trải nghiệm status/retry của M3.
 
 Các việc chính còn mở trước production:
 

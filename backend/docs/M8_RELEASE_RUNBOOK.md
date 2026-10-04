@@ -12,6 +12,28 @@ Use synthetic data only in staging. The release owner records date, image digest
 6. Probe `/actuator/health/liveness` and `/actuator/health/readiness`; readiness includes PostgreSQL in staging/prod. Keep detailed health, metrics and DB access on internal networks. Observe HTTP error/latency, Hikari pool, outbox/AI queue depth and age, dead jobs, safety dependency failures, deletion retries and disk usage.
 7. Run a synthetic end-to-end demo: register/verify/login; journal/check-in; consent; approved safety route; AI job if approved provider exists; dashboard/report; export; deletion cancellation and processing. Confirm 401/403/404 owner and permission cases.
 
+## AI rollout gate
+
+The adapters added by ADR-0009 are disabled by default. Before setting
+`MYLOG_SAFETY_CLASSIFIER_URL` or `MYLOG_AI_PROVIDER=openai` on a worker:
+
+1. Review the classifier artifact and holdout evaluation, including HIGH/CRITICAL misses,
+   Vietnamese/English slices, negation and quotations. Record model version, checksum,
+   approver and rollback artifact. Serve inference only on a private authenticated TLS endpoint.
+2. Approve an effective `safety_policy_versions` row matching rule version,
+   classifier provider `MYLOG_INTERNAL`, classifier model version and confidence threshold.
+   Review safety resources and the separate `CONSTRAIN` response path before enabling those flows.
+3. Verify provider no-training, retention, processing region and deletion terms against ADR-0004.
+   Supply `MYLOG_AI_MODEL` and `MYLOG_AI_API_KEY` from a secret manager only to the worker.
+   Set `MYLOG_AI_INPUT_USD_PER_MILLION` and `MYLOG_AI_OUTPUT_USD_PER_MILLION` to the
+   reviewed model prices so usage estimates are meaningful; update them when prices change.
+   The adapter sets `store=false`; that flag alone does not approve a provider.
+4. Pass a reviewed output safety evaluation and synthetic end-to-end/staging exercise.
+   The current validator is a baseline only. Record the decision before enabling ordinary
+   analysis for user journal content. Set `MYLOG_AI_PROVIDER_DATA_APPROVED=true` and
+   `MYLOG_AI_OUTPUT_SAFETY_APPROVED=true` only after the corresponding review evidence is
+   recorded. If any gate is unmet, keep jobs/provider disabled.
+
 ## Incident actions
 
 - Provider timeout or unsafe output: disable `MYLOG_JOBS_ENABLED`, preserve journal/outbox, inspect aggregate error codes and policy version. Do not copy raw prompts or output into logs/tickets. Resume only after safety review.

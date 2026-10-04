@@ -24,7 +24,7 @@ class JpaSafetyAnalysisPermission implements SafetyAnalysisPermission {
 
     @Override public boolean permits(UUID userId, UUID entryId) {
         SafetyEvent event = latest(userId, entryId);
-        return event != null && ("ALLOW".equals(event.decision) || "CONSTRAIN".equals(event.decision))
+        return event != null && "ALLOW".equals(event.decision)
                 && policies.approvedPolicy(event.ruleVersion, event.classifier, event.classifierVersion,
                         event.confidence, clock.instant()).filter(event.policyVersion::equals).isPresent();
     }
