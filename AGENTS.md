@@ -9,6 +9,7 @@ Tài liệu này cung cấp ngữ cảnh khi bắt đầu một phiên làm vi�
 3. Đọc `backend/docs/DATABASE_OVERVIEW.md` và `backend/docs/database/mylog.dbml` trước khi sửa persistence; Flyway migration mới là schema thực thi.
 4. Đọc `backend/docs/adr/README.md` và ADR liên quan trước khi thay đổi quyết định nền tảng. ADR `Accepted` chỉ bị thay thế bằng ADR mới, không sửa mất lịch sử quyết định.
 5. Kiểm tra code, migration và test hiện tại trước khi kết luận một tính năng đã hoàn thành. Checklist trong kế hoạch là ảnh chụp tiến độ tại thời điểm viết, không thay thế việc kiểm tra repository.
+6. Khi làm AI, safety, insight hoặc RAG, đọc `backend/docs/AI_ANALYSIS_GUIDE.md` để phân biệt luồng đã triển khai với phần provider/policy còn mở.
 
 Nếu tài liệu, code và migration không khớp, chỉ rõ sự khác biệt; không âm thầm coi cây thư mục minh họa trong tài liệu là code đã tồn tại. Một số tên file trong cây minh họa của `BACKEND_ARCHITECTURE.md` đã cũ.
 

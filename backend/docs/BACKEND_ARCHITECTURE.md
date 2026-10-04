@@ -654,6 +654,8 @@ Yêu cầu:
 
 ## 12. AI và RAG
 
+Xem [hướng dẫn AI/phân tích](AI_ANALYSIS_GUIDE.md) để đọc luồng code hiện tại, vòng đời outbox/job, safety gate và các phần chưa sẵn sàng cho production.
+
 ### 12.1 Ports
 
 ```java
