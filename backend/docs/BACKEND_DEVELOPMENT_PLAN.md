@@ -381,7 +381,9 @@ Asset có thể chuyển P2 nếu demo MVP không cần upload ảnh thật.
 
 - [x] `JournalAnalyzer`, `EmbeddingProvider`, `KnowledgeRetriever` ports.
 - [x] Fake deterministic `JournalAnalyzer` cho local/test, bật rõ bằng `MYLOG_AI_FAKE_ENABLED=true`.
-- [ ] Adapter provider thật có timeout, retry boundary và circuit breaker.
+- [x] Adapter Chat Completions có API key, timeout, JSON schema, tắt theo mặc định; chưa có provider được duyệt.
+- [ ] Provider approval, retention/no-training/region/deletion verification và circuit breaker.
+- [x] HTTP adapter cho classifier nội bộ và pipeline train/inference baseline tách riêng; model chưa được train/duyệt với corpus thật.
 - [x] Không retry lỗi policy/schema vĩnh viễn.
 - [x] Không log raw prompt/response.
 
@@ -418,8 +420,10 @@ GET  /api/v1/journal-entries/{entryId}/analysis
 Backend đã được kiểm thử với PostgreSQL Testcontainers cho fake provider, owner-scope,
 consent lúc worker chạy, retry, lease recovery và kết quả cũ; `JournalEntryChanged`/`JournalEntryDeleted`
 đánh dấu kết quả cũ `STALE` qua outbox. Fake chỉ dùng local/test. M3 chưa đạt exit criteria
-production: classifier/policy/safety content của M2 chưa được duyệt, provider thật và điều khoản
-dữ liệu chưa chốt, output safety validator mới là baseline, frontend vẫn dùng mock.
+production: classifier/policy/safety content của M2 chưa được duyệt, provider adapter chưa được
+phê duyệt theo điều khoản dữ liệu, output safety validator mới là baseline, frontend vẫn dùng mock.
+ADR-0009 chốt kiến trúc lai: classifier nội bộ được train ngoài backend, journal analyzer có thể
+dùng API key trong worker. `CONSTRAIN` hiện bị chặn khỏi ordinary reflection tới khi có luồng riêng.
 `SafetyRescreenRequested` được retry có backoff khi classifier/policy chưa sẵn sàng,
 sau đó rescreen và enqueue analysis khi đủ điều kiện. `MYLOG_JOBS_ENABLED` mặc định false;
 bật worker khi môi trường đã được cấu hình và policy/provider phù hợp.

@@ -839,6 +839,13 @@ V15 bật RLS **không có policy** và thu hồi grant của `anon`/`authentica
 
 ## 16. Xóa và retention
 
+ADR-0009 adds classifier training/inference and a worker-only provider adapter without a schema
+rewrite. `safety_events` already stores classifier/policy version and confidence;
+`ai_analyses` already stores provider/model/prompt/policy provenance. Training datasets and
+artifacts are managed outside the application database with separate `MODEL_TRAINING` consent,
+access control and deletion handling. Any future application schema change starts at V16;
+the applied V1–V15 migrations remain immutable.
+
 | Dữ liệu | Xử lý đề xuất |
 |---|---|
 | Journal/check-in/analysis/goal | hard delete sau grace period |

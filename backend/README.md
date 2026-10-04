@@ -5,6 +5,7 @@ Backend modular monolith của **mylog**, được khởi tạo bằng Java 21 v
 Tài liệu thiết kế:
 
 - [Backend architecture](docs/BACKEND_ARCHITECTURE.md)
+- [AI analysis, safety và RAG](docs/AI_ANALYSIS_GUIDE.md)
 - [Database design](docs/DATABASE_OVERVIEW.md)
 - [Database DBML](docs/database/mylog.dbml)
 - [Backend development plan](docs/BACKEND_DEVELOPMENT_PLAN.md)

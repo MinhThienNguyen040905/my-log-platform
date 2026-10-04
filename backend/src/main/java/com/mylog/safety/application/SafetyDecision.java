@@ -6,6 +6,6 @@ public record SafetyDecision(RiskLevel riskLevel, String decision, String ruleVe
                              String classifier, String classifierVersion, String policyVersion,
                              BigDecimal confidence, String resourceSetVersion) {
     public boolean permitsOrdinaryAnalysis() {
-        return "ALLOW".equals(decision) || "CONSTRAIN".equals(decision);
+        return "ALLOW".equals(decision);
     }
 }

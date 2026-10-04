@@ -4,6 +4,7 @@ import com.mylog.analysis.infrastructure.persistence.entity.AiJob;
 
 import com.mylog.analysis.application.AnalysisJobHandler;
 import com.mylog.analysis.application.AnalysisOutputValidator;
+import com.mylog.analysis.application.PermanentAnalysisFailureException;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.persistence.EntityManager;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -51,7 +52,8 @@ class AiJobWorker {
                 tx.executeWithoutResult(s -> complete(id, outcome));
                 metrics.counter("mylog.ai.jobs.completed", "outcome", outcome.name()).increment();
             } catch (RuntimeException exception) {
-                boolean permanent = exception instanceof AnalysisOutputValidator.InvalidAnalysisOutputException;
+                boolean permanent = exception instanceof AnalysisOutputValidator.InvalidAnalysisOutputException
+                        || exception instanceof PermanentAnalysisFailureException;
                 boolean terminal = tx.execute(s -> fail(id, permanent));
                 if (terminal) handler.terminalFailure(job.userId, job.aggregateId, version);
                 metrics.counter("mylog.ai.jobs.errors", "kind", permanent ? "INVALID_OUTPUT" : "TRANSIENT").increment();

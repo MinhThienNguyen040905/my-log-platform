@@ -9,6 +9,7 @@ Tài liệu này cung cấp ngữ cảnh khi bắt đầu một phiên làm vi�
 3. Đọc `backend/docs/DATABASE_OVERVIEW.md` và `backend/docs/database/mylog.dbml` trước khi sửa persistence; Flyway migration mới là schema thực thi.
 4. Đọc `backend/docs/adr/README.md` và ADR liên quan trước khi thay đổi quyết định nền tảng. ADR `Accepted` chỉ bị thay thế bằng ADR mới, không sửa mất lịch sử quyết định.
 5. Kiểm tra code, migration và test hiện tại trước khi kết luận một tính năng đã hoàn thành. Checklist trong kế hoạch là ảnh chụp tiến độ tại thời điểm viết, không thay thế việc kiểm tra repository.
+6. Khi làm AI, safety, insight hoặc RAG, đọc `backend/docs/AI_ANALYSIS_GUIDE.md` để phân biệt luồng đã triển khai với phần provider/policy còn mở.
 
 Nếu tài liệu, code và migration không khớp, chỉ rõ sự khác biệt; không âm thầm coi cây thư mục minh họa trong tài liệu là code đã tồn tại. Một số tên file trong cây minh họa của `BACKEND_ARCHITECTURE.md` đã cũ.
 
@@ -20,6 +21,7 @@ Nếu tài liệu, code và migration không khớp, chỉ rõ sự khác biệt
 - Dữ liệu nhạy cảm được mã hóa ở application bằng envelope encryption AES-256-GCM; production dùng KMS/secret manager, local/test dùng adapter riêng (ADR-0002).
 - Safety screening nhiều lớp và fail-safe trước phản hồi sinh bởi AI (ADR-0003).
 - AI đi qua application ports; provider adapter ở infrastructure, tối thiểu hóa dữ liệu gửi đi và kiểm tra điều kiện retention/consent (ADR-0004).
+- ADR-0009 chọn kiến trúc lai: classifier nội bộ có pipeline train/inference tách riêng, journal analyzer có adapter API key chạy trong worker; cả hai mặc định chưa bật/duyệt. `CONSTRAIN` chưa đi vào ordinary reflection. Xem `backend/docs/AI_ANALYSIS_GUIDE.md` và `safety-model/README.md`.
 - Ảnh journal dùng Cloudinary với quyền truy cập/delivery có ký, metadata trong DB; ADR-0006 thay ADR-0005 **đối với ảnh**. ADR-0007 chốt artifact export PDF/CSV tạm thời, mã hóa trong PostgreSQL, tối đa 5 MB và TTL 24 giờ.
 
 ## 3. Tiến độ: luôn xác minh trước khi triển khai
