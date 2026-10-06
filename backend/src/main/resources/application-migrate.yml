@@ -1,0 +1,22 @@
+spring:
+  main:
+    web-application-type: none
+  datasource:
+    url: ${MYLOG_DB_URL}
+    username: ${MYLOG_DB_USERNAME}
+    password: ${MYLOG_DB_PASSWORD}
+  flyway:
+    enabled: true
+
+mylog:
+  app-profile: worker
+  identity:
+    enabled: false
+  jobs:
+    enabled: false
+  reports:
+    enabled: false
+  exports:
+    enabled: false
+  deletion:
+    enabled: false

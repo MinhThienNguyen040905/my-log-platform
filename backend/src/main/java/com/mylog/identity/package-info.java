@@ -1,2 +1,2 @@
-/** Identity, authentication, session and user profile module. */
+/** Authentication, sessions and credentials. */
 package com.mylog.identity;

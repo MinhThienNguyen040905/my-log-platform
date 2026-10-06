@@ -1,13 +1,30 @@
 spring:
-  config:
-    activate:
-      on-profile: local
+  mail:
+    host: ${MYLOG_MAIL_HOST:localhost}
+    port: ${MYLOG_MAIL_PORT:1025}
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/mylog}
-    username: ${DB_USERNAME:mylog}
-    password: ${DB_PASSWORD:mylog_local_password}
+    url: ${MYLOG_DB_URL:jdbc:postgresql://localhost:5432/mylog}
+    username: ${MYLOG_DB_USERNAME:mylog}
+    password: ${MYLOG_DB_PASSWORD:mylog_local_only}
+    hikari:
+      maximum-pool-size: ${MYLOG_DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${MYLOG_DB_POOL_MIN_IDLE:2}
+  data:
+    redis:
+      url: ${MYLOG_REDIS_URL:redis://localhost:6379}
 
-management:
-  endpoint:
-    health:
-      show-details: always
+logging:
+  level:
+    com.mylog: DEBUG
+
+mylog:
+  identity:
+    enabled: true
+  open-api:
+    enabled: ${MYLOG_OPENAPI_ENABLED:true}
+
+springdoc:
+  api-docs:
+    enabled: ${MYLOG_OPENAPI_ENABLED:true}
+  swagger-ui:
+    enabled: ${MYLOG_SWAGGER_UI_ENABLED:true}

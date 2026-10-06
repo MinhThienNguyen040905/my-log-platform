@@ -1,2 +1,2 @@
-/** User feedback and lightweight personalization module. */
+/** User feedback and issue handling. */
 package com.mylog.feedback;

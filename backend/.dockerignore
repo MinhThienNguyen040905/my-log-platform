@@ -1,7 +1,9 @@
-target/
-.idea/
-.vscode/
-*.iml
 .env
-.git/
-README.md
+.env.*
+!.env.example
+.git
+.idea
+.vscode
+target
+logs
+*.iml

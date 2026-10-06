@@ -1,2 +1,2 @@
-/** Journal lifecycle, ownership, tags and journal persistence module. */
+/** Journal entries, tags and private assets. */
 package com.mylog.journal;

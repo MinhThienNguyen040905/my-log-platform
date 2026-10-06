@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
-import { HeartHandshake, PhoneCall, ShieldAlert, X, Heart } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { HeartHandshake, ShieldAlert, X, Heart } from 'lucide-react';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
+import { ApprovedSafetyResource, loadApprovedSafetyResources } from '../api/safety-resources';
 
 export interface SafetyModalProps {
   isOpen: boolean;
@@ -16,33 +17,20 @@ export function SafetyModal({
   isOpen,
   onClose,
   onNavigateHome,
-  detectedKeywords = [],
 }: SafetyModalProps) {
-  if (!isOpen) return null;
+  const [resources, setResources] = useState<ApprovedSafetyResource[]>([]);
 
-  const hotlines = [
-    {
-      name: 'Đường Dây Nóng Ngày Mai (Hỗ trợ tâm lý & trầm cảm)',
-      phone: '096 306 1414',
-      hours: '13:00 - 20:30 hàng ngày',
-      badge: 'Miễn phí & Bảo mật',
-      bg: 'bg-primary-container',
-    },
-    {
-      name: 'Viện Sức Khỏe Tâm Thần - Bệnh Viện Bạch Mai',
-      phone: '024 3869 3731',
-      hours: '24/7 Cấp cứu y tế',
-      badge: 'Chuyên môn y khoa',
-      bg: 'bg-mood-hope-energy',
-    },
-    {
-      name: 'Tổng Đài Quốc Gia Bảo Vệ Trẻ Em & Thanh Thiếu Niên',
-      phone: '111',
-      hours: '24/7 Toàn quốc',
-      badge: 'Khẩn cấp 24/7',
-      bg: 'bg-mood-sadness-reflect text-white',
-    },
-  ];
+  useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    setResources([]);
+    loadApprovedSafetyResources(controller.signal).then(setResources).catch(() => {
+      if (!controller.signal.aborted) setResources([]);
+    });
+    return () => controller.abort();
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -73,13 +61,13 @@ export function SafetyModal({
           <div className="flex-1">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-mood-anxiety-stress text-white font-space text-[10px] font-extrabold uppercase tracking-wider mb-1">
               <ShieldAlert className="w-3.5 h-3.5" />
-              Lưới An Toàn Cảm Xúc (FR-SAFETY-04)
+              Hỗ trợ an toàn
             </div>
             <h2 id="safety-modal-title" className="font-space text-xl sm:text-2xl font-extrabold text-on-surface leading-tight">
               Bạn không phải đơn độc lúc này
             </h2>
             <p className="font-sans text-xs sm:text-sm text-on-surface-variant mt-1 leading-relaxed">
-              MyLog nhận thấy những xúc cảm dồn nén và áp lực bạn vừa viết ra. Chúng tôi ở đây để đồng hành và nâng đỡ bạn, không hề phán xét.
+              Nếu bạn đang lo lắng về sự an toàn của mình, hãy tìm sự hỗ trợ từ một người bạn tin cậy hoặc dịch vụ khẩn cấp tại nơi bạn sống.
             </p>
           </div>
         </div>
@@ -93,52 +81,34 @@ export function SafetyModal({
             </span>
           </div>
           <p className="font-sans text-xs text-on-surface leading-relaxed">
-            AI không thể thay thế sự hỗ trợ từ con người trong những thời điểm khủng hoảng. Hãy hít một hơi thở thật sâu, uống một ngụm nước ấm và cân nhắc trò chuyện với chuyên gia hoặc người bạn thân thiết nhất của mình.
+            AI không thể thay thế sự hỗ trợ trực tiếp từ con người trong tình huống khẩn cấp. Bạn có thể liên hệ một người bạn tin cậy hoặc dịch vụ khẩn cấp tại nơi bạn sống.
           </p>
-          {detectedKeywords.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-dashed border-gray-300">
-              <span className="text-[11px] font-space text-gray-500 font-bold">Từ khóa nhận diện:</span>
-              {detectedKeywords.map((kw, idx) => (
-                <span key={idx} className="text-[10px] font-space font-bold bg-gray-100 border border-black px-2 py-0.5 rounded">
-                  {kw}
-                </span>
-              ))}
-            </div>
-          )}
+
         </div>
 
-        {/* Emergency Hotlines List */}
-        <div className="flex flex-col gap-2.5">
-          <span className="font-space text-xs font-extrabold uppercase tracking-wider text-on-surface">
-            Đường dây nóng hỗ trợ tâm lý miễn phí tại Việt Nam:
-          </span>
-          <div className="grid grid-cols-1 gap-2.5">
-            {hotlines.map((h, i) => (
-              <a
-                key={i}
-                href={`tel:${h.phone.replace(/\s+/g, '')}`}
-                className="flex items-center justify-between p-3 bg-surface-container-lowest hover:bg-white rounded-xl border-2 border-black shadow-neo-sm transition-all hover:-translate-x-0.5 hover:-translate-y-0.5 cursor-pointer group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-black text-white flex items-center justify-center shrink-0">
-                    <PhoneCall className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-space text-xs font-bold text-black group-hover:text-primary transition-colors">
-                      {h.name}
-                    </span>
-                    <span className="font-sans text-[11px] text-gray-600">
-                      {h.hours} • <strong className="text-black">{h.phone}</strong>
-                    </span>
-                  </div>
-                </div>
-                <span className={`text-[10px] font-space font-bold px-2 py-0.5 rounded border border-black shrink-0 ${h.bg}`}>
-                  {h.badge}
-                </span>
-              </a>
+        <div className="bg-surface-card p-4 rounded-2xl border-2 border-black shadow-neo-sm">
+          <p className="font-sans text-xs text-on-surface leading-relaxed">
+            Nếu bạn đang gặp nguy hiểm ngay lúc này, hãy liên hệ dịch vụ khẩn cấp tại nơi bạn sống
+            hoặc một người bạn tin cậy. Thông tin liên hệ cụ thể sẽ được hiển thị khi đã được xác minh.
+          </p>
+        </div>
+
+        {resources.length > 0 && (
+          <div className="flex flex-col gap-2.5">
+            <h3 className="font-space text-xs font-extrabold uppercase tracking-wider text-on-surface">
+              Nguồn hỗ trợ đã được xác minh
+            </h3>
+            {resources.map((resource) => (
+              <div key={resource.id} className="rounded-xl border-2 border-black bg-white p-3 text-xs">
+                <p className="font-space font-bold">{resource.name}</p>
+                {resource.description && <p className="mt-1">{resource.description}</p>}
+                {resource.contactValue && <p className="mt-1 font-semibold">{resource.contactValue}</p>}
+                <a href={resource.sourceUrl} target="_blank" rel="noopener noreferrer"
+                  className="mt-1 inline-block underline">Nguồn xác minh</a>
+              </div>
             ))}
           </div>
-        </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between gap-3 pt-3 border-t-2 border-black/10">
@@ -161,7 +131,7 @@ export function SafetyModal({
             onClick={onClose}
             className="text-xs font-space font-bold ml-auto"
           >
-            Tôi đã bình tâm, tiếp tục viết sổ
+            Tiếp tục viết sổ
           </NeoButton>
         </div>
       </div>

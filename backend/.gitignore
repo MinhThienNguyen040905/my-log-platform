@@ -1,10 +1,9 @@
 HELP.md
-.env
-.idea/
-.vscode/
-*.iml
-logs/
 target/
+.env
+.env.*
+!.env.example
+logs/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

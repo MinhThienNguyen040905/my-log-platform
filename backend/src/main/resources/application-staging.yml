@@ -1,0 +1,38 @@
+spring:
+  flyway:
+    enabled: ${MYLOG_FLYWAY_ENABLED:false}
+  mail:
+    host: ${MYLOG_MAIL_HOST}
+    port: ${MYLOG_MAIL_PORT:587}
+    username: ${MYLOG_MAIL_USERNAME}
+    password: ${MYLOG_MAIL_PASSWORD}
+  datasource:
+    url: ${MYLOG_DB_URL}
+    username: ${MYLOG_DB_USERNAME}
+    password: ${MYLOG_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${MYLOG_DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${MYLOG_DB_POOL_MIN_IDLE:5}
+  data:
+    redis:
+      url: ${MYLOG_REDIS_URL}
+
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState,db
+
+mylog:
+  identity:
+    enabled: true
+  web:
+    allowed-origins: ${MYLOG_ALLOWED_ORIGINS}
+  open-api:
+    enabled: ${MYLOG_OPENAPI_ENABLED:false}
+
+logging:
+  structured:
+    format:
+      console: logstash

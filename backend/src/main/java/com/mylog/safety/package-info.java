@@ -1,2 +1,2 @@
-/** Risk classification policy and safety-event module. */
+/** Risk screening, safety policies and approved responses. */
 package com.mylog.safety;

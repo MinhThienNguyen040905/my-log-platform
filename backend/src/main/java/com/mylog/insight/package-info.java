@@ -1,2 +1,2 @@
-/** Evidence-backed insight and suggested-action module. */
+/** Evidence-backed trends and correlations. */
 package com.mylog.insight;
