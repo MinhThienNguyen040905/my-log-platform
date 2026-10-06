@@ -630,6 +630,8 @@ Audit lưu `actorId`, `action`, `targetType`, `targetId`, `reason`, `timestamp`,
 
 ## 11. Safety pipeline
 
+Gợi ý khi đang viết là use case riêng với phân tích bài đã lưu. API `POST /api/v1/journal-writing-suggestions` (JWT, plain text tối đa 4.000 ký tự, 20 lần/15 phút/user) kiểm tra consent `AI_PROCESSING` và dùng `SafetyScreeningUseCase` trước khi trả câu hỏi mẫu do backend sở hữu. Nó không lưu draft, không tạo outbox/job và mặc định tắt bằng `MYLOG_WRITING_SUGGESTIONS_ENABLED=false`. Frontend login/journal còn mock nên chưa gọi API này; FE không tự quyết định safety hoặc nội dung gợi ý. Xem [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md) cho trạng thái triển khai.
+
 ```text
 Input validation
    ↓

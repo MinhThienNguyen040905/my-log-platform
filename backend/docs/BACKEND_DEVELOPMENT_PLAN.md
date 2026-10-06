@@ -688,6 +688,7 @@ M8 chưa đạt exit criteria release. Đã bổ sung quota ghi journal/export, 
 | API-1 | auth + `/me` | login/register/profile |
 | API-2 | journal CRUD + check-in | JournalContext/localStorage |
 | API-3 | analysis status/result | AI reflection drawer |
+| API-3a | authenticated writing suggestions + consent/safety | backend sở hữu quyết định và nội dung; FE debounce/gọi API chỉ khi auth thật và nội dung được duyệt |
 | API-4 | dashboard + insight | dashboard/insight mock data |
 | API-5 | self-care | goal mock data |
 | API-6 | report/export/delete | settings/report flows |

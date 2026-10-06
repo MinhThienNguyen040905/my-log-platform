@@ -13,6 +13,14 @@ Tài liệu này giải thích **code đang có**, đồng thời chỉ rõ ph�
 
 AI không chẩn đoán hoặc điều trị. Risk classifier phục vụ quyết định an toàn; `JournalAnalyzer` phục vụ phân tích nhật ký. Hai thành phần này khác nhau và không thay thế cho nhau.
 
+### Gợi ý khi đang viết và phân tích sau khi lưu
+
+Safety và nội dung gợi ý theo bản nháp đều thuộc backend. Editor hiện **không tự sinh gợi ý sau khi ngừng gõ và không tự kết luận safety**. FE đăng nhập/journal vẫn dùng `JournalContext`/`localStorage` mock, chưa cấp JWT thật để gọi API bản nháp; bản nháp/bài viết local chưa được mã hóa theo backend và không phù hợp production. Editor đã bỏ đường tạo reflection giả trước khi lưu. Khi tích hợp auth thật, FE chỉ debounce 3–5 giây, gửi plain text qua API có xác thực và hiển thị `status`/`suggestion` backend trả về; nếu người dùng gõ tiếp thì hủy hoặc bỏ kết quả cũ. Gợi ý không được dùng thay cho safety trên request lưu bài.
+
+Backend có `POST /api/v1/journal-writing-suggestions` cho lần tích hợp FE có xác thực sau này. Request `{ "text": "..." }` nhận plain text tối đa 4.000 ký tự; response gồm `status`, `suggestion`, `promptVersion`. Endpoint yêu cầu JWT, giới hạn 20 lần/15 phút/user, kiểm tra consent `AI_PROCESSING` trước khi screen, không lưu bản nháp. Chỉ `ALLOW` mới trả câu hỏi mẫu cố định **do backend sở hữu**; `SAFETY_FLOW`/`CONSTRAIN` không trả gợi ý; `FAIL_SAFE` trả `UNAVAILABLE`. Cờ `MYLOG_WRITING_SUGGESTIONS_ENABLED` mặc định `false` vì nội dung câu hỏi, classifier và policy chưa được duyệt. API này **không gọi LLM**; muốn sinh câu hỏi theo ngữ cảnh bằng provider phải bổ sung output validation, kiểm tra chính sách dữ liệu và đánh giá riêng.
+
+Sau khi FE được nối với journal API, thao tác lưu vẫn đi qua safety đồng bộ ở `JournalService` rồi mới tạo outbox/job phân tích bất đồng bộ. Kết quả `sentiment`/`emotions`/`topics`/reflection chỉ thuộc **phiên bản bài đã lưu**, không thuộc bản nháp. Mỗi lần sửa và lưu lại tăng `contentVersion`; kết quả cũ không được kích hoạt cho phiên bản mới.
+
 ## 2. Bản đồ module và chiều phụ thuộc
 
 ```text
