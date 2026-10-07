@@ -688,6 +688,7 @@ M8 chưa đạt exit criteria release. Đã bổ sung quota ghi journal/export, 
 | API-1 | auth + `/me` | login/register/profile |
 | API-2 | journal CRUD + check-in | JournalContext/localStorage |
 | API-3 | analysis status/result | AI reflection drawer |
+| API-3a | authenticated writing suggestions + consent/safety | backend sở hữu quyết định và nội dung; FE debounce/gọi API chỉ khi auth thật và nội dung được duyệt |
 | API-4 | dashboard + insight | dashboard/insight mock data |
 | API-5 | self-care | goal mock data |
 | API-6 | report/export/delete | settings/report flows |
@@ -804,15 +805,20 @@ Task sẵn sàng phát triển khi:
 - Asset upload.
 - Monthly report.
 - Feedback workflow.
+- Đề xuất sau khi kiểm chứng với người dùng: Micro-Wins Vault nhập thủ công, có sửa/xóa và xác nhận trước khi lưu bất kỳ trích xuất AI nào; xem [đặc tả đề xuất](SELF_COMPASSION_FEATURE_PROPOSALS.md).
 
 ### P2 — Sau MVP
 
+- Đề xuất: thư do người dùng viết để tự đọc lại vào ngày khó khăn; lời mời xem tùy chọn, không kích hoạt cứng từ điểm năng lượng và không thay thế safety flow.
+- Đề xuất: bản chuẩn bị buổi tham vấn một trang; chọn mục, xem trước, xuất chủ động, không tự chia sẻ hoặc diễn đạt như chẩn đoán.
 - OAuth/social login nếu local auth đã đủ demo.
 - SSE thay polling.
 - Advanced correlation.
 - Wearable/voice/reminder.
 - Multi-region, microservices, Kafka.
 - Encrypted full-text journal search.
+
+Ba đề xuất trên **chưa có code, API, migration hay acceptance test** và không thay đổi trạng thái M4/M5/M7. Thứ tự P1/P2 là ưu tiên khám phá sản phẩm, sẽ chốt lại sau thử nghiệm với người dùng; trước khi triển khai phải quyết định consent, retention, mã hóa, export/deletion, safety và contract. Không dùng mức sử dụng tính năng làm bằng chứng cải thiện sức khỏe tinh thần.
 
 ## 23. Sprint đầu tiên đề xuất
 

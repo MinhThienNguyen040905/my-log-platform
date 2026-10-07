@@ -62,6 +62,8 @@ mylog:
       url: ${MYLOG_SAFETY_CLASSIFIER_URL:}
       token: ${MYLOG_SAFETY_CLASSIFIER_TOKEN:}
       timeout-ms: ${MYLOG_SAFETY_CLASSIFIER_TIMEOUT_MS:2000}
+  writing-suggestions:
+    enabled: ${MYLOG_WRITING_SUGGESTIONS_ENABLED:false}
   insights:
     minimum-samples: ${MYLOG_INSIGHTS_MINIMUM_SAMPLES:7}
   reports:

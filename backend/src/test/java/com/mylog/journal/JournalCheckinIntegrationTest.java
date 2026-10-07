@@ -172,6 +172,21 @@ class JournalCheckinIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test void draftSuggestionRequiresAuthenticationAndValidInput() throws Exception {
+        UUID owner = user();
+        mvc.perform(post("/api/v1/journal-writing-suggestions")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"A synthetic draft\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/journal-writing-suggestions")
+                .with(jwt().jwt(jwt -> jwt.subject(owner.toString())))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/journal-writing-suggestions")
+                .with(jwt().jwt(jwt -> jwt.subject(owner.toString())))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"A synthetic draft\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UNAVAILABLE"));
+    }
+
     @Test void onlyVerifiedResourcesAndActiveApprovedPoliciesAreUsable() throws Exception {
         UUID approver = user();
         UUID resource = UUID.randomUUID();

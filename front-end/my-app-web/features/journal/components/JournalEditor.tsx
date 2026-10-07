@@ -6,9 +6,6 @@ import { useToast } from '@/lib/toast-context';
 import { MoodType } from '@/types';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
-import { SafetyModal } from './SafetyModal';
-import { AiReflectionDrawer } from './AiReflectionDrawer';
-import { ConfirmReflectModal } from './ConfirmReflectModal';
 import { InsertImageModal } from './InsertImageModal';
 import { AddTopicModal } from './AddTopicModal';
 import { JournalTipTapEditor } from './JournalTipTapEditor';
@@ -23,8 +20,6 @@ import {
   MapPin,
   Image as ImageIcon,
   CheckCircle2,
-  Lightbulb,
-  ChevronDown,
   Paperclip,
   Zap,
   BatteryCharging,
@@ -140,23 +135,8 @@ function JournalEditorContent() {
     setShowAddTopicModal,
     showImageModal,
     setShowImageModal,
-    showPromptModal,
-    setShowPromptModal,
-    isAiDrawerOpen,
-    setIsAiDrawerOpen,
-    isAnalyzing,
-    showConfirmReflectModal,
-    setShowConfirmReflectModal,
-    isSafetyModalOpen,
-    setIsSafetyModalOpen,
-    detectedCrisisKeywords,
     lastSavedTime,
-    aiResult,
-    writingPrompts,
     handleResetToNewEntry,
-    handleOpenAiDrawer,
-    handleAnswerQuestionInJournal,
-    executeSave,
     handleSaveClick,
     wordCount,
     router,
@@ -219,14 +199,12 @@ function JournalEditorContent() {
       <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-start justify-center transition-all duration-300">
         {/* PHYSICAL NOTEBOOK DESK CANVAS (Max-w 850px centered) */}
         <div
-          className={`w-full transition-all duration-300 ${
-            isAiDrawerOpen ? 'lg:max-w-3xl lg:mr-[420px]' : 'max-w-[850px]'
-          }`}
+          className="w-full max-w-[850px] transition-all duration-300"
         >
           <article className="relative bg-paper-warm border-[2.5px] border-black rounded-3xl p-6 sm:p-10 shadow-neo-lg transition-all overflow-visible flex flex-col gap-6">
             {/* Washi Tape and Page Number Stamp */}
             <WashiTape color={isEditMode ? 'peach' : 'lime'} rotate={-2} className="absolute -top-3.5 left-12 w-32 z-10" />
-            
+
             {/* Notebook Header */}
             <header className="flex flex-col gap-3 pb-4 border-b-2 border-black/15">
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-space font-bold text-gray-700">
@@ -288,62 +266,6 @@ function JournalEditorContent() {
                 </button>
               </div>
             </header>
-
-            {/* Prompt Helper Bar */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowPromptModal(!showPromptModal)}
-                className="inline-flex items-center gap-2 text-xs font-space font-bold text-gray-700 bg-white px-3 py-1.5 rounded-xl border border-black shadow-neo-sm hover:bg-lime-100 transition-all cursor-pointer"
-              >
-                <Lightbulb className="w-4 h-4 text-amber-500 fill-amber-300" />
-                <span> Gợi ý chủ đề viết hôm nay</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showPromptModal ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showPromptModal && (
-                <div className="absolute top-10 left-0 z-30 w-full sm:w-[420px] bg-white border-2 border-black rounded-2xl p-3 shadow-neo-lg animate-in fade-in">
-                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-black/10">
-                    <span className="font-space text-xs font-bold text-gray-800">
-                      Chọn câu hỏi để bắt đầu dòng chảy:
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowPromptModal(false)}
-                      className="text-xs font-bold text-gray-500 hover:text-black"
-                    >
-                      Đóng
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto">
-                    {writingPrompts.map((item, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          if (editorRef.current) {
-                            editorRef.current.insertContent(`<blockquote>💡 <strong>[${item.category}]</strong> ${item.prompt}</blockquote><p></p>`);
-                            editorRef.current.focus();
-                          } else {
-                            setContent((prev) => `${prev}<blockquote>💡 <strong>[${item.category}]</strong> ${item.prompt}</blockquote><p></p>`);
-                          }
-                          setShowPromptModal(false);
-                          showToast({ title: 'Đã thêm gợi ý vào trang viết!', type: 'info' });
-                        }}
-                        className="text-left p-2 rounded-xl hover:bg-paper-warm border border-transparent hover:border-black transition-all cursor-pointer flex flex-col gap-0.5"
-                      >
-                        <span className="font-space text-[10px] font-extrabold uppercase text-purple-700">
-                          {item.category}
-                        </span>
-                        <span className="font-serif text-xs text-gray-800">
-                          {item.prompt}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Writing Area: Tactile Lined Paper with TipTap */}
             <div className="relative">
@@ -479,6 +401,9 @@ function JournalEditorContent() {
               )}
 
               {/* Action Buttons: 2 Clear Actions */}
+              <p className="text-xs text-amber-900 font-space font-bold">
+                Chế độ demo: bài viết chỉ lưu trong trình duyệt, chưa qua safety hoặc phân tích AI của backend.
+              </p>
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                 <button
                   type="button"
@@ -489,15 +414,6 @@ function JournalEditorContent() {
                 </button>
 
                 <div className="flex items-center gap-3">
-                  <NeoButton
-                    variant="paper"
-                    size="md"
-                    onClick={handleOpenAiDrawer}
-                    className="font-space font-bold text-xs sm:text-sm border-2 border-black shadow-neo hover:bg-lime-100"
-                  >
-                    <span>{isAiDrawerOpen ? 'Đang mở phản chiếu' : 'Phản chiếu cùng MyLog'}</span>
-                  </NeoButton>
-
                   <NeoButton
                     variant="primary"
                     size="md"
@@ -512,31 +428,7 @@ function JournalEditorContent() {
             </div>
           </article>
         </div>
-
-        {/* AI REFLECTION DRAWER (ON-DEMAND) */}
-        <AiReflectionDrawer
-          isOpen={isAiDrawerOpen}
-          onClose={() => setIsAiDrawerOpen(false)}
-          isAnalyzing={isAnalyzing}
-          aiResult={aiResult}
-          topics={topics}
-          onInsertQuestionToJournal={handleAnswerQuestionInJournal}
-          onSave={executeSave}
-        />
       </main>
-
-      {/* CONFIRM REFLECT MODAL (Appears on save if user hasn't clicked Reflect) */}
-      <ConfirmReflectModal
-        isOpen={showConfirmReflectModal}
-        onConfirmReflect={() => {
-          setShowConfirmReflectModal(false);
-          handleOpenAiDrawer();
-        }}
-        onDirectSave={() => {
-          setShowConfirmReflectModal(false);
-          executeSave();
-        }}
-      />
 
       {/* INSERT IMAGE MODAL */}
       <InsertImageModal
@@ -568,13 +460,6 @@ function JournalEditorContent() {
         existingTopics={topics}
       />
 
-      {/* SAFETY CRISIS MODAL */}
-      <SafetyModal
-        isOpen={isSafetyModalOpen}
-        onClose={() => setIsSafetyModalOpen(false)}
-        onNavigateHome={() => router.push('/dashboard')}
-        detectedKeywords={detectedCrisisKeywords}
-      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 # Hướng dẫn cho AI agent trong my-log-platform
 
-Tài liệu này cung cấp ngữ cảnh khi bắt đầu một phiên làm việc mới. Các quy tắc dưới đây áp dụng cho `backend/`. Khi làm việc trong `front-end/my-app/`, đọc thêm `front-end/my-app/AGENTS.md`. Yêu cầu trực tiếp của người dùng trong phiên hiện tại được ưu tiên nếu khác với hướng dẫn ở đây.
+Tài liệu này cung cấp ngữ cảnh khi bắt đầu một phiên làm việc mới. Các quy tắc dưới đây áp dụng cho `backend/`. Khi làm việc trong `front-end/my-app-web/`, đọc thêm `front-end/my-app-web/AGENTS.md`. Yêu cầu trực tiếp của người dùng trong phiên hiện tại được ưu tiên nếu khác với hướng dẫn ở đây.
 
 ## 1. Đọc gì trước khi sửa backend
 

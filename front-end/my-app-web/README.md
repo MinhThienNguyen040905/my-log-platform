@@ -1,5 +1,11 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Journal AI integration status
+
+The journal editor no longer generates a mock reflection or makes a local safety decision. The current login and journal save flows still use demo state and browser `localStorage`; they do not call the backend safety or analysis APIs. Sensitive journal data must not use this demo storage in production.
+
+The backend owns draft screening and writing prompts at `POST /api/v1/journal-writing-suggestions`. The endpoint requires a real JWT and consent and is disabled until the safety policy and prompt content are approved. Once authentication is connected, the frontend should debounce input for 3–5 seconds, cancel stale requests, and render only the backend response. Saved journal analysis remains a separate backend job. See [`AI_ANALYSIS_GUIDE.md`](../../backend/docs/AI_ANALYSIS_GUIDE.md).
+
 ## Getting Started
 
 First, run the development server:
