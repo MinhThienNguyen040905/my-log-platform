@@ -4,7 +4,7 @@
 > PostgreSQL 17 + pgvector + Flyway  
 > Phạm vi: MVP và đường mở rộng đã xác định trong kiến trúc backend
 
-Tài liệu này là nguồn thiết kế chính cho schema. File DBML đi kèm để dựng sơ đồ trực quan: [database/mylog.dbml](database/mylog.dbml).
+Tài liệu này là nguồn thiết kế chính cho schema. File DBML đi kèm để dựng sơ đồ trực quan: [database/mylog.dbml](database/mylog.dbml). Đọc [giải thích 43 bảng Flyway](DATABASE_TABLES_EXPLAINED.md) để xem mục đích, khóa, dữ liệu và luồng sử dụng của từng bảng ở schema hiện hành.
 
 ## 1. Mục tiêu thiết kế
 
