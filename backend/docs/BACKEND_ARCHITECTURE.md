@@ -16,6 +16,8 @@ mylog là nền tảng nhật ký cá nhân có dữ liệu đặc biệt nhạy
 
 Sản phẩm chỉ hỗ trợ mental wellness và self-reflection, không chẩn đoán, điều trị hoặc thay thế chuyên gia.
 
+Danh mục tác nhân, luồng chính/ngoại lệ và trạng thái triển khai của từng nghiệp vụ nằm ở [USE_CASE_CATALOG.md](USE_CASE_CATALOG.md).
+
 ## 2. Lựa chọn kiến trúc
 
 ### 2.1 Modular monolith
