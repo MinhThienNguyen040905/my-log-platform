@@ -160,7 +160,7 @@ my-log-platform/
 │           │   ├── safety/
 │           │   └── support/
 │           └── resources/
-└── front-end/my-app/
+└── front-end/my-app-web/
 ```
 
 MVP chưa cần multi-module Maven. Package boundary + ArchUnit ít ceremony hơn. Chỉ tách Maven module khi build time, ownership hoặc deploy độc lập thực sự yêu cầu.
