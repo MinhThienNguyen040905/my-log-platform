@@ -1,327 +1,274 @@
-# Danh mục use case toàn dự án mylog
+# Use case của mylog
 
-> Ảnh chụp thiết kế và repository: 2026-10-07. Phạm vi gồm backend, web, mobile scaffold và dịch vụ `safety-model`. Đây là **danh mục nghiệp vụ**, không phải lời khẳng định mọi chức năng đã sẵn sàng cho production. Flyway và code quyết định hành vi thực tế; kế hoạch và tài liệu đề xuất mô tả phần chưa triển khai.
+Tài liệu này mô tả **ai sử dụng mylog và họ muốn làm gì**. Một use case bắt đầu từ hành động hoặc nhu cầu của con người. Safety, AI, outbox và worker là cách hệ thống xử lý bên trong một use case, không phải use case độc lập.
 
-## 1. Mục đích, tác nhân và cách đọc
+mylog hỗ trợ ghi nhật ký, tự nhìn lại cảm xúc và chăm sóc bản thân. Ứng dụng không chẩn đoán hay điều trị. Người dùng là chủ dữ liệu nhật ký; quản trị viên thông thường không được đọc nội dung nhật ký của họ.
 
-mylog giúp người dùng ghi nhận trải nghiệm, tự suy ngẫm, quan sát thay đổi theo thời gian và tìm nội dung hỗ trợ phù hợp. Ứng dụng không chẩn đoán, điều trị hoặc thay thế chuyên gia. Một use case trả lời **ai muốn đạt điều gì, hệ thống làm gì, khi nào dừng hoặc chuyển luồng**; worker/model là tác nhân hỗ trợ, không phải người ra quyết định thay người dùng.
+## Cách đọc trạng thái
 
-| Ký hiệu trạng thái | Nghĩa |
+- **Có backend:** Đã có luồng/API backend, nhưng giao diện, cấu hình hoặc nội dung được duyệt có thể chưa đủ để sử dụng trọn vẹn.
+- **Demo giao diện:** Giao diện web có tương tác mẫu, chưa kết nối đầy đủ với backend; dữ liệu trình duyệt không phải dữ liệu production.
+- **Dự kiến:** Ý tưởng hoặc công việc tiếp theo, chưa phải tính năng hoàn chỉnh.
+
+Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam kết phát hành. Ứng dụng mobile hiện chủ yếu là scaffold.
+
+| Người tham gia | Điều họ cần làm |
 |---|---|
-| **B** | Có API/use case backend; có thể còn phụ thuộc cấu hình, nội dung duyệt hoặc tích hợp frontend. |
-| **D** | Có màn hình web demo nhưng chưa nối đầy đủ với backend; dữ liệu trình duyệt không phải dữ liệu production. |
-| **G** | Có code nền nhưng cổng policy/consent/provider/feature flag chưa cho phép sử dụng thông thường. |
-| **P** | Đề xuất/roadmap; chưa có contract và triển khai hoàn chỉnh. |
+| Khách chưa đăng nhập | Tạo tài khoản và truy cập mylog. |
+| Người dùng | Viết, xem lại nhật ký; nhận hỗ trợ phù hợp; quản lý dữ liệu của mình. |
+| Quản trị viên và nhân viên hỗ trợ được phân quyền | Quản lý tài khoản, theo dõi vận hành và xử lý phản hồi. |
+| Biên tập viên và người duyệt | Chuẩn bị, kiểm duyệt nội dung hỗ trợ trước khi hiển thị. |
 
-**Tác nhân chính:** khách chưa đăng nhập; người dùng; quản trị tài khoản; biên tập viên nội dung; người duyệt nội dung/safety; nhân viên hỗ trợ có quyền; worker theo lịch. **Hệ thống ngoài:** PostgreSQL, Cloudinary, nhà cung cấp AI đã duyệt, dịch vụ classifier nội bộ và hệ thống email. **Chuyên gia tâm lý** chỉ nhận bản người dùng tự mang/chia sẻ nếu tính năng handout được triển khai; họ không có quyền truy cập tài khoản theo mặc định.
+## A. Khách chưa đăng nhập
 
-Điều kiện xuyên suốt: dữ liệu cá nhân phải được giới hạn theo chủ sở hữu; secret và nội dung nhật ký không vào log; phản hồi AI cần consent và safety; insight cần nguồn/số mẫu; lỗi AI không làm mất bài đã lưu. Web hiện đăng nhập và lưu nhật ký bằng mock/`localStorage`, chưa đi trọn các luồng backend. Mobile hiện là Expo scaffold, chưa có luồng nghiệp vụ mylog. Xem [AI analysis guide](AI_ANALYSIS_GUIDE.md) và [kế hoạch](BACKEND_DEVELOPMENT_PLAN.md).
+### UC-01 — Đăng ký và xác minh email
 
-```mermaid
-flowchart LR
-  U[Người dùng] --> J[Viết nhật ký / check-in]
-  J --> S[Safety đầu vào]
-  S -->|ALLOW + consent| A[Phân tích bài đã lưu]
-  S -->|CONSTRAIN / SAFETY_FLOW| R[Nguồn hỗ trợ đã duyệt]
-  S -->|FAIL_SAFE| Q[Lưu bài và chờ kiểm tra lại]
-  A --> I[Dashboard / insight / báo cáo]
-  J --> C[Mục tiêu và thói quen tự chăm sóc]
-  I --> C
-  U --> E[Export / xóa dữ liệu]
-```
+**Mục tiêu:** Có tài khoản cá nhân để bắt đầu sử dụng mylog.
 
-## 2. Tài khoản, hồ sơ và quyền quyết định dữ liệu
+**Luồng:** Khách nhập email và mật khẩu → hệ thống tạo tài khoản → khách xác minh email theo hướng dẫn. Nếu email đã tồn tại hoặc mã xác minh hết hạn, hệ thống báo lỗi phù hợp và cho phép thử lại.
 
-### UC-01 — Đăng ký và xác minh email · B, web D
+**Hiện trạng:** Có backend; giao diện web là demo và việc gửi email thực tế cần cấu hình.
 
-- **Tác nhân/khởi phát:** khách tạo tài khoản bằng email và mật khẩu; sau đó yêu cầu/xác nhận email.
-- **Luồng chính/kết quả:** backend chuẩn hóa email, lưu dạng mã hóa và HMAC để tra cứu, hash mật khẩu, tạo user/profile/quyền USER, gửi token xác minh; token hợp lệ chuyển email sang đã xác minh. API: `POST /auth/register`, `/auth/email-verifications`, `/auth/email-verifications:confirm`.
-- **Nhánh:** email trùng, token hết hạn hoặc yêu cầu quá nhiều lần không tạo thêm tài khoản/quyền; phản hồi không lộ thông tin nhạy cảm. Email delivery production còn cần cấu hình SMTP phù hợp.
+### UC-02 — Đăng nhập và đăng xuất
 
-### UC-02 — Đăng nhập, gia hạn và đăng xuất · B, web D
+**Mục tiêu:** Vào tài khoản của mình và kết thúc phiên sử dụng.
 
-- **Tác nhân/khởi phát:** người dùng nhập thông tin hoặc client gia hạn phiên.
-- **Luồng chính/kết quả:** đăng nhập cấp access JWT ngắn hạn và refresh token opaque; refresh xoay token, đăng xuất thu hồi session. API: `POST /auth/login`, `/auth/refresh`, `/auth/logout`.
-- **Nhánh:** sai mật khẩu bị giới hạn/khóa tạm; reuse refresh token thu hồi token family; tài khoản bị đình chỉ/đang xóa không lấy token mới. Nút Google trên web hiện chỉ là demo, chưa phải OAuth thật.
+**Luồng:** Người dùng nhập thông tin đăng nhập → hệ thống kiểm tra → mở phiên. Khi đăng xuất, phiên tương ứng bị thu hồi. Tài khoản bị đình chỉ hoặc thông tin sai thì không đăng nhập được.
 
-### UC-03 — Xem và thu hồi phiên đăng nhập · B
+**Hiện trạng:** Có backend; giao diện web hiện dùng luồng demo.
 
-- **Tác nhân/khởi phát:** người dùng nghi có thiết bị lạ hoặc muốn đăng xuất nơi khác.
-- **Luồng chính/kết quả:** xem danh sách phiên đã giảm dữ liệu nhận dạng, thu hồi một phiên hoặc tất cả phiên khác. API: `GET /me/sessions`, `DELETE /me/sessions/{sessionId}`, `DELETE /me/sessions?exceptCurrent=true`.
-- **Nhánh:** không thể thao tác phiên của người khác; hoạt động thu hồi nhạy cảm được audit ở mức metadata.
+### UC-03 — Lấy lại mật khẩu
 
-### UC-04 — Hoàn thành onboarding và quản lý hồ sơ · B, web D
+**Mục tiêu:** Khôi phục quyền truy cập khi quên mật khẩu.
 
-- **Tác nhân/khởi phát:** người dùng chọn tên hiển thị, locale, múi giờ và mục tiêu wellness.
-- **Luồng chính/kết quả:** đọc/sửa hồ sơ, đánh dấu onboarding hoàn tất; dữ liệu nhạy cảm được mã hóa. API: `GET/PATCH /me`, `POST /me/onboarding:complete`.
-- **Nhánh:** timezone/locale không hợp lệ bị từ chối; `If-Match` bảo vệ khi hai nơi cùng sửa; mục tiêu không được diễn đạt như chẩn đoán/kế hoạch điều trị.
+**Luồng dự kiến:** Khách yêu cầu đặt lại mật khẩu → nhận liên kết hoặc mã qua email → đặt mật khẩu mới → phiên cũ được xử lý theo chính sách bảo mật.
 
-### UC-05 — Xem, cấp hoặc rút consent · B
+**Hiện trạng:** Dự kiến; màn hình quên mật khẩu trên web chưa phải quy trình khôi phục thật.
 
-- **Tác nhân/khởi phát:** người dùng quyết định `TERMS`, `PRIVACY`, `AI_PROCESSING` và các lựa chọn tùy chọn.
-- **Luồng chính/kết quả:** lưu quyết định theo version, cho xem lịch sử/hiệu lực. API: `GET /me/consents`, `PUT /me/consents/{type}`.
-- **Nhánh:** rút `AI_PROCESSING` chặn xử lý AI tương lai, kể cả job đã được enqueue nhưng chưa chạy. Đồng ý xử lý AI **không** đồng nghĩa đồng ý dùng nhật ký để train model.
+## B. Người dùng: tài khoản và quyền riêng tư
 
-## 3. Nhật ký và check-in hằng ngày
+### UC-04 — Hoàn thành thiết lập ban đầu và sửa hồ sơ
 
-### UC-06 — Xin câu hỏi gợi viết khi đang soạn · B/G, web P
+**Mục tiêu:** Cá nhân hóa trải nghiệm bằng tên hiển thị, ngôn ngữ, múi giờ và mục tiêu sử dụng.
 
-- **Tác nhân/khởi phát:** người dùng tạm dừng viết; frontend mục tiêu đợi khoảng 3–5 giây trước khi hỏi backend.
-- **Luồng chính/kết quả:** `POST /journal-writing-suggestions` nhận plain text bản nháp có giới hạn, kiểm tra JWT/quota/consent/safety rồi trả một câu hỏi mẫu cố định nếu `ALLOW`. Không lưu bản nháp, không gọi AI tạo sinh; feature flag mặc định tắt.
-- **Nhánh:** thiếu consent, safety bị chặn hoặc classifier lỗi thì không trả gợi ý thông thường; frontend phải bỏ response cũ nếu người dùng đã gõ tiếp. Editor web hiện chưa gọi endpoint này.
+**Luồng:** Người dùng điền thông tin ban đầu → lưu hồ sơ → có thể xem và sửa về sau. Dữ liệu không hợp lệ được yêu cầu chỉnh lại.
 
-### UC-07 — Tạo bài nhật ký · B, web D
+**Hiện trạng:** Có backend; giao diện web mới ở mức demo.
 
-- **Tác nhân/khởi phát:** người dùng nhấn Lưu.
-- **Luồng chính/kết quả:** backend validate nội dung TipTap/chỉ số, tự tạo plain text để screen, mã hóa title/content, lưu bài và safety event/outbox trong cùng transaction. `POST /journal-entries` yêu cầu `Idempotency-Key`; API trả bài đã lưu trước khi AI hoàn tất.
-- **Nhánh:** safety không cho phép thì vẫn có thể lưu bài nhưng không mở ordinary analysis; provider lỗi không làm mất bài. Web hiện chỉ lưu trong trình duyệt, chưa chạy luồng này.
+### UC-05 — Chọn hoặc rút lại sự đồng ý xử lý dữ liệu
 
-### UC-08 — Đọc, lọc và xem lại bài · B, web D
+**Mục tiêu:** Quyết định có cho phép dùng AI xử lý nội dung nhật ký hay không.
 
-- **Tác nhân/khởi phát:** người dùng mở lịch sử/lịch hoặc một bài cụ thể.
-- **Luồng chính/kết quả:** `GET /journal-entries` lọc theo ngày, tag, favorite và cursor; `GET /journal-entries/{entryId}` trả bài thuộc chính user. Bài đã soft-delete không ở danh sách bình thường.
-- **Nhánh:** ID của người khác không làm lộ sự tồn tại hay nội dung bài; dữ liệu demo web không phải kết quả owner-scoped từ backend.
+**Luồng:** Người dùng xem các lựa chọn đồng ý → bật hoặc rút lại từng lựa chọn → hệ thống ghi nhận phiên bản và thời điểm. Nếu rút đồng ý xử lý AI, những phân tích AI chưa chạy sẽ không được tiếp tục chỉ vì đã được lên lịch trước đó.
 
-### UC-09 — Sửa hoặc xóa bài · B, web D
+**Hiện trạng:** Có backend. Đồng ý phân tích AI không đồng nghĩa đồng ý dùng nhật ký để huấn luyện model.
 
-- **Tác nhân/khởi phát:** người dùng cập nhật nội dung/chỉ số hoặc yêu cầu xóa.
-- **Luồng chính/kết quả:** `PATCH/DELETE /journal-entries/{entryId}` dùng `If-Match`; sửa nội dung liên quan AI tăng `contentVersion`, chạy lại safety và làm analysis cũ hết hiệu lực. Xóa là soft-delete, có worker purge theo retention.
-- **Nhánh:** version cũ trả xung đột; AI job cho phiên bản cũ không được kích hoạt kết quả; asset phải được dọn trước khi purge vật lý.
+### UC-06 — Xem và thu hồi phiên đăng nhập
 
-### UC-10 — Đánh dấu yêu thích và quản lý tag · B, web có UI demo
+**Mục tiêu:** Kiểm soát các thiết bị đang truy cập tài khoản.
 
-- **Tác nhân/khởi phát:** người dùng muốn tổ chức các bài.
-- **Luồng chính/kết quả:** `PUT/DELETE /journal-entries/{entryId}/favorite`; tạo/xem tag bằng `POST/GET /journal-tags`, gắn/bỏ tag qua `/journal-entries/{entryId}/tags/{tagId}`. Tag nhạy cảm mã hóa, equality lookup bằng HMAC theo user.
-- **Nhánh:** không gắn tag thuộc user khác; giới hạn số tag mỗi bài và độ dài tên; thao tác favorite lặp lại vẫn an toàn.
+**Luồng:** Người dùng xem danh sách phiên → chọn thu hồi một phiên hoặc các phiên khác → thiết bị bị thu hồi phải đăng nhập lại.
 
-### UC-11 — Thêm ảnh vào nhật ký · P, có UI demo
+**Hiện trạng:** Có backend.
 
-- **Tác nhân/khởi phát:** người dùng chọn ảnh khi viết bài.
-- **Luồng mục tiêu:** backend cấp workflow upload/delivery có ký với Cloudinary, lưu metadata và liên kết ảnh với bài; tải/xóa theo quyền chủ sở hữu.
-- **Giới hạn:** Cloudinary configuration và quy tắc kiến trúc đã có, nhưng API upload ảnh journal cùng kiểm tra MIME/size/checksum/malware chưa hoàn tất. Không coi thao tác chèn URL/ảnh trong UI demo là private upload production.
+## C. Người dùng: nhật ký và ghi nhận hằng ngày
 
-### UC-12 — Ghi và xem check-in theo ngày · B
+### UC-07 — Nhận gợi ý để viết tiếp
 
-- **Tác nhân/khởi phát:** người dùng tự chấm mood, stress, energy, sleep và activity.
-- **Luồng chính/kết quả:** `PUT /check-ins/{localDate}` upsert một check-in/user/ngày; `GET /check-ins/{localDate}` hoặc `GET /check-ins` để xem lại. Ngày theo timezone người dùng, chỉ số có range validation.
-- **Nhánh:** dashboard ưu tiên check-in của ngày; chỉ dùng quan sát journal làm fallback có đánh dấu nguồn, không đếm trùng hoặc coi điểm mood là chẩn đoán.
+**Mục tiêu:** Có một câu hỏi gợi mở khi đang viết và bị bí ý.
 
-## 4. Safety, phân tích AI và phản hồi cho một bài
+**Luồng mong muốn:** Người dùng dừng gõ khoảng 3–5 giây → ứng dụng hỏi backend → hiện một gợi ý ngắn nếu phù hợp. Người dùng có thể bỏ qua; gợi ý không tự ghi vào bài.
 
-### UC-13 — Phân loại safety đầu vào · B/G
+**Hiện trạng:** Backend có endpoint gợi ý mẫu, mặc định tắt và chưa dùng AI tạo sinh; editor web chưa nối luồng này. Việc chờ 3–5 giây là hành vi frontend dự kiến.
 
-- **Tác nhân/khởi phát:** hệ thống screen bản nháp được hỏi gợi ý hoặc bài khi tạo/sửa.
-- **Luồng chính/kết quả:** validate → curated rules → `RiskClassifier` → `SafetyPolicyGate` theo version. Decision là `ALLOW`, `CONSTRAIN`, `SAFETY_FLOW` hoặc `FAIL_SAFE`; safety event chỉ chứa metadata tối thiểu.
-- **Nhánh:** `HIGH/CRITICAL` chặn ordinary reflection; `MODERATE/CONSTRAIN` cũng chưa có luồng reflection riêng. Classifier timeout/unavailable dẫn tới fail-safe; bài vẫn lưu nhưng AI thường bị chặn. Rule/model/policy thật còn cần duyệt và đánh giá.
+### UC-08 — Viết và lưu nhật ký
 
-### UC-14 — Xem nguồn hỗ trợ safety · B/G
+**Mục tiêu:** Giữ lại điều mình đã trải qua, kể cả khi dịch vụ AI gặp lỗi.
 
-- **Tác nhân/khởi phát:** người dùng mở danh sách nguồn hỗ trợ hoặc hệ thống cần đưa ra safety response.
-- **Luồng chính/kết quả:** `GET /safety/resources` chỉ đọc nguồn đã duyệt, còn hiệu lực, khớp locale/country và có HTTPS source. LLM không được tự tạo hotline.
-- **Nhánh:** hiện chưa có nguồn thật được duyệt trong DB; kết quả có thể rỗng. Không tự liên hệ bên thứ ba hoặc mặc định gửi nội dung nhật ký cho người khác.
+**Luồng:** Người dùng viết và nhấn Lưu → hệ thống lưu bài → trả kết quả lưu. Sau đó hệ thống tự kiểm tra an toàn và, khi có đủ điều kiện, phân tích bài để tạo phản chiếu hoặc dữ liệu cảm xúc. Người dùng không phải chờ toàn bộ phân tích mới lưu xong.
 
-### UC-15 — Chuyển yêu cầu phân tích thành AI job · B/G
+**Trường hợp cần chú ý:** Nếu bài có dấu hiệu nguy cơ cao, hệ thống đi theo luồng hỗ trợ an toàn và không tạo phản chiếu thông thường. Nếu bộ kiểm tra không hoạt động, bài vẫn được lưu nhưng phản hồi AI thông thường tạm dừng. Đây là hai tình huống khác nhau; hệ thống không tự kết luận tình trạng y khoa của người viết.
 
-- **Tác nhân/khởi phát:** bài đã lưu với decision `ALLOW` hoặc bản fail-safe được screen lại và sau đó được phép.
-- **Luồng chính/kết quả:** outbox chứa ID/`contentVersion`, worker claim bằng lease/lock; handler tạo job idempotent cho đúng bài và version. PostgreSQL là nguồn công việc bền vững.
-- **Nhánh:** worker lỗi sẽ retry/backoff hoặc chuyển dead; không chứa raw journal trong outbox. `CONSTRAIN`/`SAFETY_FLOW` không tạo job reflection thông thường.
+**Hiện trạng:** Có backend; web hiện chủ yếu lưu bản demo trong trình duyệt. Phân tích còn phụ thuộc consent, chính sách và provider được duyệt.
 
-### UC-16 — Phân tích bài đã lưu và tạo reflection · B/G
+### UC-09 — Đọc, tìm và xem lại nhật ký
 
-- **Tác nhân/khởi phát:** `AiJobWorker` xử lý job.
-- **Luồng chính/kết quả:** kiểm tra account, consent và safety **lúc chạy**, đọc đúng bài/version, gọi `JournalAnalyzer` ngoài transaction, validate structured output rồi lưu sentiment, emotions, topics và reflection mã hóa với model/prompt/policy provenance.
-- **Nhánh:** thiếu consent, safety không cho phép, provider lỗi hay output sai schema không trả reflection thường; result đến muộn cho version cũ thành stale. Adapter API key có sẵn nhưng mặc định tắt/chưa được duyệt; fake chỉ dùng local/test, output safety validator còn là baseline.
+**Mục tiêu:** Tìm lại bài đã viết theo ngày hoặc bộ lọc phù hợp.
 
-### UC-17 — Xem trạng thái/kết quả và thử lại analysis · B, web P
+**Luồng:** Người dùng mở danh sách hoặc lịch → chọn bài → đọc nội dung và các thông tin liên quan của chính mình. Bài của tài khoản khác không được hiển thị.
 
-- **Tác nhân/khởi phát:** người dùng mở bài sau khi lưu hoặc yêu cầu phân tích lại khi phù hợp.
-- **Luồng chính/kết quả:** `GET /journal-entries/{entryId}/analysis` trả trạng thái, chỉ có reflection khi bản hiện hành `ANALYZED`; `POST /journal-entries/{entryId}/analysis:retry` có quota và kiểm tra điều kiện trước khi tạo công việc lại.
-- **Nhánh:** đang chờ/lỗi/bị safety chặn phải hiển thị riêng; retry không tạo bài mới, không bypass consent/safety. Web chưa có polling/status end-to-end.
+**Hiện trạng:** Có backend; web là demo.
 
-## 5. Nhìn lại nhiều ngày và tự chăm sóc
+### UC-10 — Sửa, đánh dấu và xóa nhật ký
 
-### UC-18 — Xem dashboard 7/30/90 ngày · B, web D
+**Mục tiêu:** Chủ động quản lý bài đã viết.
 
-- **Tác nhân/khởi phát:** người dùng mở trang tổng quan.
-- **Luồng chính/kết quả:** `GET /dashboard?range=7d|30d|90d` trả timeline chỉ số theo timezone, số bài, streak, top emotion/topic từ analysis đang active; dashboard không gọi LLM trong request.
-- **Nhánh:** ít dữ liệu thì hiển thị thiếu mẫu thay vì suy đoán; check-in ưu tiên hơn journal fallback; FE dashboard hiện chưa phải bản tích hợp API đầy đủ.
+**Luồng:** Người dùng sửa nội dung, gắn nhãn/yêu thích hoặc xóa bài → hệ thống lưu thay đổi → phân tích cũ không còn phù hợp sẽ không được hiển thị như kết quả của bản mới. Khi hai nơi cùng sửa một bài, hệ thống báo xung đột để tránh ghi đè âm thầm.
 
-### UC-19 — Xem insight có bằng chứng · B
+**Hiện trạng:** Có backend cho các thao tác nhật ký chính; mức tích hợp web còn là demo.
 
-- **Tác nhân/khởi phát:** người dùng xem quan sát từ dữ liệu nhiều ngày.
-- **Luồng chính/kết quả:** `GET /insights` lấy insight theo khoảng ngày/cursor; hiện thuật toán tính quan hệ mood–sleep khi đủ mẫu mặc định 7, lưu strength, sample size, evidence, algorithm version.
-- **Nhánh:** thiếu mẫu thì không tạo kết luận; quan hệ quan sát không chứng minh nguyên nhân và không được nói như chẩn đoán. Luồng generate insight định kỳ hiện gắn với scheduler báo cáo, mà cờ report mặc định tắt.
+### UC-11 — Thêm ảnh vào nhật ký
 
-### UC-20 — Xem báo cáo tuần/tháng · B/G, web D
+**Mục tiêu:** Minh họa trải nghiệm bằng ảnh của mình.
 
-- **Tác nhân/khởi phát:** scheduler đến đầu tuần/tháng theo timezone user; người dùng mở báo cáo.
-- **Luồng chính/kết quả:** report worker tạo metrics snapshot bất biến, narrative theo rule và evidence; `GET /reports`, `GET /reports/{reportId}` đọc theo owner. Job idempotent theo kỳ/version.
-- **Nhánh:** `MYLOG_REPORTS_ENABLED` mặc định false; thiếu dữ liệu phải ghi rõ. AI narrative qua output safety chưa triển khai/duyệt, không giả định báo cáo hiện do LLM viết.
+**Luồng mong muốn:** Người dùng chọn ảnh → tải lên → thấy ảnh gắn với bài → có thể gỡ ảnh. Chỉ chủ tài khoản được truy cập ảnh theo quyền phù hợp.
 
-### UC-21 — Tạo, xem và cập nhật mục tiêu tự chăm sóc · B
+**Hiện trạng:** Có nền tảng Cloudinary và metadata; luồng giao diện và kiểm chứng đầu cuối cần hoàn thiện.
 
-- **Tác nhân/khởi phát:** người dùng chọn mục tiêu wellness như ngủ, vận động, kết nối xã hội.
-- **Luồng chính/kết quả:** `POST/GET/PATCH /self-care/goals`; title/description mã hóa; `If-Match` bảo vệ cập nhật, có trạng thái active/paused/completed/archived.
-- **Nhánh:** không dùng mục tiêu như treatment plan; phạm vi nội dung cần duyệt thêm trước production. Web chưa nối API self-care.
+### UC-12 — Check-in cảm xúc hằng ngày
 
-### UC-22 — Tạo thói quen, ghi hoặc bỏ hoàn thành · B
+**Mục tiêu:** Ghi nhanh cảm xúc, năng lượng hoặc thông tin tự đánh giá trong ngày ngay cả khi không viết bài dài.
 
-- **Tác nhân/khởi phát:** người dùng tạo habit dưới goal và đánh dấu một ngày.
-- **Luồng chính/kết quả:** `POST /self-care/goals/{goalId}/habits`, `PUT/DELETE /self-care/habits/{habitId}/completions/{localDate}`; lịch theo timezone snapshot và tần suất, completion idempotent; `GET /goals` cho thấy progress.
-- **Nhánh:** không ghi ngày tương lai, ngoài lịch hoặc goal không active; liên hệ habit–mood chỉ hiển thị nếu mỗi nhóm đủ ít nhất 7 check-in có mood, không diễn giải thành tác dụng điều trị.
+**Luồng:** Người dùng mở check-in → chọn mức và thông tin muốn ghi → lưu → có thể xem lại theo ngày. Khi hiển thị xu hướng, check-in là dữ liệu chính của ngày; quan sát từ nhật ký chỉ là nguồn dự phòng có ghi rõ.
 
-### UC-23 — Đọc nội dung hỗ trợ đã duyệt · B/G
+**Hiện trạng:** Có backend; giao diện web cần kiểm tra tích hợp thực tế.
 
-- **Tác nhân/khởi phát:** người dùng chọn một `topicCode` cần tìm hiểu.
-- **Luồng chính/kết quả:** `GET /recommendations?topicCode=...` tìm tối đa ba excerpt khớp locale từ knowledge version `APPROVED`, còn hiệu lực, kèm citation.
-- **Nhánh:** không có nguồn phù hợp thì không bịa lời khuyên; API hiện không dùng journal raw, embedding/semantic ranking hoặc LLM generation. Chất lượng thực tế phụ thuộc kho nội dung đã duyệt.
+## D. Người dùng: phản chiếu và hỗ trợ sức khỏe tinh thần
 
-## 6. Quyền dữ liệu, hỗ trợ và quản trị
+### UC-13 — Xem phản chiếu sau khi lưu bài
 
-### UC-24 — Yêu cầu, theo dõi và tải bản xuất dữ liệu · B
+**Mục tiêu:** Nhận một phản hồi giúp tự suy ngẫm về bài đã viết.
 
-- **Tác nhân/khởi phát:** người dùng yêu cầu CSV/PDF dữ liệu của mình.
-- **Luồng chính/kết quả:** `POST /exports` tạo job; `GET /exports/{id}` theo dõi; xác thực lại mật khẩu qua `POST /exports/{id}:authorize-download` rồi tải `GET /exports/{id}/file` với JWT, chữ ký ngắn hạn và owner check. Artifact mã hóa trong PostgreSQL, giới hạn 5 MB, TTL 24 giờ.
-- **Nhánh:** hết hạn, sai mật khẩu, sai chủ sở hữu hoặc vượt quota không tải được. Đây là export dữ liệu cá nhân đầy đủ, **khác** bản chuẩn bị buổi tham vấn đề xuất ở UC-41.
+**Luồng mong muốn:** Người dùng mở bài → thấy trạng thái đang chờ hoặc phản chiếu đã có → đọc khi hệ thống hoàn tất. Nếu bài được sửa, kết quả cũ không được coi là của phiên bản mới.
 
-### UC-25 — Yêu cầu, xem trạng thái hoặc hủy xóa tài khoản · B
+**Trường hợp cần chú ý:** Không có consent, thiếu phê duyệt provider/chính sách, lỗi phân tích hoặc bài thuộc luồng safety thì không hiển thị phản chiếu thông thường. Bài nhật ký vẫn tồn tại.
 
-- **Tác nhân/khởi phát:** người dùng yêu cầu xóa và xác thực lại.
-- **Luồng chính/kết quả:** `POST /account-deletion-requests` tạo yêu cầu, thu hồi session; trong grace period 7 ngày, dùng email/mật khẩu + request ID để xem trạng thái hoặc hủy. Worker dọn dữ liệu với checkpoint/retry.
-- **Nhánh:** thất bại khi xóa asset/provider/cache không được báo hoàn tất giả; khả năng dọn Cloudinary thật và các adapter tương lai còn cần kiểm chứng. Metadata audit tối thiểu tuân theo retention.
+**Hiện trạng:** Có backend và nền xử lý bất đồng bộ; việc chạy thật phụ thuộc cổng cấu hình và phê duyệt.
 
-### UC-26 — Gửi và xem phản hồi hỗ trợ sản phẩm · B
+### UC-14 — Nhận hướng dẫn an toàn khi có dấu hiệu nguy cơ
 
-- **Tác nhân/khởi phát:** người dùng gửi góp ý/bug và xem lại phản hồi của mình.
-- **Luồng chính/kết quả:** `POST /feedback`, `GET /feedback/{id}`; message mã hóa, không tự kèm nhật ký.
-- **Nhánh:** không đọc feedback của user khác; nội dung chỉ được nhân viên có quyền xem theo workflow/audit.
+**Mục tiêu:** Được hướng tới hỗ trợ phù hợp khi nội dung có dấu hiệu cần chú ý ngay.
 
-### UC-27 — Quản trị metadata tài khoản · B
+**Luồng:** Người dùng lưu hoặc đang viết nội dung liên quan → hệ thống kiểm tra → nếu rơi vào mức cần can thiệp theo chính sách, ứng dụng hiển thị thông điệp và nguồn hỗ trợ đã được duyệt. Người dùng vẫn quyết định có liên hệ hỗ trợ hay không.
 
-- **Tác nhân/khởi phát:** admin có quyền cần xem trạng thái hoặc đình chỉ/khôi phục tài khoản.
-- **Luồng chính/kết quả:** `GET /admin/users`, `GET /admin/users/{id}/metadata`, `POST /admin/users/{id}:suspend|:restore`; hành động cần quyền riêng và reason code.
-- **Nhánh:** admin thông thường không đọc/decrypt nhật ký thô; role assignment API còn là roadmap, không ghi như đã có.
+**Hiện trạng:** Có nền safety ở backend; nội dung và nguồn hỗ trợ thực tế cần được duyệt trước khi bật. Hệ thống không tự bịa số điện thoại hoặc chẩn đoán người dùng.
 
-### UC-28 — Quan sát vận hành và retry AI job · B
+### UC-15 — Xem xu hướng cảm xúc và báo cáo
 
-- **Tác nhân/khởi phát:** admin vận hành điều tra job lỗi.
-- **Luồng chính/kết quả:** `GET /admin/dashboard`, `GET /admin/ai-jobs`, `POST /admin/ai-jobs/{id}:retry`; chỉ trả metadata/job state và error code đã sanitize.
-- **Nhánh:** retry không bypass policy/consent/safety, không đưa raw prompt hay nội dung journal vào dashboard/log.
+**Mục tiêu:** Hiểu sự thay đổi theo tuần/tháng từ các ghi nhận của chính mình.
 
-### UC-29 — Soạn, duyệt, từ chối và lưu trữ tri thức · B
+**Luồng:** Người dùng mở dashboard hoặc báo cáo → chọn khoảng thời gian → xem các chỉ số, chủ đề và nhận xét có ghi rõ nguồn/số lượng dữ liệu. Khi dữ liệu quá ít, ứng dụng nói rõ chưa đủ cơ sở để kết luận xu hướng.
 
-- **Tác nhân/khởi phát:** người biên tập tạo/sửa knowledge item; người duyệt độc lập quyết định publish.
-- **Luồng chính/kết quả:** `/admin/knowledge-items` có create, version, draft update, submit, approve/reject/archive; chỉ version approved và còn hiệu lực được retrieval, chunk/citation giữ nguồn gốc.
-- **Nhánh:** người tạo không tự duyệt; bản đã duyệt bất biến. Embedding và retrieval eval còn mở, nên đây chưa phải RAG sinh nội dung hoàn chỉnh.
+**Hiện trạng:** Có backend cho insight/báo cáo; một số luồng theo lịch hoặc phần diễn giải AI cần cấu hình và kiểm duyệt thêm.
 
-### UC-30 — Quản lý feedback của người dùng · B
+### UC-16 — Đặt mục tiêu và theo dõi thói quen tự chăm sóc
 
-- **Tác nhân/khởi phát:** nhân viên hỗ trợ có quyền xem, phân công và cập nhật trạng thái.
-- **Luồng chính/kết quả:** `GET /admin/feedback[/{id}]`, `PATCH /admin/feedback/{id}` với `If-Match`; quyền `feedback:read/manage`, audit truy cập.
-- **Nhánh:** version xung đột trả lỗi; quyền admin khác không tự được đọc nội dung feedback.
+**Mục tiêu:** Thử những hành động nhỏ phù hợp với bản thân và theo dõi việc thực hiện.
 
-## 7. Use case vận hành, model và các luồng còn trong roadmap
+**Luồng:** Người dùng tạo mục tiêu/thói quen → đánh dấu đã làm → xem tiến trình → có thể sửa hoặc dừng. Nội dung được diễn đạt như gợi ý tự chăm sóc, không phải phác đồ điều trị.
 
-### UC-31 — Train, đánh giá và phát hành classifier safety · G
+**Hiện trạng:** Có backend; cần kiểm tra từng màn hình web trước khi coi là tích hợp hoàn chỉnh.
 
-- **Tác nhân/khởi phát:** nhóm model chuẩn bị dataset hợp lệ và một bản model mới.
-- **Luồng chính/kết quả:** `safety-model/train.py` học từ train CSV và đánh giá trên holdout độc lập, tạo artifact/manifest chưa duyệt; safety owner xem recall `HIGH/CRITICAL`, false negative, lát cắt Việt/Anh, phủ định/trích dẫn và latency. `serve.py` chỉ phục vụ artifact đã duyệt qua endpoint nội bộ.
-- **Nhánh:** không dùng nhật ký production để train tự động; `AI_PROCESSING` không phải `MODEL_TRAINING`. Bật service không tự phê duyệt policy. Xem [model plan](SAFETY_CLASSIFIER_MODEL_PLAN.md) và [README](../../safety-model/README.md).
+### UC-17 — Xem nội dung và nguồn hỗ trợ đã duyệt
 
-### UC-32 — Cấu hình và đánh giá provider phân tích AI · G
+**Mục tiêu:** Tìm bài viết hoặc tài nguyên hỗ trợ đáng tin cậy.
 
-- **Tác nhân/khởi phát:** nhóm vận hành muốn bật adapter dùng API key trong worker.
-- **Luồng mục tiêu:** kiểm tra no-training, retention, region, xóa dữ liệu và output safety; chỉ gửi title/plain text tối thiểu khi consent/safety hợp lệ; ghi usage/provenance, không ghi raw request/response.
-- **Nhánh:** mặc định `MYLOG_AI_PROVIDER=none`; adapter tồn tại không có nghĩa đã được chấp thuận dùng với dữ liệu thật. Không đặt API key ở frontend.
+**Luồng:** Người dùng duyệt nội dung, nhận gợi ý phù hợp hoặc mở danh sách nguồn hỗ trợ an toàn → chỉ thấy nội dung đã qua quy trình duyệt và còn hiệu lực.
 
-### UC-33 — Duyệt policy và nguồn hỗ trợ safety · P/G
+**Hiện trạng:** Có API/nền quản lý nội dung và nguồn safety; nguồn hỗ trợ thật hiện cần được xác minh, duyệt và nhập vào hệ thống.
 
-- **Tác nhân/khởi phát:** người chịu trách nhiệm safety chuẩn bị rule/threshold/response/resource theo locale/country.
-- **Luồng mục tiêu:** đánh giá corpus, ghi version và phê duyệt policy; chỉ nguồn đã xác minh, có HTTPS và còn hiệu lực mới hiện cho user. Mỗi lần đổi model/rule/threshold cần regression evaluation.
-- **Giới hạn:** persistence/policy gate và API đọc resource đã có; admin workflow/API nhập và duyệt safety resource, dữ liệu nguồn thật cùng sign-off vận hành chưa hoàn tất.
+### UC-18 — Viết lời nhắn cho chính mình trong tương lai
 
-### UC-34 — Quản lý câu hỏi mẫu và sinh gợi ý theo ngữ cảnh · P
+**Mục tiêu:** Chuẩn bị một lời động viên do chính mình viết để xem lại lúc khó khăn.
 
-- **Tác nhân/khởi phát:** biên tập viên muốn quản lý prompt; người dùng muốn câu hỏi phù hợp nội dung đang viết.
-- **Luồng mục tiêu:** version/review/publish nội dung, rồi backend trả gợi ý khi consent/safety cho phép; nếu dùng LLM phải bổ sung provider approval, output validation, rate limit và stale-request handling.
-- **Giới hạn:** endpoint bản nháp UC-06 hiện chỉ chọn câu hỏi cố định trong code; admin prompt API trong blueprint chưa có.
+**Luồng dự kiến:** Khi cảm thấy ổn, người dùng viết và chọn lưu lời nhắn → về sau có thể tự mở lại hoặc cho phép ứng dụng gợi ý xem lại khi phù hợp. Người dùng có quyền sửa, xóa và tắt nhắc lại.
 
-### UC-35 — Hoàn thiện retrieval/RAG có trích dẫn · P
+**Hiện trạng:** Dự kiến. Không tự gửi chỉ vì một chỉ số cảm xúc thấp; cần quyền chọn rõ ràng và tránh dùng trong tình huống khủng hoảng thay cho hỗ trợ an toàn.
 
-- **Tác nhân/khởi phát:** người dùng cần nội dung được duyệt phù hợp hơn theo topic/locale.
-- **Luồng mục tiêu:** chỉ embed/chỉ mục knowledge đã duyệt, filter quyền/hiệu lực trước ranking, nếu sinh diễn giải thì kiểm tra output safety và giữ citation.
-- **Giới hạn:** hiện có excerpt retrieval ở UC-23; chưa có embedding provider/semantic index/LLM generation được duyệt.
+### UC-19 — Xem lại những tiến bộ nhỏ
 
-### UC-36 — Tích hợp web và mobile với API thật · P/D
+**Mục tiêu:** Nhớ lại các việc tích cực nhỏ mà mình từng ghi nhận.
 
-- **Tác nhân/khởi phát:** người dùng đăng nhập, viết bài, check-in hoặc xem insight trên client.
-- **Luồng mục tiêu:** client có JWT/session thật; journal và dữ liệu nhạy cảm đi qua backend, polling có trạng thái chờ/lỗi/bị chặn; không lưu raw journal ở `localStorage` production. Web hiện có các màn hình demo; mobile mới là Expo scaffold, chưa có use case mylog.
-- **Giới hạn:** không quảng bá safety, AI, export hoặc quyền riêng tư backend như đã chạy end-to-end qua UI cho tới khi tích hợp và kiểm thử thật.
+**Luồng dự kiến:** Người dùng lưu hoặc xác nhận một “điểm sáng” từ nhật ký → xem chúng trong một bộ sưu tập riêng → sửa/xóa mục bất kỳ. Việc trích xuất tự động chỉ diễn ra khi có sự đồng ý phù hợp.
 
-### UC-37 — Khôi phục mật khẩu · D/P
+**Hiện trạng:** Dự kiến.
 
-- **Tác nhân/khởi phát:** người dùng quên mật khẩu và mở màn hình khôi phục trên web.
-- **Luồng mục tiêu/kết quả:** gửi yêu cầu tới backend, nhận bằng chứng xác minh qua kênh đã đăng ký, đặt mật khẩu mới và thu hồi các phiên cũ theo policy.
-- **Giới hạn:** web hiện mô phỏng OTP cố định trong client; `IdentityController` chưa có API reset password. Không dùng OTP demo hoặc thông báo “đã gửi email” của UI như bằng chứng quy trình khôi phục tài khoản thật.
+### UC-20 — Tạo bản tóm tắt mang đến buổi tham vấn
 
-### UC-38 — Quản trị role và tra cứu audit · P
+**Mục tiêu:** Tự chuẩn bị thông tin muốn chia sẻ với chuyên gia.
 
-- **Tác nhân/khởi phát:** quản trị viên được ủy quyền cần gán quyền hoặc kiểm tra hành động nhạy cảm.
-- **Luồng mục tiêu/kết quả:** cấp/thu hồi quyền có reason code, giới hạn người được xem audit metadata và lưu dấu truy cập; không trao quyền đọc journal thô qua role thông thường.
-- **Giới hạn:** RBAC và audit ghi sự kiện đã có, nhưng endpoint gán role và đọc audit trong blueprint chưa được triển khai. Không nhầm chúng với UC-27/28 đã có.
+**Luồng dự kiến:** Người dùng chọn thời gian và loại dữ liệu → xem trước bản tóm tắt trung tính về giấc ngủ, năng lượng và chủ đề lặp lại → tải xuống hoặc chủ động chia sẻ. Mặc định không kèm nguyên văn nhật ký nhạy cảm; chuyên gia không có quyền truy cập tài khoản qua tính năng này.
 
-## 8. Ba use case self-compassion mới đề xuất
+**Hiện trạng:** Dự kiến. Chức năng export dữ liệu cá nhân hiện có không đồng nghĩa đã có bản handout này.
 
-Ba mục sau lấy từ [đề xuất self-compassion](SELF_COMPASSION_FEATURE_PROPOSALS.md); **chưa có API, migration hoặc UI hoàn chỉnh**. Chúng không mặc nhiên trở thành output mới của `JournalAnalyzer`.
+## E. Người dùng: phản hồi và quyền đối với dữ liệu
 
-### UC-39 — Viết và đọc lại “Thư gửi tương lai” · P
+### UC-21 — Gửi phản hồi về nội dung hoặc gợi ý
 
-- **Tác nhân/khởi phát:** người dùng tự viết lời nhắn cho ngày khó khăn; sau này tự mở hoặc chọn xem khi app gợi ý kín đáo.
-- **Luồng mục tiêu/kết quả:** tạo/sửa/xóa thư, chọn cách nhắc; app hỏi “Bạn có muốn đọc lời nhắn mình từng để lại không?” và tôn trọng bỏ qua/tắt. Thư là lời của người dùng, không do AI viết thay.
-- **Nhánh:** năng lượng thấp một ngày không đủ để tự động mở hoặc push thư; safety flow rủi ro cao vẫn ưu tiên nguồn hỗ trợ đã duyệt, thư không thay thế phản hồi an toàn.
+**Mục tiêu:** Báo rằng một phản hồi AI, nội dung hoặc trải nghiệm là hữu ích hay có vấn đề.
 
-### UC-40 — Lưu “Điểm sáng nhỏ” · P
+**Luồng:** Người dùng chọn mục muốn phản hồi → gửi đánh giá và mô tả tùy chọn → hệ thống ghi nhận để người phụ trách xem xét. Không đưa nguyên văn nhật ký vào phản hồi nếu người dùng không chủ động chọn.
 
-- **Tác nhân/khởi phát:** người dùng tự ghi một việc nhỏ đáng nhớ hoặc nhận đề xuất từ bài đã lưu.
-- **Luồng mục tiêu/kết quả:** người dùng xem câu gốc, sửa, xác nhận hoặc bỏ qua trước khi lưu vào vault; sau đó tự xem/sửa/xóa. Bắt đầu bằng nhập thủ công là phương án ít rủi ro hơn.
-- **Nhánh:** AI không tự tạo thành tích hoặc lưu kết quả chưa xác nhận; trích xuất chỉ xét bài hiện hành sau consent/safety và kiểm tra `contentVersion`. Nội dung mới cần mã hóa, owner-scope, export/deletion.
+**Hiện trạng:** Có backend cho phản hồi; cần kiểm tra tích hợp giao diện.
 
-### UC-41 — Tạo bản chuẩn bị buổi tham vấn · P
+### UC-22 — Xuất dữ liệu cá nhân
 
-- **Tác nhân/khởi phát:** người dùng sắp trao đổi với chuyên gia/người hỗ trợ và muốn mang ghi chú ngắn.
-- **Luồng mục tiêu/kết quả:** chọn kỳ, xem trước một trang gồm chỉ số tự ghi nhận có nguồn/số mẫu, chủ đề đủ điều kiện và câu hỏi do người dùng tự viết; bỏ từng mục, xác nhận rồi tự tải/chia sẻ.
-- **Nhánh:** không mặc định kèm nhật ký thô, safety event, suy đoán nguyên nhân hoặc nhãn chẩn đoán; không tự gửi cho bên thứ ba. Handout là bản chọn lọc, khác UC-24. Nếu xuất file, phải chốt mã hóa, TTL, xác thực tải và dọn artifact.
+**Mục tiêu:** Lấy bản sao dữ liệu của chính mình.
 
-## 9. Kịch bản xuyên suốt để thảo luận và kiểm thử
+**Luồng:** Người dùng yêu cầu xuất → hệ thống chuẩn bị file → người dùng tải trong thời gian hiệu lực. File hết hạn được dọn dẹp; chỉ chủ tài khoản nhận được file.
 
-### Kịch bản A — Một ngày viết nhật ký bình thường
+**Hiện trạng:** Có backend xuất CSV/PDF bằng job, giới hạn dung lượng và thời hạn theo chính sách hiện tại.
 
-1. Người dùng có phiên hợp lệ và đã quyết định consent (UC-02/05). Nếu tính năng gợi viết được bật, client có thể xin câu hỏi khi dừng gõ (UC-06); đây chưa phải reflection của bài đã lưu.
-2. Người dùng lưu bài (UC-07). Backend screen safety (UC-13), mã hóa và commit bài; chỉ kết quả `ALLOW` phù hợp policy mới tạo yêu cầu ordinary analysis (UC-15).
-3. Worker kiểm tra lại tài khoản, consent, safety và version trước khi gọi analyzer (UC-16). Người dùng xem trạng thái/kết quả của chính bài đó (UC-17). Họ có thể check-in riêng (UC-12).
-4. Sau nhiều ngày, dashboard/insight/report chỉ dùng dữ liệu có nguồn và đủ mẫu (UC-18/19/20). Người dùng tự chọn mục tiêu/habit hoặc đọc nội dung đã duyệt (UC-21/22/23).
+### UC-23 — Xóa tài khoản
 
-### Kịch bản B — Bài có rủi ro hoặc dependency safety lỗi
+**Mục tiêu:** Chấm dứt sử dụng và yêu cầu xóa dữ liệu cá nhân.
 
-1. Backend vẫn lưu bài; `SAFETY_FLOW` hoặc `CONSTRAIN` không enqueue reflection thường. Nếu classifier/policy chưa sẵn sàng, decision `FAIL_SAFE` tạo yêu cầu screen lại theo policy (UC-07/13/15).
-2. Chỉ nguồn hỗ trợ đã được xác minh và duyệt mới được hiển thị (UC-14). Hiện kho nguồn thật chưa được duyệt nên không được hứa rằng hotline cụ thể sẽ xuất hiện.
-3. Không dùng mood/energy score đơn lẻ để suy ra khủng hoảng, không tự gửi thư quá khứ (UC-39), không gửi dữ liệu cho bên thứ ba. Khi người dùng sửa bài, `contentVersion` mới làm kết quả cũ stale (UC-09/16).
+**Luồng:** Người dùng xác nhận yêu cầu → tài khoản chuyển sang quy trình xóa → hệ thống xóa/thu hồi dữ liệu liên quan theo chính sách, kể cả tài nguyên bên ngoài khi áp dụng.
 
-### Kịch bản C — Người dùng kiểm soát và mang dữ liệu ra ngoài
+**Hiện trạng:** Có backend cho yêu cầu và job xóa; cần kiểm chứng vận hành trước khi coi toàn bộ vòng đời production đã sẵn sàng.
 
-1. Người dùng rút consent AI (UC-05); job chưa chạy phải kiểm tra lại và không gửi nội dung cho provider (UC-16).
-2. Họ có thể tải bản xuất toàn bộ dữ liệu của mình sau xác thực lại (UC-24), hoặc sau này chọn từng mục cho bản chuẩn bị buổi tham vấn (UC-41). Hai tài liệu có mục đích và phạm vi khác nhau.
-3. Nếu yêu cầu xóa tài khoản (UC-25), phiên bị thu hồi và worker dọn dữ liệu theo retention/checkpoint; việc xóa ở Cloudinary và các provider tương lai phải được xác minh trước khi báo hoàn tất.
+## F. Quản trị viên và nhóm nội dung
 
-## 10. Ranh giới và đường kiểm chứng
+### UC-24 — Quản lý trạng thái tài khoản người dùng
 
-| Nội dung dễ nhầm | Kết luận đúng tại thời điểm viết |
-|---|---|
-| Có API backend ⇒ web đã dùng? | Không. Auth và journal web còn demo; cần nối JWT và data flow thật. |
-| Safety `ALLOW` ⇒ AI chắc chắn trả reflection? | Không. Còn consent, provider/feature flag, output validation, trạng thái job và `contentVersion`. |
-| `SAFETY_FLOW` ⇒ xóa hoặc chặn lưu nhật ký? | Không. Bài vẫn được lưu theo luồng; ordinary reflection bị chặn và nội dung hỗ trợ phải được duyệt. |
-| Có report ⇒ AI viết báo cáo? | Không. Narrative hiện từ rule/metrics; scheduler mặc định tắt. |
-| Có recommendation ⇒ RAG tạo sinh? | Không. Hiện trả excerpt đã duyệt kèm citation. |
-| Consent AI ⇒ được train model? | Không. Quyền train là quyết định riêng, không suy từ consent xử lý AI. |
+**Tác nhân:** Quản trị viên có quyền phù hợp.
 
-Nguồn để rà soát khi tài liệu thay đổi: [kiến trúc](BACKEND_ARCHITECTURE.md), [kế hoạch milestone](BACKEND_DEVELOPMENT_PLAN.md), [database overview](DATABASE_OVERVIEW.md), [DBML](database/mylog.dbml), [ADR](adr/README.md), [AI guide](AI_ANALYSIS_GUIDE.md), [self-compassion proposal](SELF_COMPASSION_FEATURE_PROPOSALS.md), các `api/*Controller.java`, Flyway migrations và test trong `backend/src/test`. Endpoint trong tài liệu này dùng path tương đối sau tiền tố `/api/v1` trừ khi ghi rõ khác.
+**Mục tiêu:** Xử lý tài khoản vi phạm hoặc cần hỗ trợ vận hành.
+
+**Luồng:** Quản trị viên tra cứu metadata cần thiết → đình chỉ hoặc khôi phục theo quyền → hệ thống ghi audit. Quản trị viên thông thường không mở hoặc giải mã nhật ký thô.
+
+**Hiện trạng:** Có backend cho một số thao tác quản trị; giao diện và phân quyền chi tiết cần đối chiếu khi tích hợp.
+
+### UC-25 — Theo dõi vận hành và xử lý tác vụ lỗi
+
+**Tác nhân:** Quản trị viên/nhân viên vận hành được phân quyền.
+
+**Mục tiêu:** Biết hệ thống có xử lý được các yêu cầu xuất, xóa và phân tích hay không.
+
+**Luồng:** Xem trạng thái tổng hợp và tác vụ lỗi → xác định nguyên nhân từ metadata an toàn → thử lại tác vụ được phép hoặc chuyển cho người phụ trách. Màn hình vận hành không hiển thị nội dung nhật ký hay prompt thô.
+
+**Hiện trạng:** Có nền API/job ở backend; quy trình vận hành và giao diện đầy đủ còn cần hoàn thiện.
+
+### UC-26 — Xem và xử lý phản hồi người dùng
+
+**Tác nhân:** Nhân viên hỗ trợ hoặc người duyệt được phân quyền.
+
+**Mục tiêu:** Phát hiện nội dung chưa phù hợp và cải thiện trải nghiệm.
+
+**Luồng:** Mở hàng đợi phản hồi → xem thông tin được phép → phân loại, xử lý hoặc chuyển tiếp → ghi lại kết quả. Quyền xem nội dung nhạy cảm không tự sinh ra từ quyền quản trị chung.
+
+**Hiện trạng:** Có backend ghi nhận phản hồi; quy trình xử lý cần kiểm tra theo vai trò và giao diện thực tế.
+
+### UC-27 — Biên tập và duyệt nội dung hỗ trợ
+
+**Tác nhân:** Biên tập viên và người duyệt nội dung.
+
+**Mục tiêu:** Chỉ cho người dùng thấy nội dung đáng tin cậy và còn hiệu lực.
+
+**Luồng:** Biên tập viên soạn/sửa bài → gửi duyệt → người có quyền duyệt xuất bản hoặc trả lại → có thể gỡ/đưa vào lưu trữ khi nội dung cũ. Người dùng chỉ thấy bản đã xuất bản.
+
+**Hiện trạng:** Có backend cho quy trình knowledge/content; nguồn safety và các câu trả lời khẩn cấp cần quy trình phê duyệt riêng trước khi sử dụng.
+
+### UC-28 — Duyệt nguồn hỗ trợ và quy tắc phản hồi an toàn
+
+**Tác nhân:** Người chịu trách nhiệm safety được phân quyền.
+
+**Mục tiêu:** Bảo đảm thông điệp và nguồn hỗ trợ được kiểm chứng trước khi hiển thị cho người dùng.
+
+**Luồng dự kiến:** Xem nguồn, nội dung, phiên bản và bằng chứng kiểm chứng → phê duyệt hoặc từ chối → theo dõi hết hạn và rút phê duyệt khi cần. Thay đổi này ảnh hưởng luồng UC-14.
+
+**Hiện trạng:** Có cổng chính sách và dữ liệu nền ở backend; chưa có bộ nguồn hỗ trợ thực tế được duyệt đầy đủ.
+
+## Những việc không đặt thành use case của người dùng
+
+Lưu outbox event, worker tạo AI job, kiểm tra consent/safety, gọi classifier/analyzer, train model và cấu hình API key là **bước triển khai**. Chúng phục vụ các mục tiêu như UC-08, UC-13, UC-14 và UC-15. Xem [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md), [BACKEND_ARCHITECTURE.md](BACKEND_ARCHITECTURE.md) và [SELF_COMPASSION_FEATURE_PROPOSALS.md](SELF_COMPASSION_FEATURE_PROPOSALS.md) khi cần thiết kế chi tiết.
