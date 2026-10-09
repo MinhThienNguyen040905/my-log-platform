@@ -86,7 +86,7 @@ MYLOG_MAIL_SMTP_AUTH=true
 MYLOG_MAIL_STARTTLS_ENABLED=true
 ```
 
-Ghi mật khẩu ứng dụng liền nhau, không có dấu cách hoặc dấu ngoặc nhọn; đừng dùng mật khẩu đăng nhập Google. Khởi động lại backend sau khi sửa `.env`. Với Gmail, có thể chỉ khởi động `redis` từ Compose nếu database đang dùng Supabase; không cần Mailpit. Kiểm tra bằng luồng đăng ký/xác minh ở mục M1 và xem email nhận được (kể cả Spam). Nếu tài khoản Google không cho tạo mật khẩu ứng dụng, cần dùng dịch vụ SMTP khác hoặc cơ chế xác thực mà tài khoản đó hỗ trợ. Cấu hình trên dùng cổng 587 với STARTTLS và xác thực SMTP; tham khảo [hướng dẫn SMTP của Gmail](https://support.google.com/mail/answer/7104828) và [hướng dẫn mật khẩu ứng dụng](https://support.google.com/mail/answer/185833).
+Ghi mật khẩu ứng dụng liền nhau, không có dấu cách hoặc dấu ngoặc nhọn; đừng dùng mật khẩu đăng nhập Google. Khởi động lại backend sau khi sửa `.env`. Email xác minh hiển thị người gửi là `mylog <địa chỉ trong MYLOG_MAIL_FROM>`; tên hiển thị không che địa chỉ gửi. Với Gmail, có thể chỉ khởi động `redis` từ Compose nếu database đang dùng Supabase; không cần Mailpit. Kiểm tra bằng luồng đăng ký/xác minh ở mục M1 và xem email nhận được (kể cả Spam). Nếu tài khoản Google không cho tạo mật khẩu ứng dụng, cần dùng dịch vụ SMTP khác hoặc cơ chế xác thực mà tài khoản đó hỗ trợ. Cấu hình trên dùng cổng 587 với STARTTLS và xác thực SMTP; tham khảo [hướng dẫn SMTP của Gmail](https://support.google.com/mail/answer/7104828) và [hướng dẫn mật khẩu ứng dụng](https://support.google.com/mail/answer/185833).
 
 Chạy ứng dụng:
 
