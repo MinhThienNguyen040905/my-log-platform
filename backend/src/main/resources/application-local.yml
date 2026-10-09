@@ -2,6 +2,12 @@ spring:
   mail:
     host: ${MYLOG_MAIL_HOST:localhost}
     port: ${MYLOG_MAIL_PORT:1025}
+    username: ${MYLOG_MAIL_USERNAME:}
+    password: ${MYLOG_MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MYLOG_MAIL_SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${MYLOG_MAIL_STARTTLS_ENABLED:false}
+      mail.smtp.starttls.required: ${MYLOG_MAIL_STARTTLS_ENABLED:false}
   datasource:
     url: ${MYLOG_DB_URL:jdbc:postgresql://localhost:5432/mylog}
     username: ${MYLOG_DB_USERNAME:mylog}

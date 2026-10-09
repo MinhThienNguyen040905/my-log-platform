@@ -9,6 +9,7 @@ spring:
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
   datasource:
     url: ${MYLOG_DB_URL}
     username: ${MYLOG_DB_USERNAME}

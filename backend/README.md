@@ -72,6 +72,22 @@ Nếu muốn phát triển hoàn toàn offline bằng PostgreSQL/pgvector local,
 
 Mailpit UI: `http://localhost:8025`. Nếu dùng PostgreSQL local thay Supabase, chạy `docker compose up -d` để khởi động cả ba service.
 
+### Gửi email xác minh bằng Gmail trong profile local
+
+Mặc định local gửi đến Mailpit, không cần tài khoản hay mật khẩu Gmail. Nếu muốn gửi email thật bằng Gmail, bật xác minh 2 bước trên tài khoản Google, tạo **mật khẩu ứng dụng** dành riêng cho mylog tại [Google App Passwords](https://myaccount.google.com/apppasswords), rồi thêm các dòng sau vào file `.env` **trên máy của bạn** (không commit, không gửi mật khẩu vào chat):
+
+```properties
+MYLOG_MAIL_HOST=smtp.gmail.com
+MYLOG_MAIL_PORT=587
+MYLOG_MAIL_USERNAME=<địa chỉ Gmail gửi thư>
+MYLOG_MAIL_PASSWORD=<mật khẩu ứng dụng Google>
+MYLOG_MAIL_FROM=<cùng địa chỉ Gmail ở trên>
+MYLOG_MAIL_SMTP_AUTH=true
+MYLOG_MAIL_STARTTLS_ENABLED=true
+```
+
+Ghi mật khẩu ứng dụng liền nhau, không có dấu cách hoặc dấu ngoặc nhọn; đừng dùng mật khẩu đăng nhập Google. Khởi động lại backend sau khi sửa `.env`. Với Gmail, có thể chỉ khởi động `redis` từ Compose nếu database đang dùng Supabase; không cần Mailpit. Kiểm tra bằng luồng đăng ký/xác minh ở mục M1 và xem email nhận được (kể cả Spam). Nếu tài khoản Google không cho tạo mật khẩu ứng dụng, cần dùng dịch vụ SMTP khác hoặc cơ chế xác thực mà tài khoản đó hỗ trợ. Cấu hình trên dùng cổng 587 với STARTTLS và xác thực SMTP; tham khảo [hướng dẫn SMTP của Gmail](https://support.google.com/mail/answer/7104828) và [hướng dẫn mật khẩu ứng dụng](https://support.google.com/mail/answer/185833).
+
 Chạy ứng dụng:
 
 ```powershell
@@ -111,7 +127,7 @@ metadata queue, kết quả, token, chi phí và độ trễ.
 Các endpoint M1 được bật trong profile `local`, `staging`, `prod`; profile `test` chỉ bật khi integration test yêu cầu. Luồng local:
 
 1. `POST /api/v1/auth/register` với email, password (tối thiểu 12 ký tự), timezone IANA, locale, `termsVersion`, `privacyVersion`, `acceptTerms=true`, `acceptPrivacy=true`.
-2. Lấy mã xác minh từ Mailpit rồi gọi `POST /api/v1/auth/email-verifications:confirm` với `{ "token": "..." }`.
+2. Lấy mã xác minh từ Mailpit (hoặc hộp thư khi dùng Gmail SMTP) rồi gọi `POST /api/v1/auth/email-verifications:confirm` với `{ "token": "..." }`.
 3. `POST /api/v1/auth/login` trả access JWT 10 phút và refresh token opaque 30 ngày. `POST /api/v1/auth/refresh` đổi refresh token mỗi lần; dùng lại token cũ sẽ revoke session family.
 4. Dùng `Authorization: Bearer <accessToken>` cho `GET/PATCH /api/v1/me`, consent và session APIs. `PATCH /me` dùng `If-Match` từ ETag của `GET /me`.
 

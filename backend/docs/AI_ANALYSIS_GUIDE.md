@@ -2,6 +2,27 @@
 
 Tài liệu này giải thích **code đang có**, đồng thời chỉ rõ phần nào mới là thiết kế hoặc còn thiếu để chạy với dữ liệu người dùng thật. Đọc cùng [kiến trúc backend](BACKEND_ARCHITECTURE.md), [kế hoạch phát triển](BACKEND_DEVELOPMENT_PLAN.md), [ADR safety](adr/0003-layered-safety-screening.md) và [ADR AI provider](adr/0004-ai-provider-and-data-handling.md). Flyway migration là nguồn schema thực thi; sơ đồ dưới đây chỉ nhằm giải thích luồng.
 
+## Sơ đồ AI đơn giản
+
+```mermaid
+flowchart TD
+    A[Người dùng viết nhật ký] --> B{Đang viết hay nhấn Lưu?}
+    B -->|Dừng gõ 3–5 giây| C[Backend kiểm tra consent và safety của bản nháp]
+    C -->|Đủ điều kiện| D[Hiển thị câu hỏi gợi ý tự phản chiếu để viết tiếp]
+    C -->|Không đủ điều kiện| E[Không hiện gợi ý thông thường]
+    D --> A
+    B -->|Nhấn Lưu| F[Backend lưu bài và kiểm tra safety]
+    F -->|Được phép| G{Có consent và provider được duyệt?}
+    G -->|Có| H[AI phân tích bài đã lưu]
+    H --> I[Phản chiếu, cảm xúc và chủ đề]
+    I --> J[Đóng góp vào xu hướng và báo cáo]
+    G -->|Không| K[Giữ bài viết, chưa phân tích AI]
+    F -->|Cần hỗ trợ an toàn| L[Hiển thị hỗ trợ đã duyệt]
+    F -->|Chưa kiểm tra được| M[Giữ bài viết, chờ kiểm tra lại]
+```
+
+Có **hai loại phản hồi ở hai thời điểm**: lúc đang viết là câu hỏi gợi ý để viết tiếp; sau khi lưu là kết quả phân tích của bài đã lưu, gồm reflection và các nhãn cảm xúc/chủ đề. Nhánh đang viết là trải nghiệm dự kiến: backend hiện chỉ có câu hỏi mẫu, mặc định tắt, chưa gọi AI tạo sinh và frontend chưa kết nối. Bài viết được lưu trước khi có kết quả phân tích AI. Sơ đồ chi tiết về outbox và worker nằm ở mục 3.
+
 ## 1. Bốn khái niệm dễ bị gọi chung là “AI”
 
 | Phần | Câu hỏi nó trả lời | Hiện trạng |
