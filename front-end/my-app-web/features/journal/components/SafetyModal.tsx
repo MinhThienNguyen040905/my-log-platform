@@ -23,7 +23,6 @@ export function SafetyModal({
   useEffect(() => {
     if (!isOpen) return;
     const controller = new AbortController();
-    setResources([]);
     loadApprovedSafetyResources(controller.signal).then(setResources).catch(() => {
       if (!controller.signal.aborted) setResources([]);
     });

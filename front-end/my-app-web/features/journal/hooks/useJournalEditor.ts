@@ -4,36 +4,50 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useJournal } from '../context/JournalContext';
 import { useToast } from '@/lib/toast-context';
-import { MoodType, AIAnalysisResult, JournalStatus } from '@/types';
-import { EMOTION_TAXONOMY } from '@/constants/emotions';
-import { detectCrisisKeywords } from '../utils/safety-checker';
+import { MoodType, JournalEmotion } from '@/types';
+import { normalizeJournalEmotion } from '../utils/journal-emotions';
 import { JournalTipTapEditorRef } from '../components/JournalTipTapEditor';
+import { prepareContent } from '../api/client';
+import { journalEditorFieldsSchema } from '../schemas/journal-editor-fields';
 
 export function useJournalEditor() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('id');
-  const { addEntry, updateEntry, getEntryById, streakCount } = useJournal();
+  const { addEntry, updateEntry, loadEntry, streakCount, draftStorageKey, userProfile, registerJournalLeaveCheck } = useJournal();
   const { showToast } = useToast();
 
   const editorRef = useRef<JournalTipTapEditorRef>(null);
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [existingDate, setExistingDate] = useState<string | null>(null);
+  const [rowVersion, setRowVersion] = useState<number | null>(null);
+  const [contentVersion, setContentVersion] = useState<number | null>(null);
+  const [loadedEntryId, setLoadedEntryId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [createKey, setCreateKey] = useState(() => crypto.randomUUID());
 
   // Core Journal State
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [mood, setMood] = useState<MoodType>('calm-joy');
+  const [selectedEmotion, setSelectedEmotion] = useState<JournalEmotion | null>('happy');
   const [moodScore, setMoodScore] = useState(8.0);
   const [hoveredMoodScore, setHoveredMoodScore] = useState<number | null>(null);
   const [stressScore, setStressScore] = useState(3.0);
   const [energyScore, setEnergyScore] = useState(7.5);
   const [sleepHours, setSleepHours] = useState(7.5);
-  const [showDetailedMetrics, setShowDetailedMetrics] = useState(false);
+  const [showDetailedMetrics, setShowDetailedMetrics] = useState(true);
 
   // Topics & Tags
   const [topics, setTopics] = useState<string[]>([]);
+  const baselineRef = useRef(JSON.stringify(['', '', 'calm-joy', 'happy', 8, 3, 7.5, 7.5, []]));
+  const currentSnapshot = JSON.stringify([title, content, mood, selectedEmotion, moodScore, stressScore, energyScore, sleepHours, topics]);
+
+  useEffect(() => {
+    registerJournalLeaveCheck(() => currentSnapshot !== baselineRef.current);
+    return () => registerJournalLeaveCheck(null);
+  }, [currentSnapshot, registerJournalLeaveCheck]);
   const [showAddTopicModal, setShowAddTopicModal] = useState(false);
 
   // Insert image modal state
@@ -44,19 +58,12 @@ export function useJournalEditor() {
 
   // AI Drawer & State
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  // Prompt to reflect before saving modal
-  const [showConfirmReflectModal, setShowConfirmReflectModal] = useState(false);
 
   // Safety Crisis Modal
   const [isSafetyModalOpen, setIsSafetyModalOpen] = useState(false);
+  const [safetySaved, setSafetySaved] = useState(false);
   const [detectedCrisisKeywords, setDetectedCrisisKeywords] = useState<string[]>([]);
 
-  // Autosave timestamp
-  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
-
-  const [aiResult, setAiResult] = useState<AIAnalysisResult | null>(null);
 
   const writingPrompts = [
     { category: 'Thấu cảm', prompt: 'Hôm nay điều gì đã làm tiêu tốn nhiều năng lượng tinh thần của bạn nhất?' },
@@ -68,17 +75,21 @@ export function useJournalEditor() {
 
   // Reset to clean new entry
   const handleResetToNewEntry = () => {
+    baselineRef.current = JSON.stringify(['', '', 'calm-joy', 'happy', 8, 3, 7.5, 7.5, []]);
     setIsEditMode(false);
+    setLoadedEntryId(null);
+    setRowVersion(null);
+    setContentVersion(null);
     setExistingDate(null);
     setTitle('');
     setContent('');
     setMood('calm-joy');
+    setSelectedEmotion('happy');
     setMoodScore(8.0);
     setStressScore(3.0);
     setEnergyScore(7.5);
     setSleepHours(7.5);
     setTopics([]);
-    setAiResult(null);
     router.push('/journal-editor');
     showToast({
       title: 'Đã mở trang sổ mới',
@@ -90,30 +101,71 @@ export function useJournalEditor() {
   // Load existing entry for editing or draft for new entry
   useEffect(() => {
     if (editId) {
-      const existing = getEntryById(editId);
-      if (existing) {
+      let active = true;
+      void loadEntry(editId).then((existing) => {
+        if (!active) return;
         setIsEditMode(true);
+        setRowVersion(existing.rowVersion ?? null);
+        setContentVersion(existing.contentVersion ?? null);
+        setLoadedEntryId(editId);
         setExistingDate(existing.date);
+        baselineRef.current = JSON.stringify([
+          existing.title, existing.content, existing.mood, existing.emotion ?? null,
+          existing.moodScore ?? 8, existing.stressScore ?? 3,
+          existing.energyScore ?? 7.5, existing.sleepHours ?? 7.5, existing.tags || [],
+        ]);
         setTitle(existing.title);
         setContent(existing.content);
         setMood(existing.mood);
-        setMoodScore(existing.moodScore);
-        setStressScore(existing.stressScore);
-        setEnergyScore(existing.energyScore);
-        setSleepHours(existing.sleepHours);
+        setSelectedEmotion(existing.emotion ?? null);
+        setMoodScore(existing.moodScore ?? 8);
+        setStressScore(existing.stressScore ?? 3);
+        setEnergyScore(existing.energyScore ?? 7.5);
+        setSleepHours(existing.sleepHours ?? 7.5);
         setTopics(existing.tags || []);
-        if (existing.aiAnalysis) setAiResult(existing.aiAnalysis);
-      }
+      }).catch((error) => {
+        if (active) showToast({ title: 'Không thể mở bài viết', message: error instanceof Error ? error.message : 'Vui lòng thử lại.', type: 'error' });
+      });
+      return () => { active = false; };
     } else {
+      const timer = setTimeout(() => {
       setIsEditMode(false);
+      setLoadedEntryId(null);
+      setRowVersion(null);
+      setContentVersion(null);
       setExistingDate(null);
+      baselineRef.current = JSON.stringify(['', '', 'calm-joy', 'happy', 8, 3, 7.5, 7.5, []]);
+      setTitle('');
+      setContent('');
+      setMood('calm-joy');
+      setSelectedEmotion('happy');
+      setMoodScore(8);
+      setStressScore(3);
+      setEnergyScore(7.5);
+      setSleepHours(7.5);
+      setTopics([]);
       try {
-        const draft = localStorage.getItem('mylog_draft_journal');
+        const draft = localStorage.getItem(draftStorageKey);
         if (draft) {
           const parsed = JSON.parse(draft);
           if (parsed.title) setTitle(parsed.title);
           if (parsed.content) setContent(parsed.content);
-          if (parsed.moodScore) setMoodScore(parsed.moodScore);
+          if (typeof parsed.moodScore === 'number') {
+            setMoodScore(parsed.moodScore);
+            setMood(parsed.mood === 'neutral' || parsed.mood === 'calm-joy'
+              || parsed.mood === 'anxiety-stress' || parsed.mood === 'sadness-reflect'
+              || parsed.mood === 'hope-energy'
+              ? parsed.mood
+              : parsed.moodScore >= 7 ? 'calm-joy'
+                : parsed.moodScore >= 5.5 ? 'neutral'
+                  : parsed.moodScore >= 4 ? 'anxiety-stress' : 'sadness-reflect');
+          }
+          const restoredEmotion = normalizeJournalEmotion(parsed.emotion);
+          if (restoredEmotion) {
+            setSelectedEmotion(restoredEmotion);
+          } else if (typeof parsed.moodScore === 'number') {
+            setSelectedEmotion(null);
+          }
           if (parsed.stressScore) setStressScore(parsed.stressScore);
           if (parsed.energyScore) setEnergyScore(parsed.energyScore);
           if (parsed.sleepHours) setSleepHours(parsed.sleepHours);
@@ -122,8 +174,10 @@ export function useJournalEditor() {
       } catch (e) {
         console.error('Draft load error:', e);
       }
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [editId, getEntryById]);
+  }, [editId, loadEntry, draftStorageKey, showToast]);
 
   // Local Autosave (quiet)
   useEffect(() => {
@@ -131,12 +185,8 @@ export function useJournalEditor() {
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(
-          'mylog_draft_journal',
-          JSON.stringify({ title, content, moodScore, stressScore, energyScore, sleepHours, topics })
-        );
-        const now = new Date();
-        setLastSavedTime(
-          `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+          draftStorageKey,
+          JSON.stringify({ title, content, mood, moodScore, emotion: selectedEmotion, stressScore, energyScore, sleepHours, topics })
         );
       } catch (e) {
         console.error('Draft save error:', e);
@@ -144,62 +194,18 @@ export function useJournalEditor() {
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [title, content, moodScore, stressScore, energyScore, sleepHours, topics, isEditMode]);
+  }, [title, content, mood, moodScore, selectedEmotion, stressScore, energyScore, sleepHours, topics, isEditMode, draftStorageKey]);
 
-  // Check crisis patterns using safety-checker
-  const checkSafetyRisk = (text: string) => {
-    const found = detectCrisisKeywords(text);
-    if (found.length > 0) {
-      setDetectedCrisisKeywords(found);
-      setIsSafetyModalOpen(true);
-      return true;
-    }
-    return false;
-  };
-
-  // Trigger AI reflection on-demand
   const handleOpenAiDrawer = () => {
-    if (!content.trim()) {
-      showToast({
-        title: 'Trang sổ còn trống!',
-        message: 'Hãy viết vài dòng tâm sự trước khi để MyLog cùng phản chiếu nhé.',
-        type: 'info',
-      });
+    if (!editId || loadedEntryId !== editId || contentVersion === null) {
+      showToast({ title: 'Hãy lưu bài viết trước', message: 'Phân tích chỉ dành cho bài viết đã lưu.', type: 'info' });
       return;
     }
-
-    if (checkSafetyRisk(content)) return;
-
+    if (currentSnapshot !== baselineRef.current) {
+      showToast({ title: 'Bài viết có thay đổi chưa lưu', message: 'Hãy lưu thay đổi trước khi xem phân tích.', type: 'info' });
+      return;
+    }
     setIsAiDrawerOpen(true);
-    setIsAnalyzing(true);
-
-    setTimeout(() => {
-      setIsAnalyzing(false);
-      setAiResult({
-        sentiment: moodScore >= 7 ? 'Tích cực & Nhẹ nhõm' : 'Suy tư & Tự vấn sâu',
-        summary: `Có vẻ hôm nay bạn đang cảm thấy ${
-          moodScore >= 8 ? 'nhẹ nhõm, tự hào và tràn đầy hy vọng' : 'cần một khoảng lặng để cân bằng lại nội tâm'
-        }.`,
-        reflectionPrompt: 'Khi nhìn lại ngày hôm nay, điều gì khiến bạn thấy trân quý nhất?',
-        reflectionQuestions: [
-          'Khoảnh khắc nào trong ngày khiến bạn cảm thấy tự tin và nhẹ nhõm nhất?',
-          'Sau khi trải qua những giờ bận rộn, bạn muốn dành cho bản thân sự chăm sóc nào tối nay?',
-          'Bạn muốn nhắn gửi một lời động viên gì đến chính mình lúc này?',
-        ],
-        emotions: [
-          { label: 'Bình an & Thư thái', percentage: Math.min(85, Math.round(moodScore * 9)), color: EMOTION_TAXONOMY.CALM.color, description: 'Cảm giác giải tỏa áp lực', emotionType: 'CALM' },
-          { label: 'Hy vọng & Tự hào', percentage: Math.min(60, Math.round(energyScore * 8)), color: EMOTION_TAXONOMY.HOPE.color, description: 'Sẵn sàng hướng về phía trước', emotionType: 'HOPE' },
-          { label: 'Áp lực còn sót lại', percentage: Math.min(50, Math.round(stressScore * 8)), color: EMOTION_TAXONOMY.ANXIETY.color, description: 'Dư âm công việc', emotionType: 'ANXIETY' },
-        ],
-        entities: [{ name: topics[0] || 'mục tiêu', category: 'công việc', sentiment: 'positive' }],
-        mindfulAction: 'Thử dành 15 phút nghe một bản nhạc êm dịu, thả lỏng bờ vai và không nhìn màn hình.',
-        suggestedAction: 'Dành 20 phút đi dạo thư thái quanh quán quen và ngủ một giấc thật sâu không đặt báo thức.',
-        topics: topics,
-        riskLevel: 'NORMAL',
-        userCorrected: false,
-        status: 'ANALYZED',
-      });
-    }, 650);
   };
 
   // Append question to editor to continue writing
@@ -211,14 +217,16 @@ export function useJournalEditor() {
       setContent((prev) => `${prev.trim()}<br/><blockquote>💭 ${q}</blockquote><p></p>`);
     }
     showToast({
-      title: 'Đã chèn câu hỏi vào sổ tay!',
+      title: 'Đã đưa câu hỏi vào bài viết.',
       message: 'Bạn có thể tiếp tục viết dòng suy ngẫm của mình.',
       type: 'info',
     });
   };
 
   // Save entry
-  const executeSave = () => {
+  const executeSave = async () => {
+    if (isSaving) return;
+    if (editId && loadedEntryId !== editId) return;
     const plainText = editorRef.current ? editorRef.current.getText() : content.replace(/<[^>]*>/g, '');
     if (!plainText.trim()) {
       showToast({
@@ -229,79 +237,72 @@ export function useJournalEditor() {
       return;
     }
 
-    if (checkSafetyRisk(plainText)) return;
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const nowTimeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-
-    const journalStatus: JournalStatus = isEditMode
-      ? 'ANALYSIS_OUTDATED'
-      : (aiResult ? 'ANALYZED' : 'SAVED');
-
-    if (isEditMode && editId) {
-      updateEntry(editId, {
-        title: title.trim() || 'Trang nhật ký không tên',
-        content: content.trim(),
-        mood: moodScore >= 7 ? 'calm-joy' : stressScore >= 6 ? 'anxiety-stress' : 'neutral',
-        moodScore,
-        stressScore,
-        energyScore,
-        sleepHours,
-        tags: topics,
-        status: journalStatus,
-        aiAnalysis: aiResult ? { ...aiResult, status: journalStatus } : undefined,
-      });
-
-      showToast({
-        title: 'Đã cập nhật bài viết thành công!',
-        message: 'Trang nhật ký đã được cất vào Lịch ký ức.',
-        type: 'success',
-      });
-    } else {
-      addEntry({
-        title: title.trim() || 'Trang nhật ký không tên',
-        content: content.trim(),
-        date: todayStr,
-        time: nowTimeStr,
-        mood: moodScore >= 7 ? 'calm-joy' : stressScore >= 6 ? 'anxiety-stress' : 'neutral',
-        moodScore,
-        stressScore,
-        energyScore,
-        sleepHours,
-        tags: topics,
-        location: 'Hà Nội, Việt Nam',
-        status: journalStatus,
-        aiAnalysis: aiResult ? { ...aiResult, status: journalStatus } : undefined,
-      });
-
-      showToast({
-        title: 'Đã lưu trang nhật ký thành công!',
-        message: 'Những dòng suy tư của bạn đã được lưu giữ an toàn.',
-        type: 'success',
-      });
-
-      localStorage.removeItem('mylog_draft_journal');
+    const editorContent = editorRef.current?.getJSON();
+    if (!editorContent) return;
+    let contentJson;
+    try { contentJson = prepareContent(editorContent); }
+    catch (error) {
+      showToast({ title: 'Chưa thể lưu nội dung này', message: error instanceof Error ? error.message : 'Kiểu nội dung chưa được hỗ trợ.', type: 'error' });
+      return;
+    }
+    if (!journalEditorFieldsSchema.safeParse({ title, topics }).success) {
+      showToast({ title: 'Thông tin quá dài', message: 'Tiêu đề tối đa 160 ký tự; mỗi bài tối đa 20 chủ đề, mỗi chủ đề tối đa 40 ký tự.', type: 'error' });
+      return;
     }
 
-    setTimeout(() => {
-      router.push('/history-calendar');
-    }, 600);
-  };
-
-  const handleSaveClick = () => {
-    if (!isAiDrawerOpen && !isEditMode) {
-      setShowConfirmReflectModal(true);
-    } else {
-      executeSave();
+    const body = {
+      title: title.trim() || 'Trang nhật ký không tên', contentJson,
+      timezone: userProfile.timezone, moodCode: selectedEmotion === 'very_bad' ? 'very-bad' : selectedEmotion ?? 'neutral',
+      moodScore, stressScore, energyScore, sleepMinutes: Math.round(sleepHours * 60),
+    };
+    if (topics.some((topic) => topic.trim())) {
+      showToast({ title: 'Chủ đề chưa khả dụng', message: 'Chưa thể lưu chủ đề theo bài viết. Vui lòng bỏ chủ đề trước khi lưu.', type: 'error' });
+      return;
     }
+    setIsSaving(true);
+    try {
+      let saved;
+      if (isEditMode && editId) {
+        if (rowVersion === null) throw new Error('Chưa tải phiên bản bài viết. Vui lòng mở lại bài.');
+        saved = await updateEntry(editId, body, rowVersion);
+        setRowVersion(saved.rowVersion ?? null);
+        setContentVersion(saved.contentVersion ?? null);
+      } else {
+        saved = await addEntry(body, createKey);
+      }
+      baselineRef.current = currentSnapshot;
+      if (!isEditMode) {
+        try { localStorage.removeItem(draftStorageKey); } catch { /* The entry is already saved on the server. */ }
+        setCreateKey(crypto.randomUUID());
+      }
+      try {
+        await loadEntry(saved.id);
+      } catch {
+        showToast({ title: 'Đã lưu bài viết', message: 'Bài đã được lưu trên máy chủ nhưng chưa tải lại được. Bạn có thể mở lại từ lịch sử.', type: 'info' });
+      }
+      if (saved.riskLevel === 'HIGH' || saved.riskLevel === 'CRITICAL') {
+        setDetectedCrisisKeywords([]);
+        setSafetySaved(true);
+        setIsSafetyModalOpen(true);
+      }
+      showToast({ title: 'Đã lưu trang nhật ký', message: 'Bài viết đã được lưu trên máy chủ.', type: 'success' });
+      if (saved.riskLevel !== 'HIGH' && saved.riskLevel !== 'CRITICAL') router.push('/history-calendar');
+    } catch (error) {
+      showToast({ title: 'Chưa thể lưu bài viết', message: error instanceof Error ? error.message : 'Vui lòng thử lại.', type: 'error' });
+    } finally { setIsSaving(false); }
   };
 
-  const plainTextContent = editorRef.current ? editorRef.current.getText() : content.replace(/<[^>]*>/g, '');
+  const plainTextContent = content.replace(/<[^>]*>/g, '');
   const wordCount = plainTextContent.trim() ? plainTextContent.trim().split(/\s+/).filter(Boolean).length : 0;
 
   return {
     editorRef,
     isEditMode,
+    editId,
+    rowVersion,
+    contentVersion,
+    loadedEntryId,
+    isSaving,
     existingDate,
     title,
     setTitle,
@@ -309,6 +310,8 @@ export function useJournalEditor() {
     setContent,
     mood,
     setMood,
+    selectedEmotion,
+    setSelectedEmotion,
     moodScore,
     setMoodScore,
     hoveredMoodScore,
@@ -331,20 +334,15 @@ export function useJournalEditor() {
     setShowPromptModal,
     isAiDrawerOpen,
     setIsAiDrawerOpen,
-    isAnalyzing,
-    showConfirmReflectModal,
-    setShowConfirmReflectModal,
     isSafetyModalOpen,
+    safetySaved,
     setIsSafetyModalOpen,
     detectedCrisisKeywords,
-    lastSavedTime,
-    aiResult,
     writingPrompts,
     handleResetToNewEntry,
     handleOpenAiDrawer,
     handleAnswerQuestionInJournal,
     executeSave,
-    handleSaveClick,
     wordCount,
     router,
     streakCount,

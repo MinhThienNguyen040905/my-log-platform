@@ -3,40 +3,28 @@
 import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/lib/toast-context';
-import { MoodType } from '@/types';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { SafetyModal } from './SafetyModal';
 import { AiReflectionDrawer } from './AiReflectionDrawer';
-import { ConfirmReflectModal } from './ConfirmReflectModal';
-import { InsertImageModal } from './InsertImageModal';
 import { AddTopicModal } from './AddTopicModal';
 import { JournalTipTapEditor } from './JournalTipTapEditor';
 import { useJournalEditor } from '../hooks/useJournalEditor';
+import { JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER } from '../utils/journal-emotions';
+import type { JournalEmotion } from '@/types';
 import {
   ArrowLeft,
-  Sparkles,
   Save,
   Sliders,
   Check,
   Calendar,
-  MapPin,
-  Image as ImageIcon,
-  CheckCircle2,
   Lightbulb,
   ChevronDown,
-  Paperclip,
   Zap,
   BatteryCharging,
   Moon,
   Plus,
-  Frown,
-  Annoyed,
-  Meh,
-  Smile,
-  Laugh,
   Edit3,
-  RotateCcw,
   Flame,
 } from 'lucide-react';
 
@@ -54,74 +42,33 @@ export function JournalEditor() {
   );
 }
 
-const MOOD_ICONS: {
-  score: number;
-  mood: MoodType;
-  icon: React.ElementType;
-  label: string;
-  iconColor: string;
-  activeBg: string;
-  hoverBg: string;
-}[] = [
-  {
-    score: 2.0,
-    mood: 'anxiety-stress',
-    icon: Frown,
-    label: 'Mệt mỏi / Trầm',
-    iconColor: 'text-rose-500',
-    activeBg: 'bg-rose-300',
-    hoverBg: 'hover:bg-rose-50',
-  },
-  {
-    score: 4.5,
-    mood: 'anxiety-stress',
-    icon: Annoyed,
-    label: 'Áp lực / Bối rối',
-    iconColor: 'text-amber-500',
-    activeBg: 'bg-amber-300',
-    hoverBg: 'hover:bg-amber-50',
-  },
-  {
-    score: 6.0,
-    mood: 'neutral',
-    icon: Meh,
-    label: 'Bình thường',
-    iconColor: 'text-slate-500',
-    activeBg: 'bg-slate-200',
-    hoverBg: 'hover:bg-slate-100',
-  },
-  {
-    score: 8.0,
-    mood: 'calm-joy',
-    icon: Smile,
-    label: 'Thư thái / Tốt',
-    iconColor: 'text-lime-600',
-    activeBg: 'bg-primary-container',
-    hoverBg: 'hover:bg-lime-50',
-  },
-  {
-    score: 9.5,
-    mood: 'hope-energy',
-    icon: Laugh,
-    label: 'Hào hứng / Tuyệt vời',
-    iconColor: 'text-yellow-500',
-    activeBg: 'bg-yellow-300',
-    hoverBg: 'hover:bg-yellow-50',
-  },
-];
+const MOOD_ICONS = JOURNAL_EMOTION_ORDER.map((id) => ({ id, ...JOURNAL_EMOTIONS[id] }));
+const MOOD_COLORS: Record<JournalEmotion, { activeBg: string; hoverBg: string }> = {
+  neutral: { activeBg: 'bg-slate-200', hoverBg: 'hover:bg-slate-100' },
+  happy: { activeBg: 'bg-primary-container', hoverBg: 'hover:bg-lime-50' },
+  angry: { activeBg: 'bg-orange-200', hoverBg: 'hover:bg-orange-50' },
+  sad: { activeBg: 'bg-blue-200', hoverBg: 'hover:bg-blue-50' },
+  very_bad: { activeBg: 'bg-indigo-200', hoverBg: 'hover:bg-indigo-50' },
+};
 
 function JournalEditorContent() {
   const { showToast } = useToast();
   const {
     editorRef,
     isEditMode,
+    editId,
+    rowVersion,
+    contentVersion,
+    loadedEntryId,
+    isSaving,
     existingDate,
     title,
     setTitle,
     content,
     setContent,
-    mood,
     setMood,
+    selectedEmotion,
+    setSelectedEmotion,
     moodScore,
     setMoodScore,
     hoveredMoodScore,
@@ -138,35 +85,30 @@ function JournalEditorContent() {
     setTopics,
     showAddTopicModal,
     setShowAddTopicModal,
-    showImageModal,
-    setShowImageModal,
     showPromptModal,
     setShowPromptModal,
     isAiDrawerOpen,
     setIsAiDrawerOpen,
-    isAnalyzing,
-    showConfirmReflectModal,
-    setShowConfirmReflectModal,
     isSafetyModalOpen,
+    safetySaved,
     setIsSafetyModalOpen,
     detectedCrisisKeywords,
-    lastSavedTime,
-    aiResult,
     writingPrompts,
     handleResetToNewEntry,
     handleOpenAiDrawer,
-    handleAnswerQuestionInJournal,
     executeSave,
-    handleSaveClick,
     wordCount,
     router,
     streakCount,
   } = useJournalEditor();
+  const selectedMoodScore = MOOD_ICONS.reduce((closest, candidate) =>
+    Math.abs(candidate.score - moodScore) < Math.abs(closest - moodScore) ? candidate.score : closest,
+    MOOD_ICONS[0].score);
 
   return (
     <div className="w-full flex flex-col bg-bg-canvas min-h-[calc(100vh-80px)] pb-16 selection:bg-primary-container selection:text-black overflow-x-hidden relative">
       {/* Top Quiet Meta Bar */}
-      <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-4 pb-2 flex flex-wrap items-center justify-between gap-3 text-xs font-space font-bold text-gray-600">
+      <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-4 pb-2 flex flex-wrap items-center gap-3 text-xs font-space font-bold text-gray-600">
         <div className="flex items-center gap-2">
           {/* Chỉ hiển thị nút quay về Lịch ký ức khi đang sửa bài (isEditMode) */}
           {isEditMode && (
@@ -202,17 +144,6 @@ function JournalEditorContent() {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-gray-500">
-            {wordCount} từ
-          </span>
-          {lastSavedTime && (
-            <span className="inline-flex items-center gap-1 text-green-700 font-bold bg-white px-2.5 py-1 rounded-full border border-black/30 shadow-neo-sm animate-in fade-in">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Đã lưu nháp {lastSavedTime}
-            </span>
-          )}
-        </div>
       </section>
 
       {/* Main Screen Layout Container */}
@@ -225,16 +156,16 @@ function JournalEditorContent() {
         >
           <article className="relative bg-paper-warm border-[2.5px] border-black rounded-3xl p-6 sm:p-10 shadow-neo-lg transition-all overflow-visible flex flex-col gap-6">
             {/* Washi Tape and Page Number Stamp */}
-            <WashiTape color={isEditMode ? 'peach' : 'lime'} rotate={-2} className="absolute -top-3.5 left-12 w-32 z-10" />
+            <WashiTape color={isEditMode ? 'peach' : 'lime'} rotate={2} className="absolute -top-3.5 right-12 w-32 z-10" />
             
             {/* Notebook Header */}
             <header className="flex flex-col gap-3 pb-4 border-b-2 border-black/15">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-space font-bold text-gray-700">
-                <span className="inline-flex items-center gap-1.5 bg-white px-3 py-1 rounded-xl border border-black shadow-neo-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-3 text-xs font-space font-bold text-gray-700">
+                <span className="inline-flex w-fit max-w-full items-center gap-1.5 bg-white px-3 py-1 rounded-xl border border-black shadow-neo-sm">
                   <Calendar className="w-3.5 h-3.5 text-black" />
                   {isEditMode && existingDate
                     ? `Ngày ghi: ${existingDate}`
-                    : `Hôm nay, ${new Date().toLocaleDateString('vi-VN', {
+                    : `${new Date().toLocaleDateString('vi-VN', {
                         weekday: 'long',
                         day: 'numeric',
                         month: 'long',
@@ -242,13 +173,56 @@ function JournalEditorContent() {
                       })}`}
                 </span>
 
-                {/* Huy hiệu 15 Ngày Viết Liên Tục (chỉ hiển thị khi tạo mới !isEditMode) */}
-                {!isEditMode && (
-                  <div className="inline-flex items-center gap-1.5 bg-amber-200 text-black px-3 py-1 rounded-xl border border-black shadow-neo-xs font-space font-extrabold animate-in fade-in">
-                    <Flame className="w-4 h-4 text-orange-600 fill-orange-500 shrink-0" />
-                    <span>{streakCount || 15} Ngày Viết Liên Tục</span>
+                <div className="flex w-fit max-w-full flex-wrap items-center gap-2 md:justify-self-end">
+                  <div className="flex w-fit items-center gap-1 bg-white px-[14px] py-1 rounded-2xl border border-black shadow-neo-sm" role="group" aria-label="Chọn cảm xúc hôm nay">
+                    {MOOD_ICONS.map((item) => {
+                      const isSelected = selectedEmotion ? selectedEmotion === item.id : selectedMoodScore === item.score;
+                      const isHovered = hoveredMoodScore === item.score;
+                      const IconComponent = item.icon;
+
+                      return (
+                      <div key={item.score} className="relative flex items-center justify-center">
+                        {/* Floating Neo-Brutalist Tooltip when hovered */}
+                        {isHovered && (
+                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white text-black border border-black font-space text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-neo-xs whitespace-nowrap z-40 pointer-events-none animate-in fade-in zoom-in-95 flex flex-col items-center">
+                            <span>{item.label}</span>
+                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white border-b border-r border-black rotate-45" />
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMoodScore(item.score);
+                            setMood(JOURNAL_EMOTIONS[item.id].mood);
+                            setSelectedEmotion(item.id);
+                          }}
+                          onMouseEnter={() => setHoveredMoodScore(item.score)}
+                          onMouseLeave={() => setHoveredMoodScore(null)}
+                          aria-label={item.label}
+                          aria-pressed={isSelected}
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${
+                            isSelected
+                              ? `${MOOD_COLORS[item.id].activeBg} border border-black scale-110 text-black`
+                              : `opacity-85 hover:opacity-100 ${MOOD_COLORS[item.id].hoverBg}`
+                          }`}
+                          title={item.label}
+                        >
+                          <span aria-hidden="true" className="relative inline-flex items-center justify-center">
+                            <IconComponent className="w-6 h-6 stroke-[2.2]" />
+                          </span>
+                        </button>
+                      </div>
+                      );
+                    })}
                   </div>
-                )}
+                  {!isEditMode && (
+                    <div className="inline-flex w-fit items-center gap-1.5 bg-amber-100 text-orange-700 px-2.5 py-1 rounded-xl shadow-neo-xs font-space font-extrabold animate-in fade-in" aria-label={`${streakCount} ngày viết liên tục`}>
+                      <span className="text-lg leading-none">{streakCount}</span>
+                      <Flame className="w-5 h-5 text-orange-600 fill-orange-500 shrink-0" aria-hidden="true" />
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Title Input */}
@@ -297,7 +271,7 @@ function JournalEditorContent() {
                 className="inline-flex items-center gap-2 text-xs font-space font-bold text-gray-700 bg-white px-3 py-1.5 rounded-xl border border-black shadow-neo-sm hover:bg-lime-100 transition-all cursor-pointer"
               >
                 <Lightbulb className="w-4 h-4 text-amber-500 fill-amber-300" />
-                <span> Gợi ý chủ đề viết hôm nay</span>
+                <span> Gợi ý chủ đề</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showPromptModal ? 'rotate-180' : ''}`} />
               </button>
 
@@ -347,65 +321,19 @@ function JournalEditorContent() {
 
             {/* Writing Area: Tactile Lined Paper with TipTap */}
             <div className="relative">
+              {editId && loadedEntryId !== editId ? <p className="p-6 font-space text-sm" role="status">Đang tải bài viết...</p> :
               <JournalTipTapEditor
+                key={editId ? `${editId}:${rowVersion}` : 'new'}
                 ref={editorRef}
                 initialContent={content}
                 onChange={(html) => setContent(html)}
-                onOpenImageModal={() => setShowImageModal(true)}
-              />
+                onOpenImageModal={() => showToast({ title: 'Chèn ảnh chưa khả dụng', message: 'Backend chưa hỗ trợ ảnh trong nội dung nhật ký.', type: 'info' })}
+              />}
             </div>
 
             {/* Bottom Toolbar: Quiet & Friendly */}
             <div className="pt-4 border-t-2 border-black/15 flex flex-col gap-4">
-              {/* Mood 5-point Selector */}
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="font-space text-xs font-extrabold uppercase text-gray-600">
-                    Hôm nay bạn thấy thế nào?
-                  </span>
-                  <div className="flex items-center gap-1.5 bg-white py-1 px-2.5 rounded-2xl border border-black shadow-neo-sm">
-                    {MOOD_ICONS.map((item) => {
-                      const isSelected = Math.abs(moodScore - item.score) < 1.0;
-                      const IconComponent = item.icon;
-                      const isHovered = hoveredMoodScore === item.score;
-
-                      return (
-                        <div key={item.score} className="relative flex items-center justify-center">
-                          {/* Floating Neo-Brutalist Tooltip when hovered */}
-                          {isHovered && (
-                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white text-black border border-black font-space text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-neo-xs whitespace-nowrap z-40 pointer-events-none animate-in fade-in zoom-in-95 flex flex-col items-center">
-                              <span>{item.label}</span>
-                              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white border-b border-r border-black rotate-45" />
-                            </div>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setMoodScore(item.score);
-                              setMood(item.mood);
-                            }}
-                            onMouseEnter={() => setHoveredMoodScore(item.score)}
-                            onMouseLeave={() => setHoveredMoodScore(null)}
-                            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
-                              isSelected
-                                ? `${item.activeBg} border border-black shadow-neo-sm scale-110 text-black`
-                                : `opacity-85 hover:opacity-100 ${item.hoverBg}`
-                            }`}
-                            title={item.label}
-                          >
-                            <IconComponent
-                              className={`w-5 h-5 stroke-[2.3] transition-transform ${
-                                isSelected ? 'text-black' : item.iconColor
-                              }`}
-                            />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
+              <div className="flex flex-wrap items-center justify-end gap-3">
                 {/* Optional Detailed Metrics */}
                 <div className="flex items-center gap-2">
                   <button
@@ -480,14 +408,7 @@ function JournalEditorContent() {
 
               {/* Action Buttons: 2 Clear Actions */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => router.back()}
-                  className="px-4 py-2 bg-white text-black font-space text-xs font-bold border border-black rounded-xl shadow-neo-sm hover:bg-gray-100 transition-all cursor-pointer"
-                >
-                  Đóng sổ
-                </button>
-
+                <span className="text-xs font-space font-bold text-gray-500">{wordCount} từ</span>
                 <div className="flex items-center gap-3">
                   <NeoButton
                     variant="paper"
@@ -495,17 +416,18 @@ function JournalEditorContent() {
                     onClick={handleOpenAiDrawer}
                     className="font-space font-bold text-xs sm:text-sm border-2 border-black shadow-neo hover:bg-lime-100"
                   >
-                    <span>{isAiDrawerOpen ? 'Đang mở phản chiếu' : 'Phản chiếu cùng MyLog'}</span>
+                    <span>{isAiDrawerOpen ? 'Đang mở gợi ý' : 'Gợi ý nhìn lại'}</span>
                   </NeoButton>
 
                   <NeoButton
                     variant="primary"
                     size="md"
-                    onClick={handleSaveClick}
+                    onClick={executeSave}
+                    disabled={isSaving || (!!editId && loadedEntryId !== editId)}
                     className="font-space font-extrabold text-xs sm:text-sm shadow-neo"
                     icon={isEditMode ? <Check className="w-4 h-4 stroke-[2.5]" /> : <Save className="w-4 h-4 stroke-[2.5]" />}
                   >
-                    <span>{isEditMode ? 'Cập nhật bài viết' : 'Lưu vào sổ tay'}</span>
+                    <span>{isSaving ? 'Đang lưu...' : isEditMode ? 'Cập nhật bài viết' : 'Lưu'}</span>
                   </NeoButton>
                 </div>
               </div>
@@ -517,41 +439,10 @@ function JournalEditorContent() {
         <AiReflectionDrawer
           isOpen={isAiDrawerOpen}
           onClose={() => setIsAiDrawerOpen(false)}
-          isAnalyzing={isAnalyzing}
-          aiResult={aiResult}
-          topics={topics}
-          onInsertQuestionToJournal={handleAnswerQuestionInJournal}
-          onSave={executeSave}
+          entryId={editId}
+          contentVersion={contentVersion}
         />
       </main>
-
-      {/* CONFIRM REFLECT MODAL (Appears on save if user hasn't clicked Reflect) */}
-      <ConfirmReflectModal
-        isOpen={showConfirmReflectModal}
-        onConfirmReflect={() => {
-          setShowConfirmReflectModal(false);
-          handleOpenAiDrawer();
-        }}
-        onDirectSave={() => {
-          setShowConfirmReflectModal(false);
-          executeSave();
-        }}
-      />
-
-      {/* INSERT IMAGE MODAL */}
-      <InsertImageModal
-        isOpen={showImageModal}
-        onClose={() => setShowImageModal(false)}
-        onInsert={(url, caption) => {
-          if (editorRef.current) {
-            editorRef.current.insertImage(url, caption);
-            if (caption) {
-              editorRef.current.insertContent(`<p style="text-align: center; font-size: 0.85rem; font-style: italic; color: #6b7280; margin-top: -0.5rem;">${caption}</p>`);
-            }
-          }
-          showToast({ title: 'Đã dán ảnh vào trang sổ!', type: 'success' });
-        }}
-      />
 
       {/* ADD TOPIC MODAL */}
       <AddTopicModal
@@ -571,7 +462,7 @@ function JournalEditorContent() {
       {/* SAFETY CRISIS MODAL */}
       <SafetyModal
         isOpen={isSafetyModalOpen}
-        onClose={() => setIsSafetyModalOpen(false)}
+        onClose={() => { setIsSafetyModalOpen(false); if (safetySaved) router.push('/history-calendar'); }}
         onNavigateHome={() => router.push('/dashboard')}
         detectedKeywords={detectedCrisisKeywords}
       />

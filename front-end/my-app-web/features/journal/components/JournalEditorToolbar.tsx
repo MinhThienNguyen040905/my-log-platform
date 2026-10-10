@@ -81,9 +81,9 @@ export const JournalEditorToolbar: React.FC<JournalEditorToolbarProps> = ({
       {/* Highlighter marker */}
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleHighlight({ color: '#B7FF32' }).run()}
+        disabled
         className={buttonClass(editor.isActive('highlight'))}
-        title="Bút dạ quang (Highlight)"
+        title="Tô sáng chưa được backend hỗ trợ"
       >
         <Highlighter className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-lime-600 stroke-[2.5]" />
       </button>
@@ -133,8 +133,9 @@ export const JournalEditorToolbar: React.FC<JournalEditorToolbarProps> = ({
       <button
         type="button"
         onClick={onOpenImageModal}
+        disabled
         className="px-2 py-1 rounded-lg border border-black/30 hover:border-black bg-white hover:bg-lime-100 transition-all flex items-center gap-1.5 text-xs font-space font-bold cursor-pointer shadow-neo-sm"
-        title="Dán ảnh kỷ niệm vào trang sổ"
+        title="Chèn ảnh chưa được backend hỗ trợ"
       >
         <ImageIcon className="w-3.5 h-3.5 text-purple-600 stroke-[2.5]" />
         <span className="hidden sm:inline text-[11px]">Chèn ảnh</span>

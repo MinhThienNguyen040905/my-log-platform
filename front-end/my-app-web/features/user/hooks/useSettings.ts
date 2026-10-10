@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useJournal } from '@/features/journal';
 import { useToast } from '@/lib/toast-context';
+import { createProfileSchema } from '../schemas/profile-form';
+import { useTranslation } from 'react-i18next';
+import { useAppLanguage } from '@/app/_components/AppLanguageProvider';
 
 export interface AvatarOption {
   id: string;
@@ -21,8 +24,10 @@ export const AVATAR_OPTIONS: AvatarOption[] = [
 ];
 
 export function useSettings() {
-  const { userProfile, updateProfile, entries } = useJournal();
+  const { userProfile, updateProfile, entries, draftStorageKey } = useJournal();
   const { showToast } = useToast();
+  const { t } = useTranslation();
+  const { locale } = useAppLanguage();
 
   // Personal info state
   const [name, setName] = useState(userProfile.name || '');
@@ -32,111 +37,28 @@ export function useSettings() {
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>('sprout');
   const [timezone, setTimezone] = useState(userProfile.timezone || 'Asia/Ho_Chi_Minh');
   const [language, setLanguage] = useState<'vi' | 'en'>(userProfile.language || 'vi');
-
-  // Password change state
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
-
-  // Sync with user profile on mount
-  useEffect(() => {
-    setName(userProfile.name || '');
-    setPenName(userProfile.penName || '');
-    setBio(userProfile.bio || 'Mỗi ngày là một trang sách mới.');
-    setAvatarUrl(userProfile.avatarUrl || '/avatar.png');
-    setTimezone(userProfile.timezone || 'Asia/Ho_Chi_Minh');
-    setLanguage(userProfile.language || 'vi');
-  }, [userProfile]);
-
-  // Password strength calculation
-  const getPasswordStrength = (pwd: string) => {
-    if (!pwd) return { label: 'Chưa nhập', width: 'w-0', color: 'bg-gray-200' };
-    if (pwd.length < 6) return { label: 'Yếu', width: 'w-1/3', color: 'bg-red-500' };
-    if (pwd.length < 10) return { label: 'Vừa phải', width: 'w-2/3', color: 'bg-amber-300' };
-    return { label: 'Rất mạnh', width: 'w-full', color: 'bg-primary-container' };
-  };
-
-  const passwordStrength = getPasswordStrength(newPassword);
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; penName?: string }>({});
 
   // Save personal profile & localization
-  const handleSaveProfile = () => {
-    if (!penName.trim()) {
-      showToast({
-        title: 'Bút danh không được để trống!',
-        message: 'Vui lòng nhập bút danh hiển thị cho cuốn sổ tay của bạn.',
-        type: 'error',
-      });
+  const handleSaveProfile = async () => {
+    const parsed = createProfileSchema(locale).safeParse({ name, penName, timezone, language });
+    if (!parsed.success) {
+      const errors = parsed.error.flatten().fieldErrors;
+      setFieldErrors({ name: errors.name?.[0], penName: errors.penName?.[0] });
+      showToast({ title: t('settings.invalid'), type: 'error' });
       return;
     }
+    setFieldErrors({});
 
-    updateProfile({
-      name: name.trim() || penName.trim(),
-      penName: penName.trim(),
-      bio: bio.trim(),
-      avatarUrl,
-      timezone,
-      language,
-    });
-
-    showToast({
-      title: 'Đã cập nhật hồ sơ cá nhân!',
-      message: 'Thông tin tác giả và thiết lập đã được lưu an toàn.',
-      type: 'success',
-    });
+    try {
+      await updateProfile({ name: parsed.data.name || parsed.data.penName, penName: parsed.data.penName, timezone: parsed.data.timezone, language: parsed.data.language });
+      showToast({ title: t('settings.saved'), message: t('settings.savedDetail'), type: 'success' });
+    } catch (error) {
+      showToast({ title: t('settings.saveError'), message: error instanceof Error ? error.message : t('auth.tryAgain'), type: 'error' });
+    }
   };
 
-  // Change password handler
-  const handleChangePassword = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!currentPassword) {
-      showToast({
-        title: 'Chưa nhập mật khẩu hiện tại!',
-        message: 'Vui lòng nhập mật khẩu hiện tại để xác thực tài khoản.',
-        type: 'error',
-      });
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      showToast({
-        title: 'Mật khẩu mới quá ngắn!',
-        message: 'Mật khẩu mới phải có tối thiểu 6 ký tự.',
-        type: 'error',
-      });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      showToast({
-        title: 'Mật khẩu xác nhận không khớp!',
-        message: 'Vui lòng kiểm tra lại mật khẩu xác nhận của bạn.',
-        type: 'error',
-      });
-      return;
-    }
-
-    setPasswordLoading(true);
-
-    setTimeout(() => {
-      setPasswordLoading(false);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-
-      showToast({
-        title: 'Đổi mật khẩu thành công!',
-        message: 'Chìa khóa sổ tay của bạn đã được cập nhật an toàn.',
-        type: 'success',
-      });
-    }, 500);
-  };
-
-  const hasDraft = typeof window !== 'undefined' && !!localStorage.getItem('mylog_draft_journal');
+  const hasDraft = typeof window !== 'undefined' && !!localStorage.getItem(draftStorageKey);
 
   return {
     userProfile,
@@ -155,23 +77,9 @@ export function useSettings() {
     setTimezone,
     language,
     setLanguage,
-    currentPassword,
-    setCurrentPassword,
-    newPassword,
-    setNewPassword,
-    confirmPassword,
-    setConfirmPassword,
-    showCurrentPassword,
-    setShowCurrentPassword,
-    showNewPassword,
-    setShowNewPassword,
-    showConfirmPassword,
-    setShowConfirmPassword,
-    passwordLoading,
-    passwordStrength,
+    fieldErrors,
     hasDraft,
     handleSaveProfile,
-    handleChangePassword,
   };
 }
 

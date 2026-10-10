@@ -1,5 +1,6 @@
 import { Extension } from '@tiptap/core';
-import Suggestion, { SuggestionOptions } from '@tiptap/suggestion';
+import Suggestion, { type SuggestionOptions, type SuggestionProps, type SuggestionKeyDownProps } from '@tiptap/suggestion';
+import type { Editor } from '@tiptap/core';
 import { ReactRenderer } from '@tiptap/react';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import {
@@ -97,7 +98,7 @@ export const createSlashCommandExtension = (onOpenImageModal?: () => void) => {
       return {
         suggestion: {
           char: '/',
-          command: ({ editor, range, props }: any) => {
+          command: ({ editor, range, props }: { editor: Editor; range: { from: number; to: number }; props: CommandItem }) => {
             props.command({ editor, range });
           },
         },
@@ -124,7 +125,7 @@ export const createSlashCommandExtension = (onOpenImageModal?: () => void) => {
             let popup: TippyInstance[];
 
             return {
-              onStart: (props: any) => {
+              onStart: (props: SuggestionProps<CommandItem>) => {
                 component = new ReactRenderer(SlashCommandMenu, {
                   props,
                   editor: props.editor,
@@ -135,7 +136,7 @@ export const createSlashCommandExtension = (onOpenImageModal?: () => void) => {
                 }
 
                 popup = tippy('body', {
-                  getReferenceClientRect: props.clientRect,
+                  getReferenceClientRect: () => props.clientRect?.() ?? new DOMRect(),
                   appendTo: () => document.body,
                   content: component.element,
                   showOnCreate: true,
@@ -145,7 +146,7 @@ export const createSlashCommandExtension = (onOpenImageModal?: () => void) => {
                 });
               },
 
-              onUpdate(props: any) {
+              onUpdate(props: SuggestionProps<CommandItem>) {
                 component?.updateProps(props);
 
                 if (!props.clientRect) {
@@ -153,11 +154,11 @@ export const createSlashCommandExtension = (onOpenImageModal?: () => void) => {
                 }
 
                 popup?.[0]?.setProps({
-                  getReferenceClientRect: props.clientRect,
+                  getReferenceClientRect: () => props.clientRect?.() ?? new DOMRect(),
                 });
               },
 
-              onKeyDown(props: any) {
+              onKeyDown(props: SuggestionKeyDownProps) {
                 if (props.event.key === 'Escape') {
                   popup?.[0]?.hide();
                   return true;

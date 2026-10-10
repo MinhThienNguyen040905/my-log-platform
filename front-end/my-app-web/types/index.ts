@@ -1,12 +1,15 @@
 export type MoodType = 'calm-joy' | 'hope-energy' | 'anxiety-stress' | 'sadness-reflect' | 'neutral';
+export type JournalEmotion = 'neutral' | 'happy' | 'angry' | 'sad' | 'very_bad';
 
 export type JournalStatus =
   | 'DRAFT'
   | 'SAVED'
+  | 'PENDING'
   | 'ANALYZING'
   | 'ANALYZED'
   | 'ANALYSIS_FAILED'
-  | 'ANALYSIS_OUTDATED';
+  | 'ANALYSIS_OUTDATED'
+  | 'BLOCKED_BY_SAFETY';
 
 export type EmotionType =
   | 'JOY'
@@ -60,21 +63,26 @@ export interface AIAnalysisResult {
 
 export interface JournalEntry {
   id: string;
+  contentVersion?: number;
+  rowVersion?: number;
+  contentJson?: Record<string, unknown>;
   title: string;
   content: string;
   date: string; // YYYY-MM-DD
   time: string; // HH:mm
   mood: MoodType;
-  moodScore: number; // 1-10
-  stressScore: number; // 1-10
-  energyScore: number; // 1-10
-  sleepHours: number;
+  emotion?: JournalEmotion;
+  moodScore: number | null; // 1-10 when loaded from detail
+  stressScore: number | null; // 1-10 when loaded from detail
+  energyScore: number | null; // 1-10 when loaded from detail
+  sleepHours: number | null;
   tags: string[];
   photoUrl?: string;
   photoCaption?: string;
   location?: string;
   isFavorite?: boolean;
   status?: JournalStatus;
+  riskLevel?: string;
   updatedAt?: string;
   aiAnalysis?: AIAnalysisResult;
 }

@@ -1,0 +1,4 @@
+# Agent reports & temporary artifacts
+**/.agents/reports/
+.playwright-mcp/
+scratch/
