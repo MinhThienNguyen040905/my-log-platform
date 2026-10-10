@@ -10,9 +10,6 @@ import {
   Globe,
   Clock,
   Check,
-  Key,
-  Eye,
-  EyeOff,
   ArrowLeft,
   Sparkles,
   Lock,
@@ -23,8 +20,14 @@ import {
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useSettings, AVATAR_OPTIONS } from '../hooks/useSettings';
+import { AccountAccessPanel } from './AccountAccessPanel';
+import { AccountDataExport } from '@/features/export';
+import { useJournal } from '@/features/journal';
+import { useTranslation } from 'react-i18next';
 
 export function SettingsView() {
+  const { t } = useTranslation();
+  const { userId } = useJournal();
   const {
     userProfile,
     entries,
@@ -42,23 +45,9 @@ export function SettingsView() {
     setTimezone,
     language,
     setLanguage,
-    currentPassword,
-    setCurrentPassword,
-    newPassword,
-    setNewPassword,
-    confirmPassword,
-    setConfirmPassword,
-    showCurrentPassword,
-    setShowCurrentPassword,
-    showNewPassword,
-    setShowNewPassword,
-    showConfirmPassword,
-    setShowConfirmPassword,
-    passwordLoading,
-    passwordStrength,
+    fieldErrors,
     hasDraft,
     handleSaveProfile,
-    handleChangePassword,
   } = useSettings();
 
   return (
@@ -71,7 +60,7 @@ export function SettingsView() {
             className="inline-flex items-center gap-2 text-xs font-space font-bold text-gray-600 hover:text-black hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Quay lại Bảng điều khiển (Dashboard)</span>
+            <span>{t('settingsExtra.back')}</span>
           </Link>
 
           <span className="font-mono text-[11px] font-bold text-gray-500 uppercase px-2.5 py-1 bg-white border border-black/40 rounded-full shadow-neo-xs">
@@ -92,10 +81,10 @@ export function SettingsView() {
               </div>
               <div>
                 <h1 className="font-space text-2xl sm:text-3xl font-extrabold text-black">
-                  Hồ Sơ & Thiết Lập Sổ Tay
+                  {t('settingsExtra.header')}
                 </h1>
                 <p className="font-sans text-xs sm:text-sm text-gray-600 mt-0.5">
-                  Tùy chỉnh bút danh, bảo mật chìa khóa và quản lý không gian nhật ký của bạn.
+                  {t('settingsExtra.description')}
                 </p>
               </div>
             </div>
@@ -113,7 +102,7 @@ export function SettingsView() {
                 <BookOpen className="w-4 h-4 text-black" />
               </div>
               <h2 className="font-space text-lg font-extrabold text-black uppercase tracking-wider">
-                1. Thông Tin Tác Giả Sổ Tay
+                {t('settings.authorSection')}
               </h2>
             </div>
 
@@ -122,14 +111,14 @@ export function SettingsView() {
               <div className="flex flex-col gap-2">
                 <label className="font-space text-xs font-extrabold text-black uppercase flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  Ảnh đại diện / Linh vật sổ tay:
+                  {t('settingsExtra.avatar')}:
                 </label>
                 <div className="flex items-center gap-3 flex-wrap">
                   {/* Current Avatar Preview */}
                   <div className="relative w-14 h-14 rounded-2xl border-2 border-black overflow-hidden bg-paper-warm shadow-neo shrink-0">
                     <Image
                       src={avatarUrl}
-                      alt="Avatar tác giả"
+                      alt={t('settingsExtra.avatarAlt')}
                       width={56}
                       height={56}
                       className="w-full h-full object-cover"
@@ -168,21 +157,24 @@ export function SettingsView() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="font-space text-xs font-bold text-black" htmlFor="author-name">
-                    Họ và tên tác giả:
+                    {t('settings.name')}:
                   </label>
                   <input
                     id="author-name"
                     type="text"
                     value={name}
+                    aria-invalid={!!fieldErrors.name}
+                    aria-describedby={fieldErrors.name ? 'author-name-error' : undefined}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Nguyễn Minh Anh"
                     className="w-full p-2.5 bg-paper-warm/30 border-2 border-black rounded-xl font-space text-sm font-bold shadow-neo-xs focus:outline-none focus:bg-white transition-all"
                   />
+                  {fieldErrors.name && <p id="author-name-error" role="alert" className="text-xs text-red-700">{fieldErrors.name}</p>}
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <label className="font-space text-xs font-bold text-black flex items-center justify-between" htmlFor="author-penname">
-                    <span>Bút danh hiển thị (Pen Name):</span>
+                    <span>{t('settings.penName')}:</span>
                     <span className="text-red-500 font-extrabold">*</span>
                   </label>
                   <input
@@ -190,10 +182,13 @@ export function SettingsView() {
                     type="text"
                     required
                     value={penName}
+                    aria-invalid={!!fieldErrors.penName}
+                    aria-describedby={fieldErrors.penName ? 'author-penname-error' : undefined}
                     onChange={(e) => setPenName(e.target.value)}
                     placeholder="Minh Anh"
                     className="w-full p-2.5 bg-paper-warm/30 border-2 border-black rounded-xl font-space text-sm font-bold shadow-neo-xs focus:outline-none focus:bg-white transition-all"
                   />
+                  {fieldErrors.penName && <p id="author-penname-error" role="alert" className="text-xs text-red-700">{fieldErrors.penName}</p>}
                 </div>
               </div>
 
@@ -201,12 +196,12 @@ export function SettingsView() {
               <div className="flex flex-col gap-1.5">
                 <label className="font-space text-xs font-bold text-gray-700 flex items-center gap-1.5" htmlFor="author-email">
                   <Mail className="w-3.5 h-3.5" />
-                  Địa chỉ Email tài khoản:
+                  {t('settingsExtra.email')}:
                 </label>
                 <div className="p-2.5 bg-paper-warm/20 border border-black/40 rounded-xl font-mono text-xs text-gray-700 flex items-center justify-between">
                   <span>{userProfile.email}</span>
                   <span className="text-[10px] font-space font-bold uppercase bg-white px-2 py-0.5 rounded border border-black">
-                    Chỉ đọc
+                    {t('settingsExtra.readOnly')}
                   </span>
                 </div>
               </div>
@@ -215,16 +210,19 @@ export function SettingsView() {
               <div className="flex flex-col gap-1.5">
                 <label className="font-space text-xs font-bold text-black flex items-center gap-1.5" htmlFor="author-bio">
                   <FileText className="w-3.5 h-3.5" />
-                  Lời đề tựa / Châm ngôn cho cuốn sổ (Bio):
+                  {t('settingsExtra.bio')}:
                 </label>
                 <input
                   id="author-bio"
                   type="text"
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  placeholder="Mỗi ngày là một trang sách mới..."
+                  disabled
+                  title={t('settingsExtra.bioTitle')}
+                  placeholder={t('settingsExtra.bioPlaceholder')}
                   className="w-full p-2.5 bg-paper-warm/30 border-2 border-black rounded-xl font-serif text-sm italic shadow-neo-xs focus:outline-none focus:bg-white transition-all"
                 />
+                <p className="text-xs text-gray-600">{t('settingsExtra.bioUnavailable')}</p>
               </div>
             </div>
           </section>
@@ -236,120 +234,12 @@ export function SettingsView() {
                 <Lock className="w-4 h-4 text-black" />
               </div>
               <h2 className="font-space text-lg font-extrabold text-black uppercase tracking-wider">
-                2. Đổi Mật Khẩu Bảo Mật
+                {t('settingsExtra.password')}
               </h2>
             </div>
-
-            <form
-              onSubmit={handleChangePassword}
-              className="bg-white border-2 border-black rounded-2xl p-5 sm:p-6 shadow-neo-sm flex flex-col gap-4"
-            >
-              {/* Current Password */}
-              <div className="flex flex-col gap-1.5">
-                <label className="font-space text-xs font-bold text-black" htmlFor="curr-pass">
-                  Mật khẩu hiện tại:
-                </label>
-                <div className="relative flex items-center">
-                  <Key className="w-4 h-4 text-gray-500 absolute left-3.5 pointer-events-none" />
-                  <input
-                    id="curr-pass"
-                    type={showCurrentPassword ? 'text' : 'password'}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Nhập mật khẩu hiện tại..."
-                    className="w-full pl-10 pr-10 py-2.5 bg-paper-warm/30 border-2 border-black rounded-xl font-space text-xs sm:text-sm font-bold shadow-neo-xs focus:outline-none focus:bg-white transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-3 text-gray-500 hover:text-black cursor-pointer"
-                    aria-label={showCurrentPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  >
-                    {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* New Password & Confirm */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* New Password */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-space text-xs font-bold text-black" htmlFor="new-pass">
-                    Mật khẩu mới (tối thiểu 6 ký tự):
-                  </label>
-                  <div className="relative flex items-center">
-                    <Key className="w-4 h-4 text-gray-500 absolute left-3.5 pointer-events-none" />
-                    <input
-                      id="new-pass"
-                      type={showNewPassword ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Nhập mật khẩu mới..."
-                      className="w-full pl-10 pr-10 py-2.5 bg-paper-warm/30 border-2 border-black rounded-xl font-space text-xs sm:text-sm font-bold shadow-neo-xs focus:outline-none focus:bg-white transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 text-gray-500 hover:text-black cursor-pointer"
-                      aria-label={showNewPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                    >
-                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-
-                  {/* Password Strength Meter */}
-                  {newPassword && (
-                    <div className="flex flex-col gap-1 mt-1">
-                      <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden border border-black/20">
-                        <div className={`h-full transition-all duration-300 ${passwordStrength.width} ${passwordStrength.color}`} />
-                      </div>
-                      <span className="font-space text-[10px] text-gray-600 font-bold">
-                        Độ mạnh: <strong className="text-black">{passwordStrength.label}</strong>
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Confirm New Password */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-space text-xs font-bold text-black" htmlFor="confirm-pass">
-                    Xác nhận mật khẩu mới:
-                  </label>
-                  <div className="relative flex items-center">
-                    <Key className="w-4 h-4 text-gray-500 absolute left-3.5 pointer-events-none" />
-                    <input
-                      id="confirm-pass"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Nhập lại mật khẩu mới..."
-                      className="w-full pl-10 pr-10 py-2.5 bg-paper-warm/30 border-2 border-black rounded-xl font-space text-xs sm:text-sm font-bold shadow-neo-xs focus:outline-none focus:bg-white transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 text-gray-500 hover:text-black cursor-pointer"
-                      aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <NeoButton
-                  type="submit"
-                  variant="paper"
-                  size="sm"
-                  disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
-                  className="font-space font-extrabold text-xs shadow-neo-sm cursor-pointer"
-                  icon={<Key className="w-3.5 h-3.5" />}
-                >
-                  {passwordLoading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
-                </NeoButton>
-              </div>
-            </form>
+            <div className="bg-white border-2 border-black rounded-2xl p-5 sm:p-6 shadow-neo-sm font-space text-sm text-gray-700">
+              {t('settingsExtra.passwordUnavailable')}
+            </div>
           </section>
 
           {/* SECTION 3: PREFERENCES & TIMEZONE */}
@@ -359,7 +249,7 @@ export function SettingsView() {
                 <Globe className="w-4 h-4 text-black" />
               </div>
               <h2 className="font-space text-lg font-extrabold text-black uppercase tracking-wider">
-                3. Ngôn Ngữ & Múi Giờ
+                {t('settings.languageSection')}
               </h2>
             </div>
 
@@ -368,7 +258,7 @@ export function SettingsView() {
               <div className="flex flex-col gap-2">
                 <label className="font-space text-xs font-bold text-black flex items-center gap-1.5">
                   <Globe className="w-3.5 h-3.5" />
-                  Ngôn ngữ giao diện (Language):
+                  {t('settings.language')}:
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -402,7 +292,7 @@ export function SettingsView() {
               <div className="flex flex-col gap-2">
                 <label className="font-space text-xs font-bold text-black flex items-center gap-1.5" htmlFor="timezone-select">
                   <Clock className="w-3.5 h-3.5" />
-                  Múi giờ ghi nhật ký (Timezone):
+                  {t('settings.timezone')}:
                 </label>
                 <select
                   id="timezone-select"
@@ -426,7 +316,7 @@ export function SettingsView() {
                 <Shield className="w-4 h-4 text-green-700" />
               </div>
               <h2 className="font-space text-lg font-extrabold text-black uppercase tracking-wider">
-                4. Gói Tài Khoản & Két Bảo Mật Sổ Tay
+                {t('settingsExtra.security')}
               </h2>
             </div>
 
@@ -435,7 +325,7 @@ export function SettingsView() {
                 <div className="flex items-center gap-2">
                   <Shield className="w-5 h-5 text-green-700 stroke-[2.3]" />
                   <span className="font-space text-sm font-extrabold text-black">
-                    Cơ Chế Bảo Mật & Lưu Trữ Riêng Tư
+                    {t('settingsExtra.securityTitle')}
                   </span>
                 </div>
                 <span className="px-3 py-1 bg-primary-container text-black font-space text-xs font-extrabold rounded-lg border border-black uppercase">
@@ -445,15 +335,15 @@ export function SettingsView() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-space">
                 <div className="p-3 bg-white rounded-xl border border-black flex flex-col gap-1 shadow-neo-xs">
-                  <span className="text-gray-500 font-bold">Chuẩn mã hóa:</span>
+                  <span className="text-gray-500 font-bold">{t('settingsExtra.encryption')}</span>
                   <span className="font-extrabold text-black flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5 text-green-700 stroke-[3]" /> AES-256 Vault Cục Bộ
+                    <Check className="w-3.5 h-3.5 text-green-700 stroke-[3]" /> {t('settingsExtra.encrypted')}
                   </span>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-black flex flex-col gap-1 shadow-neo-xs">
-                  <span className="text-gray-500 font-bold">Tổng bài viết đã cất giữ:</span>
+                  <span className="text-gray-500 font-bold">{t('settingsExtra.entries')}</span>
                   <span className="font-extrabold text-black text-sm">
-                    {entries.length} trang nhật ký
+                    {t('settingsExtra.entryCount', { count: entries.length })}
                   </span>
                 </div>
               </div>
@@ -461,11 +351,14 @@ export function SettingsView() {
               {hasDraft && (
                 <div className="flex items-center gap-2 text-xs font-space font-bold text-amber-800 bg-amber-100 p-3 rounded-xl border border-amber-300">
                   <AlertCircle className="w-4 h-4 text-amber-800 shrink-0" />
-                  <span>Bạn đang có 1 bản nháp nhật ký tự động lưu trên trình duyệt này.</span>
+                  <span>{t('settingsExtra.draft')}</span>
                 </div>
               )}
             </div>
           </section>
+
+          <AccountAccessPanel />
+          <AccountDataExport userId={userId} />
 
           {/* SECTION 5: ACTION FOOTER */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t-2 border-black">
@@ -473,7 +366,7 @@ export function SettingsView() {
               href="/dashboard"
               className="w-full sm:w-auto px-5 py-2.5 bg-white text-black font-space text-xs font-bold border-2 border-black rounded-xl hover:bg-gray-100 transition-colors cursor-pointer shadow-neo-xs text-center"
             >
-              ← Về Bảng điều khiển
+              ← {t('settingsExtra.back')}
             </Link>
 
             <NeoButton
@@ -483,7 +376,7 @@ export function SettingsView() {
               className="w-full sm:w-auto font-space font-extrabold text-xs sm:text-sm shadow-neo cursor-pointer justify-center"
               icon={<Check className="w-4 h-4 stroke-[2.5]" />}
             >
-              Lưu toàn bộ thay đổi
+              {t('settings.save')}
             </NeoButton>
           </div>
         </div>

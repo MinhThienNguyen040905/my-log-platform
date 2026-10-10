@@ -6,24 +6,20 @@ import Image from 'next/image';
 import { WashiTape, PolaroidCard, StickerBadge } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { BentoCard } from '@/components/ui/BentoCard';
+import { motion } from 'motion/react';
 import {
-  Sparkles,
   ArrowRight,
   PenTool,
   CheckCircle2,
   Brain,
-  Zap,
   Heart,
   TrendingUp,
   Lightbulb,
   ShieldCheck,
   Sliders,
   Compass,
-  CalendarDays,
   Lock,
   Flame,
-  Check,
-  EyeOff,
 } from 'lucide-react';
 
 export function LandingView() {
@@ -126,7 +122,12 @@ export function LandingView() {
         </div>
 
         {/* Main Hero Container */}
-        <div className='max-w-4xl mx-auto text-center flex flex-col items-center gap-6 relative z-20'>
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
+          className='max-w-4xl mx-auto text-center flex flex-col items-center gap-6 relative z-20'
+        >
           {/* Brand Tagline Badge */}
           <div className='inline-flex items-center gap-2 bg-paper-warm px-4 py-1.5 border-neo-sm rounded-full shadow-neo-sm rotate-[-1deg]'>
             <span className='w-2.5 h-2.5 rounded-full bg-primary-container border border-black animate-pulse'></span>
@@ -189,7 +190,7 @@ export function LandingView() {
               <CheckCircle2 className='w-4 h-4 text-green-700 shrink-0' /> Không cần đắn đo cấu trúc
             </span>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* 2. PRODUCT LOOP: 3 STEPS (BROUGHT UP EARLY) */}

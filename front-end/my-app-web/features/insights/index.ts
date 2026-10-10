@@ -1,3 +1,4 @@
 export { InsightView } from './components/InsightView';
-export { ExportReportDropdown } from './components/ExportReportDropdown';
+export { listInsights } from './api/insights';
+export type { Insight, InsightEvidence, InsightPage } from './api/insights';
 

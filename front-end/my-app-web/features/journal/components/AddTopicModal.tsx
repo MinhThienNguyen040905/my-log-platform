@@ -36,11 +36,12 @@ export const AddTopicModal: React.FC<AddTopicModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setInputValue('');
-      setError(null);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
+        setInputValue('');
+        setError(null);
         inputRef.current?.focus();
       }, 50);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
