@@ -9,6 +9,7 @@ Tài liệu liên quan:
 - [Kiến trúc backend](BACKEND_ARCHITECTURE.md)
 - [Thiết kế database](DATABASE_OVERVIEW.md)
 - [Database DBML](database/mylog.dbml)
+- [Danh mục use case toàn dự án](USE_CASE_CATALOG.md)
 
 ## 1. Mục tiêu của kế hoạch
 
