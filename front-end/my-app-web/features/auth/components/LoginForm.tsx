@@ -1,49 +1,47 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Eye, EyeOff, Mail, Key, Sparkles, ShieldCheck, Heart, BookOpen } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Mail, Key, ShieldCheck, BookOpen } from 'lucide-react';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useToast } from '@/lib/toast-context';
+import { authError, authPost } from '../api/client';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { createAuthSchemas, loginSchema } from '../schemas/auth-forms';
+import { useAppLanguage } from '@/app/_components/AppLanguageProvider';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { motion } from 'motion/react';
 
 export function LoginForm() {
   const router = useRouter();
   const { showToast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { locale } = useAppLanguage();
+  const { t } = useTranslation();
+  const schema = useMemo(() => createAuthSchemas(locale).login, [locale]);
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(schema),
+    mode: 'onBlur',
+    defaultValues: { email: '', password: '', rememberMe: false },
+  });
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    showToast({
-      title: 'Đăng nhập thành công!',
-      message: 'Chào mừng bạn trở lại với không gian nhật ký.',
-      type: 'success',
-    });
-    setTimeout(() => {
-      setLoading(false);
-      router.push('/dashboard');
-    }, 600);
-  };
-
-  const handleGoogleLogin = () => {
-    setLoading(true);
-    showToast({
-      title: 'Đăng nhập Google thành công!',
-      message: 'Đang mở cuốn sổ tay cá nhân của bạn...',
-      type: 'success',
-    });
-    setTimeout(() => {
-      setLoading(false);
-      router.push('/dashboard');
-    }, 600);
-  };
+  const submit = handleSubmit(async ({ email, password, rememberMe }) => {
+    try {
+      const response = await authPost('login', { email: email.trim(), password, rememberMe });
+      if (!response.ok) throw new Error(await authError(response, locale));
+      showToast({ title: t('auth.loginSuccess'), type: 'success' });
+      router.replace('/dashboard');
+      router.refresh();
+    } catch (error) {
+      showToast({ title: t('auth.loginError'), message: error instanceof Error ? error.message : t('auth.tryAgain'), type: 'error' });
+    }
+  });
 
   return (
     <div className='min-h-screen bg-bg-canvas flex flex-col justify-between selection:bg-brand-lime selection:text-black overflow-x-hidden'>
@@ -61,6 +59,7 @@ export function LoginForm() {
             />
           </div>
         </Link>
+        <LanguageSwitcher />
         <Link href='/'>
           <NeoButton variant='paper' size='sm' className='font-space font-bold gap-1.5 text-xs'>
             <ArrowLeft className='w-4 h-4' />
@@ -70,7 +69,12 @@ export function LoginForm() {
 
       {/* Main Login Container */}
       <main className='flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 flex items-center justify-center'>
-        <div className='w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch'>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.28, ease: 'easeOut' }}
+          className='w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch'
+        >
           
           {/* Left / Top Sanctuary Polaroid Banner (Scrapbook Cozy Desk) */}
           <div className='lg:col-span-5 bg-paper-warm border-neo rounded-3xl p-6 sm:p-8 shadow-neo-lg flex flex-col justify-between relative overflow-visible'>
@@ -83,10 +87,10 @@ export function LoginForm() {
               </div>
 
               <h2 className='font-space text-2xl sm:text-3xl font-extrabold text-on-surface leading-tight'>
-                Chào mừng bạn trở lại với cuốn sổ riêng
+                {t('auth.welcome')}
               </h2>
               <p className='font-sans text-xs sm:text-sm text-on-surface-variant leading-relaxed'>
-                Nơi những suy tư không bị phán xét, nơi bạn dành ít phút lắng lại sau những ồn ào giảng đường và công việc.
+                {t('auth.welcomeDescription')}
               </p>
             </div>
 
@@ -102,10 +106,10 @@ export function LoginForm() {
               </div>
               <div className='mt-3 flex flex-col'>
                 <p className='font-serif italic text-xs sm:text-sm font-semibold text-on-surface'>
-                  &ldquo;Hôm nay của bạn có êm đềm không?&rdquo;
+                  &ldquo;{t('auth.quote')}&rdquo;
                 </p>
                 <span className='font-mono text-[11px] text-gray-500 font-bold mt-1'>
-                  17:45 • Giờ tan lớp • Bình yên
+                  {t('auth.quoteCaption')}
                 </span>
               </div>
             </div>
@@ -113,7 +117,7 @@ export function LoginForm() {
             {/* Privacy Promise Badge */}
             <div className='mt-6 pt-4 border-t border-border-soft flex items-center gap-2 text-xs font-space font-bold text-gray-600'>
               <ShieldCheck className='w-4 h-4 text-primary shrink-0' />
-              <span>Dữ liệu cảm xúc được mã hoá an toàn nội bộ</span>
+              <span>{t('auth.privacyPromise')}</span>
             </div>
           </div>
 
@@ -125,10 +129,10 @@ export function LoginForm() {
               <div className='flex items-center justify-between mb-6'>
                 <div>
                   <h1 className='font-space text-2xl sm:text-3xl font-extrabold text-on-surface'>
-                    Đăng nhập tài khoản
+                    {t('auth.loginTitle')}
                   </h1>
                   <p className='font-sans text-xs sm:text-sm text-on-surface-variant mt-1'>
-                    Truy cập lại kho tàng ký ức và chuỗi streak 14 ngày của bạn
+                    {t('auth.loginSubtitle')}
                   </p>
                 </div>
                 <div className='w-10 h-10 rounded-xl bg-primary-container border-neo-sm shadow-neo-sm flex items-center justify-center font-bold'>
@@ -139,7 +143,8 @@ export function LoginForm() {
               {/* Google 1-Tap Login */}
               <button
                 type='button'
-                onClick={handleGoogleLogin}
+                disabled
+                title={t('auth.googleLoginUnavailable')}
                 className='w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border-neo rounded-xl shadow-neo font-space font-bold text-xs sm:text-sm hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-neo-lg active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer'
               >
                 <svg className='w-4 h-4 shrink-0' viewBox='0 0 24 24'>
@@ -148,19 +153,19 @@ export function LoginForm() {
                   <path d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z' fill='#FBBC05'/>
                   <path d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z' fill='#EA4335'/>
                 </svg>
-                <span>Đăng nhập bằng Google</span>
+                <span>{t('auth.googleLoginUnavailable')}</span>
               </button>
 
               {/* Neo-Brutalist Divider */}
               <div className='relative flex items-center justify-center my-6'>
                 <div className='w-full h-0.5 bg-border-hard'></div>
                 <span className='absolute bg-surface-card px-3 font-space text-[11px] font-bold uppercase tracking-widest text-on-surface-variant'>
-                  Hoặc bằng email
+                  {t('auth.byEmail')}
                 </span>
               </div>
 
               {/* Form Input Fields */}
-              <form onSubmit={handleSubmit} className='flex flex-col gap-4'>
+              <form onSubmit={submit} noValidate className='flex flex-col gap-4'>
                 {/* Email Field */}
                 <div className='flex flex-col gap-1.5'>
                   <label className='font-space text-xs font-bold uppercase text-on-surface flex items-center justify-between' htmlFor='login-email'>
@@ -172,23 +177,24 @@ export function LoginForm() {
                     <input
                       id='login-email'
                       type='email'
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      aria-invalid={!!errors.email}
+                      aria-describedby={errors.email ? 'login-email-error' : undefined}
+                      {...register('email')}
                       placeholder='minhanh@gmail.com'
                       className='w-full pl-10 pr-3 py-2.5 bg-paper-warm border-neo-sm rounded-xl font-sans text-xs sm:text-sm text-on-surface placeholder:text-gray-400 focus:outline-none focus:bg-white focus:shadow-neo-sm transition-all'
                     />
                   </div>
+                  {errors.email && <p id='login-email-error' role='alert' className='text-xs text-red-700'>{errors.email.message}</p>}
                 </div>
 
                 {/* Password Field */}
                 <div className='flex flex-col gap-1.5'>
                   <div className='flex items-center justify-between'>
                     <label className='font-space text-xs font-bold uppercase text-on-surface' htmlFor='login-password'>
-                      Mật khẩu
+                      {t('auth.password')}
                     </label>
                     <Link href='/auth/forgot-password' className='font-space text-xs font-bold text-primary hover:underline'>
-                      Quên mật khẩu?
+                      {t('auth.forgot')}
                     </Link>
                   </div>
                   <div className='relative flex items-center'>
@@ -196,9 +202,9 @@ export function LoginForm() {
                     <input
                       id='login-password'
                       type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      aria-invalid={!!errors.password}
+                      aria-describedby={errors.password ? 'login-password-error' : undefined}
+                      {...register('password')}
                       placeholder='••••••••••••'
                       className='w-full pl-10 pr-10 py-2.5 bg-paper-warm border-neo-sm rounded-xl font-sans text-xs sm:text-sm text-on-surface placeholder:text-gray-400 focus:outline-none focus:bg-white focus:shadow-neo-sm transition-all'
                     />
@@ -210,46 +216,47 @@ export function LoginForm() {
                       {showPassword ? <EyeOff className='w-4 h-4' /> : <Eye className='w-4 h-4' />}
                     </button>
                   </div>
+                  {errors.password && <p id='login-password-error' role='alert' className='text-xs text-red-700'>{errors.password.message}</p>}
                 </div>
 
                 {/* Remember Me Checkbox */}
                 <label className='flex items-center gap-2 cursor-pointer select-none mt-1'>
                   <input
                     type='checkbox'
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
+                    {...register('rememberMe')}
                     className='w-4 h-4 rounded border-2 border-black accent-black'
                   />
                   <span className='font-sans text-xs text-on-surface-variant font-medium'>
-                    Ghi nhớ đăng nhập trên máy này
+                    {t('auth.remember')}
                   </span>
                 </label>
 
                 {/* Submit CTA Button */}
                 <button
                   type='submit'
-                  disabled={loading}
+                  disabled={isSubmitting}
                   className='w-full mt-2 py-3 px-4 bg-primary-container border-neo rounded-xl font-space font-extrabold text-sm uppercase tracking-wider shadow-neo hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-neo-lg active:translate-x-1 active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70'
                 >
-                  <span>{loading ? 'Đang mở khóa...' : 'VÀO KHÔNG GIAN VIẾT →'}</span>
+                  <span>{isSubmitting ? t('auth.loggingIn') : t('auth.loginAction')}</span>
                 </button>
               </form>
+              <Link href='/auth/verify-email' className='mt-3 inline-block font-space text-xs font-bold underline'>{t('auth.notVerified')}</Link>
             </div>
 
             {/* Bottom Redirect to Register */}
             <div className='mt-8 pt-4 border-t border-border-soft text-center font-space text-xs font-bold text-gray-600'>
-              Chưa có sổ nhật ký cá nhân?{' '}
+              {t('auth.noAccount')}{' '}
               <Link href='/auth/register' className='text-black underline hover:text-primary font-extrabold'>
-                Đăng ký mở sổ mới →
+                {t('auth.registerAction')}
               </Link>
             </div>
           </div>
-        </div>
+        </motion.div>
       </main>
 
       {/* Mini Footer */}
       <footer className='py-4 px-4 border-t-2 border-on-background bg-bg-canvas text-center font-space text-xs text-gray-500'>
-        © 2026 MyLog. Đồng hành cùng sức khỏe tâm trí người trẻ.
+        {t('auth.footer')}
       </footer>
     </div>
   );

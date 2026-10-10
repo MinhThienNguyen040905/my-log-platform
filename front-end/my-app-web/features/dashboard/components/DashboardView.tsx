@@ -1,10 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useJournal, SafetyModal } from '@/features/journal';
-import { WashiTape, PolaroidCard, StickerBadge } from '@/components/ui/ScrapbookDecorations';
+import { getDashboard, type Dashboard } from '../api/dashboard';
+import { MoodStressTrendChart } from './MoodStressTrendChart';
+import { EmotionDistributionChart } from './EmotionDistributionChart';
+import { useQuery } from '@tanstack/react-query';
+import { WashiTape, PolaroidCard } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
+import { useTranslation } from 'react-i18next';
+import { useAppLanguage } from '@/app/_components/AppLanguageProvider';
+import { motion } from 'motion/react';
 import {
   Flame,
   Calendar,
@@ -14,20 +21,47 @@ import {
   Zap,
   Moon,
   Lightbulb,
-  TrendingUp,
   Sparkles,
-  ShieldCheck,
-  BarChart3,
-  Layers,
   HeartHandshake,
 } from 'lucide-react';
 
 export function DashboardView() {
-  const { entries, stats, streakCount } = useJournal();
-  const latestEntry = entries[0];
+  const { t } = useTranslation();
+  const { locale } = useAppLanguage();
+  const { entries, streakCount, accountProfile, userId } = useJournal();
+  const dashboardQuery = useQuery<Dashboard>({ queryKey: ['dashboard', userId, '30d'], queryFn: () => getDashboard('30d') });
+  const dashboard = dashboardQuery.data;
+  const dashboardError = dashboardQuery.isError;
+  const stats = dashboard?.timeline.slice(-14) ?? [];
+  const average = (key: 'moodScore' | 'stressScore' | 'energyScore' | 'sleepMinutes') => {
+    const values = stats.map((day) => day[key]).filter((value): value is number => value !== null);
+    return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+  };
+  const mood = average('moodScore');
+  const stress = average('stressScore');
+  const energy = average('energyScore');
+  const sleep = average('sleepMinutes');
+  const greetingName = accountProfile.displayName?.trim() || accountProfile.penName?.trim() || (locale === 'en' ? 'there' : 'bạn');
+  const recordedDays = new Set(entries.map((entry) => entry.date)).size;
 
   const [trendView, setTrendView] = useState<'both' | 'mood' | 'stress'>('both');
   const [isSafetyModalOpen, setIsSafetyModalOpen] = useState(false);
+  const [todayLabel, setTodayLabel] = useState('');
+
+  useEffect(() => {
+    const updateToday = () => {
+      setTodayLabel(new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'vi-VN', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+        timeZone: accountProfile.timezone,
+      }).format(new Date()));
+    };
+    const initialTimer = window.setTimeout(updateToday, 0);
+    const refreshTimer = window.setInterval(updateToday, 60_000);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(refreshTimer);
+    };
+  }, [accountProfile.timezone, locale]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8 selection:bg-primary-container selection:text-black">
@@ -39,10 +73,10 @@ export function DashboardView() {
           </div>
           <div>
             <span className="font-space text-xs font-extrabold uppercase text-black block">
-              Tiến độ mở khóa Insight Lịch sử :
+              {t('dashboard.progress')}
             </span>
             <p className="font-sans text-xs text-gray-700 mt-0.5">
-              Bạn đã tích lũy <strong>{entries.length} ngày ghi chép</strong> (Yêu cầu tối thiểu &ge; 3 ngày). Dữ liệu đủ để Statistical Engine kích hoạt toàn diện!
+              {t('dashboard.recorded', { count: recordedDays })}
             </p>
           </div>
         </div>
@@ -52,13 +86,18 @@ export function DashboardView() {
             href="/insight"
             className="text-xs font-space font-bold underline text-black hover:text-primary flex items-center gap-1"
           >
-            Xem ma trận bằng chứng
+            {t('dashboard.evidence')}
           </Link>
         </div>
       </div>
 
       {/* 1. HERO BANNER - Playful Neo-Brutalist Scrapbook */}
-      <section className="relative w-full">
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.32, ease: 'easeOut' }}
+        className="relative w-full"
+      >
         {/* Washi Tape decoration */}
         <WashiTape color="lavender" rotate={-2} className="absolute -top-3 left-10 w-36 z-20" />
 
@@ -68,19 +107,19 @@ export function DashboardView() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-3 py-1 bg-paper-warm text-on-surface font-space text-xs sm:text-sm font-bold border-neo-sm rounded-lg shadow-neo-sm flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-on-surface stroke-[2.5]" />
-                Thứ Năm, 15 Tháng 10, 2026
+                {todayLabel || t('dashboard.loadingDate')}
               </span>
               <span className="px-3 py-1 bg-primary-container text-on-primary-container font-space text-xs sm:text-sm font-bold border-neo-sm rounded-lg shadow-neo-sm uppercase tracking-wider">
-                Kỳ Phân Tích: Tuần 42
+                {t('dashboard.period')}
               </span>
             </div>
 
             {/* Streak Badge */}
             <div className="inline-flex items-center gap-2 bg-mood-hope-energy text-black px-4 py-1.5 border-neo-sm rounded-xl shadow-neo-sm rotate-1">
               <Flame className="w-5 h-5 text-orange-600 fill-orange-500 shrink-0" />
-              <span className="font-space text-sm font-extrabold">{streakCount} Ngày Viết Liên Tục</span>
+              <span className="font-space text-sm font-extrabold">{t('dashboard.streak', { count: streakCount })}</span>
               <span className="text-[11px] bg-white px-2 py-0.5 rounded border border-black uppercase font-bold text-on-surface">
-                Huy hiệu Sổ Tay Vàng
+                {t('dashboard.badge')}
               </span>
             </div>
           </div>
@@ -88,15 +127,14 @@ export function DashboardView() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             <div className="lg:col-span-8 flex flex-col gap-3">
               <h1 className="font-space text-2xl sm:text-4xl lg:text-5xl font-extrabold text-on-surface tracking-tight leading-tight">
-                Chào Minh Anh,{' '}
+                {t('dashboard.greeting', { name: greetingName })}{' '}
                 <span className="bg-primary-container px-2.5 py-0.5 border-neo-sm rounded-lg shadow-neo-sm inline-block">
-                  hôm nay
+                  {t('dashboard.today')}
                 </span>{' '}
-                bạn cảm thấy thế nào?
+                {t('dashboard.feeling')}
               </h1>
               <p className="font-sans text-sm sm:text-base text-on-surface-variant max-w-2xl leading-relaxed">
-                Không gian cá nhân an toàn để trút cạn suy tư. Nhịp sống chậm lại 5 phút để AI cùng bạn thấu cảm,
-                nhận diện mẫu hình xúc cảm và tìm lại cân bằng nội tại.
+                {t('dashboard.intro')}
               </p>
             </div>
 
@@ -104,7 +142,7 @@ export function DashboardView() {
             <div className="lg:col-span-4 flex flex-col sm:flex-row lg:justify-end items-stretch sm:items-center gap-3">
               <Link href="/journal-editor" className="w-full sm:w-auto">
                 <NeoButton size="lg" className="w-full bg-primary-container text-on-primary-container font-extrabold" icon={<Edit3 className="w-5 h-5 stroke-[2.5]" />}>
-                  Ghi lại nhật ký hôm nay
+                  {t('dashboard.write')}
                 </NeoButton>
               </Link>
             </div>
@@ -114,8 +152,8 @@ export function DashboardView() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8 pt-6 border-t-2 border-on-background">
             <div className="bg-surface-container-lowest p-3.5 rounded-2xl border-neo-sm shadow-neo-sm flex items-center justify-between hover:bg-paper-warm transition-colors">
               <div>
-                <span className="font-space text-xs text-on-surface-variant uppercase tracking-wider block font-bold">Tâm Trạng</span>
-                <span className="font-space text-xl font-bold text-on-surface">7.8<span className="text-xs font-normal text-on-surface-variant">/10</span></span>
+                <span className="font-space text-xs text-on-surface-variant uppercase tracking-wider block font-bold">{t('dashboard.moodAverage')}</span>
+                <span className="font-space text-xl font-bold text-on-surface">{mood === null ? '—' : mood.toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}{mood !== null && <span className="text-xs font-normal text-on-surface-variant">/10</span>}</span>
               </div>
               <div className="w-10 h-10 rounded-xl bg-mood-calm-joy/30 border-neo-sm flex items-center justify-center shadow-neo-sm">
                 <Smile className="w-5 h-5 text-green-800 stroke-[2.5]" />
@@ -124,8 +162,8 @@ export function DashboardView() {
 
             <div className="bg-surface-container-lowest p-3.5 rounded-2xl border-neo-sm shadow-neo-sm flex items-center justify-between hover:bg-paper-warm transition-colors">
               <div>
-                <span className="font-space text-xs text-on-surface-variant uppercase tracking-wider block font-bold">Mức Độ Stress</span>
-                <span className="font-space text-xl font-bold text-on-surface">3<span className="text-xs font-normal text-on-surface-variant">/10 Thấp</span></span>
+                <span className="font-space text-xs text-on-surface-variant uppercase tracking-wider block font-bold">{t('dashboard.stressAverage')}</span>
+                <span className="font-space text-xl font-bold text-on-surface">{stress === null ? '—' : stress.toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}{stress !== null && <span className="text-xs font-normal text-on-surface-variant">/10</span>}</span>
               </div>
               <div className="w-10 h-10 rounded-xl bg-mood-calm-joy/30 border-neo-sm flex items-center justify-center shadow-neo-sm">
                 <Leaf className="w-5 h-5 text-green-800 stroke-[2.5]" />
@@ -134,8 +172,8 @@ export function DashboardView() {
 
             <div className="bg-surface-container-lowest p-3.5 rounded-2xl border-neo-sm shadow-neo-sm flex items-center justify-between hover:bg-paper-warm transition-colors">
               <div>
-                <span className="font-space text-xs text-on-surface-variant uppercase tracking-wider block font-bold">Năng Lượng</span>
-                <span className="font-space text-xl font-bold text-on-surface">8.0<span className="text-xs font-normal text-on-surface-variant">/10</span></span>
+                <span className="font-space text-xs text-on-surface-variant uppercase tracking-wider block font-bold">{t('dashboard.energyAverage')}</span>
+                <span className="font-space text-xl font-bold text-on-surface">{energy === null ? '—' : energy.toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}{energy !== null && <span className="text-xs font-normal text-on-surface-variant">/10</span>}</span>
               </div>
               <div className="w-10 h-10 rounded-xl bg-mood-hope-energy/40 border-neo-sm flex items-center justify-center shadow-neo-sm">
                 <Zap className="w-5 h-5 text-yellow-700 fill-yellow-500 stroke-[2.5]" />
@@ -144,16 +182,17 @@ export function DashboardView() {
 
             <div className="bg-surface-container-lowest p-3.5 rounded-2xl border-neo-sm shadow-neo-sm flex items-center justify-between hover:bg-paper-warm transition-colors">
               <div>
-                <span className="font-space text-xs text-on-surface-variant uppercase tracking-wider block font-bold">Giấc Ngủ Đêm Qua</span>
-                <span className="font-space text-xl font-bold text-on-surface">7.5h<span className="text-xs font-normal text-on-surface-variant"> Sâu</span></span>
+                <span className="font-space text-xs text-on-surface-variant uppercase tracking-wider block font-bold">{t('dashboard.sleepAverage')}</span>
+                <span className="font-space text-xl font-bold text-on-surface">{sleep === null ? '—' : (sleep / 60).toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}{sleep !== null && <span className="text-xs font-normal text-on-surface-variant">{t('dashboard.hours')}</span>}</span>
               </div>
               <div className="w-10 h-10 rounded-xl bg-mood-sadness-reflect/20 border-neo-sm flex items-center justify-center shadow-neo-sm">
                 <Moon className="w-5 h-5 text-blue-700 fill-blue-500 stroke-[2.5]" />
               </div>
             </div>
           </div>
+          {dashboardError && <p role="alert" className="mt-3 text-sm text-red-700">{t('dashboard.metricsError')} <button type="button" className="underline" onClick={() => void dashboardQuery.refetch()}>{t('common.retry')}</button></p>}
         </div>
-      </section>
+      </motion.section>
 
       {/* 2. CORE COLLAGE BENTO GRID (FR-10, FR-06, FR-07) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -165,7 +204,7 @@ export function DashboardView() {
             <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b-2 border-on-background">
               <div className="flex items-center gap-2">
                 <span className="w-3.5 h-3.5 rounded-full bg-primary-container border-neo-sm"></span>
-                <h2 className="font-space text-lg font-bold text-on-surface">Xu Hướng 14 Ngày Qua </h2>
+                <h2 className="font-space text-lg font-bold text-on-surface">{t('dashboard.trends')}</h2>
               </div>
               
               {/* Trend View Filter Chips */}
@@ -177,7 +216,7 @@ export function DashboardView() {
                     trendView === 'both' ? 'bg-black text-white' : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                 >
-                  Cả hai
+                  {t('dashboard.both')}
                 </button>
                 <button
                   type="button"
@@ -186,7 +225,7 @@ export function DashboardView() {
                     trendView === 'mood' ? 'bg-primary-container text-black' : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                 >
-                  Chỉ Mood
+                  {t('dashboard.moodOnly')}
                 </button>
                 <button
                   type="button"
@@ -195,64 +234,24 @@ export function DashboardView() {
                     trendView === 'stress' ? 'bg-mood-anxiety-stress text-white' : 'bg-gray-100 hover:bg-gray-200'
                   }`}
                 >
-                  Chỉ Stress
+                  {t('dashboard.stressOnly')}
                 </button>
               </div>
             </div>
 
-            {/* Legend */}
-            <div className="flex items-center gap-4 my-4 text-xs font-space font-bold">
-              {(trendView === 'both' || trendView === 'mood') && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-primary-container border border-black"></span>
-                  <span>Tâm trạng (Mood 1-10)</span>
-                </div>
-              )}
-              {(trendView === 'both' || trendView === 'stress') && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-mood-anxiety-stress border border-black"></span>
-                  <span>Áp lực (Stress 1-10)</span>
-                </div>
-              )}
-            </div>
-
-            {/* Interactive Bar/Column Visualizer */}
-            <div className="h-48 w-full flex items-end justify-between gap-1.5 sm:gap-2 pt-6 pb-2 px-2 bg-paper-warm/40 rounded-2xl border-neo-sm">
-              {stats.map((item, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end group relative">
-                  {/* Tooltip */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-10 bg-black text-white text-[10px] font-mono px-2 py-1 rounded whitespace-nowrap z-30 pointer-events-none">
-                    {item.date}: Mood {item.moodScore} | Stress {item.stressScore}
-                  </div>
-
-                  <div className="w-full flex items-end justify-center gap-0.5 h-36">
-                    {/* Mood bar */}
-                    {(trendView === 'both' || trendView === 'mood') && (
-                      <div
-                        style={{ height: `${(item.moodScore / 10) * 100}%` }}
-                        className={`${trendView === 'mood' ? 'w-full' : 'w-1/2'} bg-primary-container border border-black rounded-t shadow-neo-sm transition-all duration-300 group-hover:brightness-105`}
-                      />
-                    )}
-                    {/* Stress bar */}
-                    {(trendView === 'both' || trendView === 'stress') && (
-                      <div
-                        style={{ height: `${(item.stressScore / 10) * 100}%` }}
-                        className={`${trendView === 'stress' ? 'w-full' : 'w-1/2'} bg-mood-anxiety-stress/80 border border-black rounded-t shadow-neo-sm transition-all duration-300 group-hover:brightness-105`}
-                      />
-                    )}
-                  </div>
-                  <span className="font-space text-[10px] font-bold text-on-surface-variant truncate">
-                    {item.dayName}
-                  </span>
-                </div>
-              ))}
+            {/* Recharts Area / Line Chart Visualizer */}
+            <div className="mt-4">
+              <MoodStressTrendChart
+                data={stats}
+                trendView={trendView}
+                onTrendViewChange={setTrendView}
+                hideHeader
+              />
             </div>
 
             <p className="mt-4 text-xs font-sans text-on-surface-variant bg-surface-container-low p-3 rounded-xl border border-border-soft flex items-start gap-2">
               <Lightbulb className="w-4 h-4 text-amber-500 fill-amber-400 shrink-0 mt-0.5" />
-              <span>
-                <strong>AI Khái Quát:</strong> Tâm trạng có xu hướng bật tăng mạnh vào cuối tuần và những ngày sau khi hoàn thành các mục tiêu học tập quan trọng.
-              </span>
+              <span>{t('dashboard.chartHint')}</span>
             </p>
           </div>
 
@@ -261,27 +260,21 @@ export function DashboardView() {
             <div className="flex items-center justify-between pb-3 border-b-2 border-on-background mb-4">
               <div className="flex items-center gap-2">
                 <span className="w-3.5 h-3.5 rounded-full bg-secondary-container border-neo-sm"></span>
-                <h2 className="font-space text-lg font-bold text-on-surface">Chủ Đề Nổi Bật Tuần Này</h2>
+                <h2 className="font-space text-lg font-bold text-on-surface">{t('dashboard.topics')}</h2>
               </div>
               <span className="font-space text-xs bg-paper-warm px-2 py-0.5 rounded border border-black font-bold">
-                Frequency Analysis
+                {t('dashboard.frequency')}
               </span>
             </div>
 
             <div className="flex flex-wrap gap-2.5">
-              {[
-                { tag: '#đồ án bách khoa', count: 8, bg: 'bg-primary-container' },
-                { tag: '#chạy bộ hồ tây', count: 5, bg: 'bg-mood-hope-energy' },
-                { tag: '#latte yến mạch', count: 4, bg: 'bg-paper-warm' },
-                { tag: '#thức khuya sửa code', count: 3, bg: 'bg-mood-anxiety-stress text-white' },
-                { tag: '#sách tâm lý học', count: 3, bg: 'bg-secondary-fixed' },
-                { tag: '#buông bỏ cầu toàn', count: 2, bg: 'bg-mood-sadness-reflect text-white' },
-              ].map((item, i) => (
+              {dashboard && dashboard.topTopics.length === 0 && <p className="text-sm">{t('dashboard.noTopics')}</p>}
+              {(dashboard?.topTopics ?? []).map((item, i) => (
                 <span
                   key={i}
-                  className={`font-space text-xs font-bold px-3 py-1.5 rounded-xl border-neo-sm shadow-neo-sm flex items-center gap-1.5 hover:scale-105 transition-transform cursor-pointer ${item.bg}`}
+                  className="font-space text-xs font-bold px-3 py-1.5 rounded-xl border-neo-sm shadow-neo-sm flex items-center gap-1.5 bg-paper-warm"
                 >
-                  <span>{item.tag}</span>
+                  <span>{item.code}</span>
                   <span className="text-[10px] bg-black/15 px-1.5 py-0.5 rounded-full font-mono">{item.count}</span>
                 </span>
               ))}
@@ -298,52 +291,22 @@ export function DashboardView() {
             <div className="flex items-center justify-between pb-3 border-b-2 border-on-background mb-4">
               <div className="flex items-center gap-2">
                 <span className="w-3.5 h-3.5 rounded-full bg-mood-hope-energy border-neo-sm"></span>
-                <h2 className="font-space text-lg font-bold text-on-surface">Phổ Cảm Xúc </h2>
+                <h2 className="font-space text-lg font-bold text-on-surface">{t('dashboard.emotions')}</h2>
               </div>
               <span className="font-space text-xs bg-paper-warm px-2 py-0.5 rounded border border-black font-bold">
-                Tuần 42
+                {t('dashboard.last30')}
               </span>
             </div>
 
-            <div className="flex flex-col gap-3">
-              {[
-                { label: 'Bình an & Thư thái', percent: 45, color: 'bg-mood-calm-joy' },
-                { label: 'Năng lượng & Tự hào', percent: 30, color: 'bg-mood-hope-energy' },
-                { label: 'Suy tư & Tự vấn', percent: 15, color: 'bg-mood-sadness-reflect' },
-                { label: 'Lo âu & Căng thẳng deadline', percent: 10, color: 'bg-mood-anxiety-stress' },
-              ].map((em, idx) => (
-                <div key={idx} className="flex flex-col gap-1">
-                  <div className="flex justify-between text-xs font-space font-bold">
-                    <span>{em.label}</span>
-                    <span className="font-mono">{em.percent}%</span>
-                  </div>
-                  <div className="w-full h-3 bg-gray-100 rounded-full border-neo-sm overflow-hidden p-0.5">
-                    <div
-                      style={{ width: `${em.percent}%` }}
-                      className={`h-full rounded-full ${em.color} border-r border-black`}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* AI Empathetic Quote */}
-            <div className="mt-5 p-3.5 bg-paper-warm border-neo-sm rounded-2xl shadow-neo-sm">
-              <span className="font-space text-[10px] uppercase tracking-wider font-extrabold text-primary-container bg-black px-2 py-0.5 rounded inline-block mb-1">
-                AI Phản Chiếu Thấu Cảm
-              </span>
-              <p className="font-serif italic text-xs sm:text-sm text-on-surface leading-relaxed">
-                &ldquo;Cảm xúc bình an đang chiếm ưu thế vượt trội sau khi Minh Anh hoàn thành bảo vệ đề cương. Hãy tiếp tục duy trì những khoảng dừng tĩnh lặng mỗi sớm.&rdquo;
-              </p>
-            </div>
+            <EmotionDistributionChart emotions={dashboard?.topEmotions ?? []} />
           </div>
 
           {/* POLAROID SHELF (FR-12 & FR-JOURNAL-09) */}
           <div className="bg-surface-card border-neo rounded-3xl p-6 shadow-neo">
             <div className="flex items-center justify-between pb-3 border-b-2 border-on-background mb-4">
-              <h2 className="font-space text-lg font-bold text-on-surface">Kệ Ký Ức (Polaroid Shelf)</h2>
+              <h2 className="font-space text-lg font-bold text-on-surface">{t('dashboard.memories')}</h2>
               <Link href="/history-calendar" className="text-xs font-space font-bold underline hover:text-primary">
-                Xem tất cả ({entries.length}) →
+                {t('dashboard.viewAll', { count: entries.length })}
               </Link>
             </div>
 
@@ -366,8 +329,8 @@ export function DashboardView() {
             <div className="flex items-center gap-3">
               <HeartHandshake className="w-5 h-5 text-mood-anxiety-stress shrink-0" />
               <div>
-                <span className="font-space text-xs font-bold text-black block">Cần sự trợ giúp khẩn cấp?</span>
-                <span className="font-sans text-[11px] text-gray-600">Đường dây nóng hỗ trợ tâm lý 24/7</span>
+                <span className="font-space text-xs font-bold text-black block">{t('dashboard.supportQuestion')}</span>
+                <span className="font-sans text-[11px] text-gray-600">{t('dashboard.supportDescription')}</span>
               </div>
             </div>
             <button
@@ -375,7 +338,7 @@ export function DashboardView() {
               onClick={() => setIsSafetyModalOpen(true)}
               className="text-xs font-space font-bold px-3 py-1.5 bg-white border border-black rounded-xl shadow-neo-sm hover:bg-paper-warm transition-colors cursor-pointer shrink-0"
             >
-              Mở hỗ trợ
+              {t('dashboard.openSupport')}
             </button>
           </div>
         </div>

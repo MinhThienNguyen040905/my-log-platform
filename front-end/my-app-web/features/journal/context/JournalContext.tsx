@@ -1,154 +1,173 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { JournalEntry, WellnessGoal, DailyStat, UserProfile } from '@/types';
-import { INITIAL_ENTRIES, MOCK_GOALS, MOCK_14_DAYS_STATS } from '@/lib/mock-data';
-
-const DEFAULT_PROFILE: UserProfile = {
-  name: 'Minh Anh',
-  penName: 'Minh Anh',
-  email: 'minhanh.journal@gmail.com',
-  plan: 'FREE',
-  timezone: 'Asia/Ho_Chi_Minh',
-  avatarUrl: '/avatar.png',
-  language: 'vi',
-};
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
+import { JournalEntry, DailyStat, UserProfile } from '@/types';
+import { journalBody, journalJson, journalRequest, toEntry, type JournalDetail, type JournalPage } from '../api/client';
+import { clearJournalDrafts } from '../utils/draft-storage';
+import { useAccountProfile, type Profile } from '@/features/user';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface JournalContextType {
+  userId: string;
   entries: JournalEntry[];
-  goals: WellnessGoal[];
   stats: DailyStat[];
-  addEntry: (entry: Omit<JournalEntry, 'id'>) => JournalEntry;
-  updateEntry: (id: string, entry: Partial<JournalEntry>) => void;
-  deleteEntry: (id: string) => void;
-  toggleGoal: (id: string) => void;
+  addEntry: (entry: Record<string, unknown>, key: string) => Promise<JournalEntry>;
+  updateEntry: (id: string, entry: Record<string, unknown>, version: number) => Promise<JournalEntry>;
+  deleteEntry: (id: string, version: number) => Promise<void>;
   getEntryById: (id: string) => JournalEntry | undefined;
-  toggleFavorite: (id: string) => void;
+  toggleFavorite: (id: string) => Promise<JournalEntry>;
+  loadEntry: (id: string) => Promise<JournalEntry>;
+  reloadEntries: () => Promise<void>;
+  entriesLoading: boolean;
+  entriesError: string | null;
   userProfile: UserProfile;
-  updateProfile: (data: Partial<UserProfile>) => void;
+  accountProfile: Profile;
+  reloadProfile: () => Promise<Profile>;
+  updateProfile: (data: Partial<UserProfile>) => Promise<Profile>;
+  completeOnboarding: () => Promise<Profile>;
   logout: () => void;
   streakCount: number;
+  draftStorageKey: string;
+  registerJournalLeaveCheck: (check: (() => boolean) | null) => void;
+  hasUnsavedJournalChanges: () => boolean;
 }
 
 const JournalContext = createContext<JournalContextType | undefined>(undefined);
 
-export function JournalProvider({ children }: { children: React.ReactNode }) {
-  const [entries, setEntries] = useState<JournalEntry[]>(INITIAL_ENTRIES);
-  const [goals, setGoals] = useState<WellnessGoal[]>(MOCK_GOALS);
-  const [stats] = useState<DailyStat[]>(MOCK_14_DAYS_STATS);
-  const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE);
-  const [isLoaded, setIsLoaded] = useState(false);
+function journalStreak(entries: JournalEntry[], timezone: string) {
+  if (!entries.length) return 0;
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' })
+    .formatToParts(new Date());
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  const today = new Date(`${value('year')}-${value('month')}-${value('day')}T00:00:00Z`);
+  const dates = new Set(entries.map((entry) => entry.date));
+  if (!dates.has(today.toISOString().slice(0, 10))) today.setUTCDate(today.getUTCDate() - 1);
+  let count = 0;
+  while (dates.has(today.toISOString().slice(0, 10))) {
+    count++;
+    today.setUTCDate(today.getUTCDate() - 1);
+  }
+  return count;
+}
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('mylog_entries');
-      if (stored) {
-        setEntries(JSON.parse(stored));
-      }
-      const storedGoals = localStorage.getItem('mylog_goals');
-      if (storedGoals) {
-        setGoals(JSON.parse(storedGoals));
-      }
-      const storedProfile = localStorage.getItem('mylog_user_profile');
-      if (storedProfile) {
-        setUserProfile(JSON.parse(storedProfile));
-      }
-    } catch (e) {
-      console.error('Failed to load from localStorage:', e);
-    }
-    setIsLoaded(true);
+export function JournalProvider({ children, userId, profile }: {
+  children: React.ReactNode;
+  userId: string;
+  profile: Profile;
+}) {
+  const queryClient = useQueryClient();
+  const storageKey = useCallback((name: string) => `mylog_${userId}_${name}`, [userId]);
+  const { userProfile, accountProfile, reloadProfile, updateProfile, completeOnboarding } = useAccountProfile(profile);
+  const entriesKey = useMemo(() => ['journal', userId, 'entries'] as const, [userId]);
+  const [stats] = useState<DailyStat[]>([]);
+  const journalLeaveCheck = useRef<(() => boolean) | null>(null);
+  const registerJournalLeaveCheck = useCallback((check: (() => boolean) | null) => {
+    journalLeaveCheck.current = check;
   }, []);
+  const hasUnsavedJournalChanges = useCallback(() => journalLeaveCheck.current?.() ?? false, []);
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    try {
-      localStorage.setItem('mylog_entries', JSON.stringify(entries));
-    } catch (e) {
-      console.error('Failed to save entries:', e);
-    }
-  }, [entries, isLoaded]);
+  const entriesQuery = useQuery({
+    queryKey: entriesKey,
+    queryFn: async () => {
+      const all: JournalEntry[] = [];
+      let cursor: string | null = null;
+      do {
+        const page: JournalPage = await journalJson<JournalPage>(`journal-entries?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
+        all.push(...page.items.map(toEntry));
+        cursor = page.nextCursor;
+      } while (cursor);
+      return all;
+    },
+  });
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data]);
+  const entriesLoading = entriesQuery.isPending;
+  const entriesError = entriesQuery.error instanceof Error ? entriesQuery.error.message : null;
+  const reloadEntries = async () => { await entriesQuery.refetch(); };
+  const refreshDerived = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['dashboard', userId] }),
+    queryClient.invalidateQueries({ queryKey: ['insights', userId] }),
+    queryClient.invalidateQueries({ queryKey: ['reports', userId] }),
+  ]);
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    try {
-      localStorage.setItem('mylog_goals', JSON.stringify(goals));
-    } catch (e) {
-      console.error('Failed to save goals:', e);
-    }
-  }, [goals, isLoaded]);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    try {
-      localStorage.setItem('mylog_user_profile', JSON.stringify(userProfile));
-    } catch (e) {
-      console.error('Failed to save user profile:', e);
-    }
-  }, [userProfile, isLoaded]);
-
-  const addEntry = (data: Omit<JournalEntry, 'id'>): JournalEntry => {
-    const newEntry: JournalEntry = {
-      ...data,
-      id: 'entry-' + Date.now(),
-      status: data.status || 'ANALYZED',
-    };
-    setEntries(prev => [newEntry, ...prev]);
-    return newEntry;
+  const addEntry = async (body: Record<string, unknown>, key: string) => {
+    const saved = await journalJson<JournalDetail>('journal-entries', {
+      method: 'POST', ...journalBody(body, { 'Idempotency-Key': key }),
+    });
+    const entry = toEntry(saved);
+    queryClient.setQueryData<JournalEntry[]>(entriesKey, (previous) => previous ? [entry, ...previous.filter((old) => old.id !== entry.id)] : previous);
+    void refreshDerived();
+    return entry;
   };
 
-  const updateEntry = (id: string, updated: Partial<JournalEntry>) => {
-    setEntries(prev => prev.map(e => (e.id === id ? { ...e, ...updated, updatedAt: new Date().toISOString() } : e)));
+  const updateEntry = async (id: string, body: Record<string, unknown>, version: number) => {
+    const saved = await journalJson<JournalDetail>(`journal-entries/${id}`, {
+      method: 'PATCH', ...journalBody(body, { 'If-Match': `"${version}"` }),
+    });
+    const entry = toEntry(saved);
+    queryClient.setQueryData<JournalEntry[]>(entriesKey, (previous) => previous?.map((old) => old.id === id ? entry : old));
+    queryClient.removeQueries({ queryKey: ['analysis', userId, id] });
+    void refreshDerived();
+    return entry;
   };
 
-  const deleteEntry = (id: string) => {
-    setEntries(prev => prev.filter(e => e.id !== id));
+  const deleteEntry = async (id: string, version: number) => {
+    await journalRequest(`journal-entries/${id}`, { method: 'DELETE', headers: { 'If-Match': `"${version}"` } });
+    queryClient.setQueryData<JournalEntry[]>(entriesKey, (previous) => previous?.filter((entry) => entry.id !== id));
+    queryClient.removeQueries({ queryKey: ['analysis', userId, id] });
+    void refreshDerived();
   };
 
-  const getEntryById = (id: string): JournalEntry | undefined => {
+  const loadEntry = useCallback(async (id: string) => {
+    const detail = await journalJson<JournalDetail>(`journal-entries/${id}`);
+    const entry = toEntry(detail);
+    queryClient.setQueryData<JournalEntry[]>(entriesKey, (previous) => previous?.map((old) => old.id === id ? entry : old));
+    return entry;
+  }, [queryClient, entriesKey]);
+
+  const getEntryById = useCallback((id: string): JournalEntry | undefined => {
     return entries.find(e => e.id === id);
-  };
+  }, [entries]);
 
-  const toggleFavorite = (id: string) => {
-    setEntries(prev => prev.map(e => (e.id === id ? { ...e, isFavorite: !e.isFavorite } : e)));
-  };
-
-  const updateProfile = (data: Partial<UserProfile>) => {
-    setUserProfile(prev => ({ ...prev, ...data }));
+  const toggleFavorite = async (id: string) => {
+    const current = entries.find((entry) => entry.id === id);
+    if (!current) throw new Error('Không tìm thấy bài viết.');
+    const saved = await journalJson<JournalDetail>(`journal-entries/${id}/favorite`, {
+      method: current.isFavorite ? 'DELETE' : 'PUT',
+    });
+    const entry = toEntry(saved);
+    queryClient.setQueryData<JournalEntry[]>(entriesKey, (previous) => previous?.map((old) => old.id === id ? { ...entry, tags: old.tags } : old));
+    return entry;
   };
 
   const logout = () => {
-    localStorage.removeItem('mylog_draft_journal');
-    // Reserved for future session cleanup
-  };
-
-  const toggleGoal = (id: string) => {
-    setGoals(prev => prev.map(g => {
-      if (g.id !== id) return g;
-      const completed = !g.completed;
-      return {
-        ...g,
-        completed,
-        completedDays: completed ? g.targetDays : Math.max(0, g.completedDays - 1)
-      };
-    }));
+    clearJournalDrafts();
   };
 
   return (
     <JournalContext.Provider
       value={{
+        userId,
         entries,
-        goals,
         stats,
         addEntry,
         updateEntry,
         deleteEntry,
-        toggleGoal,
         getEntryById,
         toggleFavorite,
+        loadEntry,
+        reloadEntries,
+        entriesLoading,
+        entriesError,
         userProfile,
+        accountProfile,
+        reloadProfile,
         updateProfile,
+        completeOnboarding,
         logout,
-        streakCount: 14 + (entries.length > INITIAL_ENTRIES.length ? 1 : 0),
+        streakCount: journalStreak(entries, userProfile.timezone),
+        draftStorageKey: storageKey('draft_journal'),
+        registerJournalLeaveCheck,
+        hasUnsavedJournalChanges,
       }}
     >
       {children}

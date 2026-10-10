@@ -1,6 +1,7 @@
 'use client';
 
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import type { Editor } from '@tiptap/core';
 import {
   Heading2,
   Heading3,
@@ -16,7 +17,7 @@ export interface CommandItem {
   title: string;
   subtitle: string;
   icon: React.ComponentType<{ className?: string }>;
-  command: (params: { editor: any; range: any }) => void;
+  command: (params: { editor: Editor; range: { from: number; to: number } }) => void;
 }
 
 export interface SlashCommandMenuRef {

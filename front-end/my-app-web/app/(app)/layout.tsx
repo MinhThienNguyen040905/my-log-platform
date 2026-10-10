@@ -1,14 +1,12 @@
-import { Navbar } from '@/components/layout/Navbar';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { AuthGate } from '@/app/_components/AuthGate';
 
-export default function AppLayout({
+export default async function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <>
-      <Navbar />
-      <main className='flex-1 pt-20 w-full'>{children}</main>
-    </>
-  );
+  if (!(await cookies()).has('mylog_refresh')) redirect('/auth/login');
+  return <AuthGate><main className='flex-1 pt-20 w-full'>{children}</main></AuthGate>;
 }

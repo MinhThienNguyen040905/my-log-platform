@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/lib/toast-context";
-import { JournalProvider } from "@/features/journal";
+import { AppQueryProvider } from "@/app/_components/AppQueryProvider";
+import { AppLanguageProvider } from "@/app/_components/AppLanguageProvider";
+import { isAppLocale } from "@/lib/i18n";
+import { cookies } from "next/headers";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -27,14 +30,16 @@ export const metadata: Metadata = {
   description: "Không gian nhật ký thông minh phong cách scrapbook hỗ trợ sức khỏe tinh thần và tự thấu cảm.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const storedLocale = (await cookies()).get('mylog_locale')?.value;
+  const locale = isAppLocale(storedLocale) ? storedLocale : 'vi';
   return (
     <html
-      lang="vi"
+      lang={locale}
       data-scroll-behavior="smooth"
       className={`${spaceGrotesk.variable} ${plusJakartaSans.variable} ${playfairDisplay.variable} h-full antialiased scroll-smooth`}
     >
@@ -45,11 +50,13 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-bg-canvas text-on-surface font-sans">
-        <ToastProvider>
-          <JournalProvider>
-            {children}
-          </JournalProvider>
-        </ToastProvider>
+        <AppLanguageProvider initialLocale={locale}>
+          <AppQueryProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </AppQueryProvider>
+        </AppLanguageProvider>
       </body>
     </html>
   );

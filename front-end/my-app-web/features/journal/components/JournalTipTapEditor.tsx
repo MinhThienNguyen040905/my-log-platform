@@ -2,6 +2,7 @@
 
 import React, { useEffect, useImperativeHandle, forwardRef, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import type { JSONContent } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Highlight from '@tiptap/extension-highlight';
@@ -16,6 +17,7 @@ export interface JournalTipTapEditorRef {
   focus: () => void;
   getText: () => string;
   getHTML: () => string;
+  getJSON: () => JSONContent;
 }
 
 interface JournalTipTapEditorProps {
@@ -114,6 +116,7 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
       },
       getText: () => editor?.getText() || '',
       getHTML: () => editor?.getHTML() || '',
+      getJSON: () => editor?.getJSON() || { type: 'doc', content: [] },
     }));
 
     return (

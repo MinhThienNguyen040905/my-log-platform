@@ -4,8 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { useJournal } from '@/features/journal';
+import type { UserProfile } from '@/types';
 import { useToast } from '@/lib/toast-context';
+import { useTranslation } from 'react-i18next';
 import {
   Flame,
   Menu,
@@ -14,53 +15,80 @@ import {
   PenTool,
   Calendar,
   BarChart3,
-  ArrowRight,
-  User,
   LogOut,
   Globe,
   Settings,
   Check,
   ChevronDown,
+  Shield,
 } from 'lucide-react';
 
-export function Navbar() {
+export function Navbar({ onLogout, penName, streakCount, userProfile, updateProfile, hasUnsavedJournalChanges }: {
+  onLogout: () => Promise<void>;
+  penName: string;
+  streakCount: number;
+  userProfile: UserProfile;
+  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  hasUnsavedJournalChanges: () => boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ kind: 'navigate'; destination: string } | { kind: 'logout' } | null>(null);
 
-  const { streakCount, userProfile, updateProfile, logout } = useJournal();
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   const navItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { label: 'Journal Editor', path: '/journal-editor', icon: PenTool },
-    { label: 'History & Calendar', path: '/history-calendar', icon: Calendar },
-    { label: 'Insights & AI Reports', path: '/insight', icon: BarChart3 },
+    { label: t('nav.dashboard'), path: '/dashboard', icon: LayoutDashboard },
+    { label: t('nav.journal'), path: '/journal-editor', icon: PenTool },
+    { label: t('nav.history'), path: '/history-calendar', icon: Calendar },
+    { label: t('nav.insights'), path: '/insight', icon: BarChart3 },
   ];
 
   const isActive = (itemPath: string) => {
     return pathname === itemPath || (itemPath !== '/' && pathname.startsWith(itemPath));
   };
 
-  const handleLogout = () => {
-    setUserMenuOpen(false);
-    setMobileOpen(false);
-    logout();
-    showToast({
-      title: 'Đã đăng xuất tài khoản',
-      message: 'Hẹn gặp lại bạn trong trang nhật ký tiếp theo.',
-      type: 'info',
-    });
-    router.push('/auth/login');
+  const confirmLeave = (destination?: string) => {
+    if (destination && `${window.location.pathname}${window.location.search}` === destination) return true;
+    if (!hasUnsavedJournalChanges()) return true;
+    setPendingAction(destination ? { kind: 'navigate', destination } : { kind: 'logout' });
+    return false;
   };
 
-  const handleToggleLanguage = (lang: 'vi' | 'en') => {
-    updateProfile({ language: lang });
-    showToast({
-      title: lang === 'vi' ? 'Ngôn ngữ: Tiếng Việt' : 'Language: English',
-      type: 'info',
-    });
+  const handleLogout = async () => {
+    if (!confirmLeave()) return;
+    await performLogout();
+  };
+
+  const performLogout = async () => {
+    setUserMenuOpen(false);
+    setMobileOpen(false);
+    try {
+      await onLogout();
+      showToast({ title: 'Đã đăng xuất tài khoản', type: 'info' });
+    } catch {
+      showToast({ title: 'Không thể đăng xuất', message: 'Vui lòng thử lại.', type: 'error' });
+    }
+  };
+
+  const continuePendingAction = () => {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    setPendingAction(null);
+    if (action.kind === 'logout') void performLogout();
+    else router.push(action.destination);
+  };
+
+  const handleToggleLanguage = async (lang: 'vi' | 'en') => {
+    try {
+      await updateProfile({ language: lang });
+      showToast({ title: lang === 'vi' ? 'Ngôn ngữ: Tiếng Việt' : 'Language: English', type: 'info' });
+    } catch {
+      showToast({ title: 'Không thể đổi ngôn ngữ', message: 'Vui lòng thử lại.', type: 'error' });
+    }
   };
 
   return (
@@ -71,6 +99,7 @@ export function Navbar() {
           {/* Brand Logo Container */}
           <Link
             href="/dashboard"
+            onNavigate={(event) => { if (!confirmLeave('/dashboard')) event.preventDefault(); }}
             className="flex items-center shrink-0 group focus:outline-none"
           >
             <div className="relative flex items-center justify-center h-10 sm:h-11 w-auto max-w-[130px] sm:max-w-[160px] overflow-hidden">
@@ -93,6 +122,7 @@ export function Navbar() {
                 <Link
                   key={item.path}
                   href={item.path}
+                  onNavigate={(event) => { if (!confirmLeave(item.path)) event.preventDefault(); }}
                   className={`px-3.5 py-2 font-space text-sm font-semibold rounded-xl transition-all duration-150 ${
                     active
                       ? 'bg-paper-warm text-on-surface border-neo-sm shadow-neo-sm font-bold'
@@ -117,17 +147,17 @@ export function Navbar() {
                 type="button"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-2 sm:gap-2.5 shrink-0 text-left cursor-pointer p-1 rounded-2xl hover:bg-paper-warm transition-colors"
-                title="Tùy chọn tài khoản"
+                title={t('nav.accountOptions')}
               >
                 <div className="hidden sm:flex flex-col items-end leading-none">
                   <span className="font-space font-extrabold text-sm text-on-surface tracking-tight flex items-center gap-1">
-                    {userProfile.penName}
+                    {penName}
                     <ChevronDown className="w-3 h-3 text-gray-500" />
                   </span>
                   <div className="mt-1 inline-flex items-center gap-1 bg-paper-warm px-2 py-0.5 rounded border border-black/80 shadow-[1px_1px_0px_#111111]">
                     <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 shrink-0" />
                     <span className="font-space font-bold text-[11px] text-on-surface tracking-tight">
-                      {streakCount} ngày streak
+                      {streakCount} {t('nav.streak')}
                     </span>
                   </div>
                 </div>
@@ -157,7 +187,7 @@ export function Navbar() {
                     <div className="p-2.5 bg-white rounded-xl border border-black flex flex-col gap-0.5">
                       <div className="flex items-center justify-between">
                         <span className="font-space text-xs font-extrabold text-black">
-                          {userProfile.penName}
+                          {penName}
                         </span>
                         <span className="px-1.5 py-0.2 bg-primary-container text-black font-space text-[9px] font-extrabold rounded border border-black uppercase">
                           {userProfile.plan}
@@ -171,17 +201,29 @@ export function Navbar() {
                     {/* Menu Items */}
                     <Link
                       href="/setting"
+                      onNavigate={(event) => { if (!confirmLeave('/setting')) event.preventDefault(); }}
                       onClick={() => setUserMenuOpen(false)}
                       className="w-full px-3 py-2 bg-white hover:bg-surface-card text-left font-space text-xs font-bold rounded-xl border border-black/80 flex items-center gap-2 cursor-pointer shadow-neo-sm transition-all"
                     >
                       <Settings className="w-3.5 h-3.5 text-black" />
-                      <span>Hồ sơ & Thiết lập</span>
+                      <span>{t('nav.settings')}</span>
+                    </Link>
+
+                    {/* Admin Console Shortcut */}
+                    <Link
+                      href="/admin"
+                      onNavigate={(event) => { if (!confirmLeave('/admin')) event.preventDefault(); }}
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full px-3 py-2 bg-paper-warm hover:bg-white text-left font-space text-xs font-extrabold rounded-xl border border-black flex items-center gap-2 cursor-pointer shadow-neo-sm transition-all"
+                    >
+                      <Shield className="w-3.5 h-3.5 text-black stroke-[2.3]" />
+                      <span>{t('nav.admin')}</span>
                     </Link>
 
                     {/* Language Switcher */}
                     <div className="p-2 bg-white rounded-xl border border-black/80 flex flex-col gap-1.5">
                       <span className="font-space text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">
-                        <Globe className="w-3 h-3" /> Ngôn ngữ:
+                        <Globe className="w-3 h-3" /> {t('common.language')}:
                       </span>
                       <div className="grid grid-cols-2 gap-1 text-[11px] font-space font-bold">
                         <button
@@ -220,7 +262,7 @@ export function Navbar() {
                       className="w-full px-3 py-2 bg-red-100 hover:bg-red-200 text-red-800 text-left font-space text-xs font-bold rounded-xl border border-red-400 flex items-center gap-2 cursor-pointer transition-all"
                     >
                       <LogOut className="w-3.5 h-3.5 text-red-700" />
-                      <span>Đăng xuất (FR-ACCOUNT-03)</span>
+                      <span>{t('nav.logout')}</span>
                     </button>
                   </div>
                 </>
@@ -259,7 +301,7 @@ export function Navbar() {
                 </div>
                 <div>
                   <span className="font-space font-extrabold text-sm text-on-surface block">
-                    {userProfile.penName}
+                    {penName}
                   </span>
                   <span className="font-mono text-[10px] text-gray-500 truncate block">
                     {userProfile.email}
@@ -269,7 +311,7 @@ export function Navbar() {
               <div className="inline-flex items-center gap-1 bg-paper-warm px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#111111]">
                 <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 shrink-0" />
                 <span className="font-space font-bold text-xs text-on-surface">
-                  {streakCount} ngày
+                  {streakCount} {t('nav.streak')}
                 </span>
               </div>
             </div>
@@ -282,6 +324,7 @@ export function Navbar() {
                 <Link
                   key={item.path}
                   href={item.path}
+                  onNavigate={(event) => { if (!confirmLeave(item.path)) event.preventDefault(); }}
                   onClick={() => setMobileOpen(false)}
                   className={`px-4 py-2.5 font-space text-sm font-bold rounded-xl border-neo-sm transition-all flex items-center gap-2.5 ${
                     active
@@ -299,11 +342,12 @@ export function Navbar() {
             <div className="pt-2 border-t border-border-soft flex flex-col gap-2">
               <Link
                 href="/setting"
+                onNavigate={(event) => { if (!confirmLeave('/setting')) event.preventDefault(); }}
                 onClick={() => setMobileOpen(false)}
                 className="w-full px-4 py-2 bg-white text-black font-space text-xs font-bold rounded-xl border border-black flex items-center justify-center gap-2 cursor-pointer shadow-neo-sm"
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>Hồ sơ cá nhân & Cài đặt</span>
+                <span>{t('nav.settings')}</span>
               </Link>
 
               <button
@@ -312,7 +356,7 @@ export function Navbar() {
                 className="w-full px-4 py-2 bg-red-100 text-red-800 font-space text-xs font-bold rounded-xl border border-red-400 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5 text-red-700" />
-                <span>Đăng xuất (Logout)</span>
+                <span>{t('nav.logout')}</span>
               </button>
             </div>
           </div>
@@ -329,6 +373,7 @@ export function Navbar() {
             <Link
               key={item.path}
               href={item.path}
+              onNavigate={(event) => { if (!confirmLeave(item.path)) event.preventDefault(); }}
               className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
                 isActive
                   ? 'bg-primary-container text-black border border-black shadow-neo-xs font-extrabold'
@@ -337,18 +382,35 @@ export function Navbar() {
             >
               <IconComp className="w-4 h-4" />
               <span className="text-[10px] font-space">
-                {item.label === 'Journal Editor'
-                  ? 'Viết sổ'
-                  : item.label === 'History & Calendar'
-                  ? 'Lịch ký ức'
-                  : item.label === 'Insights & AI Reports'
-                  ? 'Báo cáo AI'
-                  : item.label}
+                {item.label}
               </span>
             </Link>
           );
         })}
       </div>
+      {pendingAction && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 px-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="unsaved-journal-title"
+            aria-describedby="unsaved-journal-description"
+            onKeyDown={(event) => { if (event.key === 'Escape') setPendingAction(null); }}
+            className="w-full max-w-md rounded-3xl border-neo bg-surface-card p-6 shadow-neo-lg"
+          >
+            <h2 id="unsaved-journal-title" className="font-space text-xl font-extrabold text-on-surface">{t('nav.unsavedTitle')}</h2>
+            <p id="unsaved-journal-description" className="mt-3 text-sm leading-relaxed text-on-surface-variant">
+              {t('nav.unsavedDescription')}
+            </p>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button type="button" autoFocus onClick={() => setPendingAction(null)} className="rounded-xl border-neo bg-white px-5 py-2 font-space font-bold shadow-neo-sm">{t('nav.stay')}</button>
+              <button type="button" onClick={continuePendingAction} className="rounded-xl border-neo bg-primary-container px-5 py-2 font-space font-bold shadow-neo-sm">
+                {pendingAction.kind === 'logout' ? t('nav.logout') : t('nav.leave')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
