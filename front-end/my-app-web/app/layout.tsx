@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import { ToastProvider } from "@/lib/toast-context";
-import { AppQueryProvider } from "@/app/_components/AppQueryProvider";
-import { AppLanguageProvider } from "@/app/_components/AppLanguageProvider";
+import { ToastProvider } from "@/providers/ToastProvider";
+import { AppQueryProvider } from "@/providers/AppQueryProvider";
+import { AppLanguageProvider } from "@/providers/AppLanguageProvider";
 import { isAppLocale } from "@/lib/i18n";
 import { cookies } from "next/headers";
 
