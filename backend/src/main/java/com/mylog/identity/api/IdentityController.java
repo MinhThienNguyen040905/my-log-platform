@@ -2,6 +2,7 @@ package com.mylog.identity.api;
 
 import com.mylog.identity.application.IdentityService;
 import com.mylog.identity.api.request.ConfirmEmailVerificationRequest;
+import com.mylog.identity.api.request.ConfirmEmailVerificationCodeRequest;
 import com.mylog.identity.api.request.EmailVerificationRequest;
 import com.mylog.identity.api.request.LoginRequest;
 import com.mylog.identity.api.request.RefreshRequest;
@@ -48,6 +49,13 @@ public class IdentityController {
     @PostMapping("/email-verifications:confirm")
     public ResponseEntity<Void> confirm(@Valid @RequestBody ConfirmEmailVerificationRequest request) {
         identity.confirmVerification(request.token());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/email-verifications:confirm-code")
+    public ResponseEntity<Void> confirmCode(@Valid @RequestBody ConfirmEmailVerificationCodeRequest request,
+                                             HttpServletRequest http) {
+        identity.confirmVerificationCode(request.email(), request.code(), http.getRemoteAddr());
         return ResponseEntity.noContent().build();
     }
 

@@ -116,7 +116,7 @@ Policy hiện yêu cầu row `APPROVED`, người và thời điểm phê duyệ
 5. Theo dõi lỗi/timeout, `UNKNOWN`, phân bố nhãn, tỷ lệ chặn/rescreen, drift và các lỗi được đánh giá lại. Dừng ordinary AI nếu safety dependency hoặc policy không còn hợp lệ.
 6. Rollback bằng cách vô hiệu URL classifier hoặc quay về model artifact/version và policy đã duyệt trước đó. Backend fail-safe trong lúc chuyển đổi. Không sửa lịch sử `safety_events` hoặc policy cũ.
 
-Runbook triển khai nằm ở [M8_RELEASE_RUNBOOK.md](M8_RELEASE_RUNBOOK.md). Mọi thay đổi schema sau V15 cần migration V16 trở lên; kế hoạch này hiện **không yêu cầu migration**.
+Runbook triển khai nằm ở [M8_RELEASE_RUNBOOK.md](M8_RELEASE_RUNBOOK.md). V16 đã dành cho mã xác minh email; mọi thay đổi schema tiếp theo cần migration V17 trở lên. Kế hoạch classifier này hiện **không yêu cầu migration**.
 
 ## 8. Những việc còn thiếu trước production
 

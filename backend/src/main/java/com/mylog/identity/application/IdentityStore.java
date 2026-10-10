@@ -36,9 +36,12 @@ public interface IdentityStore {
     void revokeSession(UUID userId, UUID sessionId, String reason, Instant now);
     void revokeOtherSessions(UUID userId, UUID except, Instant now);
     void revokeAllSessions(UUID userId, String reason, Instant now);
-    void createActionToken(UUID id, UUID userId, byte[] hash, String purpose, Instant expiresAt, Instant now);
+    void createActionToken(UUID id, UUID userId, byte[] hash, byte[] codeHash, String purpose,
+                           Instant expiresAt, Instant codeExpiresAt, Instant now);
     Optional<UUID> consumeActionToken(byte[] hash, String purpose, Instant now);
+    Optional<UUID> consumeActionCode(UUID userId, byte[] codeHash, Instant now);
     boolean actionTokenAlreadyConsumed(byte[] hash, String purpose);
+    void invalidateVerificationTokens(UUID userId);
     boolean recordRateLimit(byte[] subjectHash, Instant now, int maxAttempts, long windowSeconds);
     void audit(UUID actorId, String action, UUID targetId, Instant now);
     void purgeExpired(Instant now);

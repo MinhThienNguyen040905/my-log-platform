@@ -130,9 +130,11 @@ metadata queue, kết quả, token, chi phí và độ trễ.
 Các endpoint M1 được bật trong profile `local`, `staging`, `prod`; profile `test` chỉ bật khi integration test yêu cầu. Luồng local:
 
 1. `POST /api/v1/auth/register` với email, password (tối thiểu 12 ký tự), timezone IANA, locale, `termsVersion`, `privacyVersion`, `acceptTerms=true`, `acceptPrivacy=true`.
-2. Lấy mã xác minh từ Mailpit (hoặc hộp thư khi dùng Gmail SMTP) rồi gọi `POST /api/v1/auth/email-verifications:confirm` với `{ "token": "..." }`.
+2. Email chứa liên kết `MYLOG_VERIFICATION_URL?token=...` (token dài, hạn 24 giờ) và mã 8 chữ số (hạn 10 phút). Backend không xử lý liên kết bằng `GET`: trang web/app nhận liên kết phải để người dùng bấm xác nhận rồi gọi `POST /api/v1/auth/email-verifications:confirm` với `{ "token": "..." }`. Nếu nhập mã trên thiết bị khác, gọi `POST /api/v1/auth/email-verifications:confirm-code` với `{ "email": "...", "code": "12345678" }`. Có thể yêu cầu gửi lại bằng `POST /api/v1/auth/email-verifications` với `{ "email": "..." }`; mã và liên kết cũ hết hiệu lực khi gửi lại.
 3. `POST /api/v1/auth/login` trả access JWT 10 phút và refresh token opaque 30 ngày. `POST /api/v1/auth/refresh` đổi refresh token mỗi lần; dùng lại token cũ sẽ revoke session family.
 4. Dùng `Authorization: Bearer <accessToken>` cho `GET/PATCH /api/v1/me`, consent và session APIs. `PATCH /me` dùng `If-Match` từ ETag của `GET /me`.
+
+`MYLOG_VERIFICATION_URL` phải là URL HTTPS của trang xác minh trên web ở staging/prod; profile local/test cho phép HTTP. Backend chỉ tạo email và xác minh qua POST, chưa có trang web hoặc mobile xử lý liên kết. Khi client được nối, dùng cùng URL qua iOS Universal Links/Android App Links, cho phép nhập mã ở cả web và app, không xác minh tự động khi GET và không lưu token trong log, analytics hoặc lịch sử điều hướng. Mã ngắn chỉ dùng một lần, tối đa 5 lần nhập sai cho mỗi email được gửi; sau khi xác minh bằng liên kết hoặc mã, phương thức còn lại hết hiệu lực. Không tự tạo phiên đăng nhập ở bước xác minh.
 
 M1 dùng BCrypt cost 12, mã hóa email/profile bằng AES-GCM envelope, HMAC có khóa cho email lookup và token hash. Khóa AES dùng để mã hóa payload có thể rotate bằng `MYLOG_IDENTITY_PREVIOUS_KEYS`; `MYLOG_IDENTITY_LOOKUP_KEY` phải giữ ổn định. JWT có thể chuyển khóa ký bằng `MYLOG_JWT_PREVIOUS_PUBLIC_KEYS`. Local/test có khóa phát triển mặc định; staging/prod yêu cầu khóa và SMTP từ secret manager/environment, không có fallback.
 
