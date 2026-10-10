@@ -236,11 +236,14 @@ class IdentityRepository implements IdentityStore {
         entityManager.clear();
     }
 
-    @Override public void createActionToken(UUID id, UUID userId, byte[] hash, String purpose, Instant expiresAt, Instant now) {
+    @Override public void createActionToken(UUID id, UUID userId, byte[] hash, byte[] codeHash, String purpose,
+                                             Instant expiresAt, Instant codeExpiresAt, Instant now) {
         AuthActionToken token = new AuthActionToken();
         token.id = id;
         token.userId = userId;
         token.tokenHash = hash;
+        token.codeHash = codeHash;
+        token.codeExpiresAt = codeExpiresAt;
         token.purpose = purpose;
         token.expiresAt = expiresAt;
         token.createdAt = now;
@@ -254,6 +257,32 @@ class IdentityRepository implements IdentityStore {
                 .setLockMode(LockModeType.PESSIMISTIC_WRITE).getResultStream().findFirst()
                 .filter(t -> t.consumedAt == null && t.expiresAt.isAfter(now))
                 .map(t -> { t.consumedAt = now; return t.userId; });
+    }
+
+    @Override public Optional<UUID> consumeActionCode(UUID userId, byte[] codeHash, Instant now) {
+        return entityManager.createQuery("""
+                select t from AuthActionToken t where t.userId=:userId and t.purpose='VERIFY_EMAIL'
+                  and t.consumedAt is null order by t.createdAt desc
+                """, AuthActionToken.class).setParameter("userId", userId)
+                .setLockMode(LockModeType.PESSIMISTIC_WRITE).setMaxResults(1).getResultStream().findFirst()
+                .filter(t -> t.codeHash != null && t.codeExpiresAt != null
+                        && t.codeExpiresAt.isAfter(now) && t.codeFailedAttempts < 5)
+                .flatMap(t -> {
+                    if (!java.security.MessageDigest.isEqual(t.codeHash, codeHash)) {
+                        t.codeFailedAttempts++;
+                        return Optional.empty();
+                    }
+                    t.consumedAt = now;
+                    return Optional.of(t.userId);
+                });
+    }
+
+    @Override public void invalidateVerificationTokens(UUID userId) {
+        entityManager.flush();
+        entityManager.createQuery("""
+                delete from AuthActionToken t
+                where t.userId=:userId and t.purpose='VERIFY_EMAIL' and t.consumedAt is null
+                """).setParameter("userId", userId).executeUpdate();
     }
 
     @Override public boolean actionTokenAlreadyConsumed(byte[] hash, String purpose) {

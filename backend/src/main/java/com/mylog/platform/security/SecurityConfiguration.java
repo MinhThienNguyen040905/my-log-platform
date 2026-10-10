@@ -58,6 +58,7 @@ class SecurityConfiguration {
                         authorize.requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
                                 "/api/v1/auth/email-verifications", "/api/v1/auth/email-verifications:confirm",
+                                "/api/v1/auth/email-verifications:confirm-code",
                                 "/api/v1/account-deletion-requests/*:cancel",
                                 "/api/v1/account-deletion-requests/*:status")
                                 .permitAll();

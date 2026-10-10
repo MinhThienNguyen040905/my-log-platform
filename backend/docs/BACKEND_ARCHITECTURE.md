@@ -490,6 +490,7 @@ Base path `/api/v1`. JSON `camelCase`; enum `UPPER_SNAKE_CASE`; ID là UUID stri
 POST   /auth/register
 POST   /auth/email-verifications
 POST   /auth/email-verifications:confirm
+POST   /auth/email-verifications:confirm-code
 POST   /auth/login
 POST   /auth/refresh
 POST   /auth/logout
