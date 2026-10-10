@@ -6,12 +6,14 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import type { JournalEntry } from '@/types';
 import { useJournal } from '../context/JournalContext';
+import { useAccount } from '@/features/user';
 import { journalBody, journalJson, journalRequest, prepareContent, type JournalTag } from '../api/client';
 
 type Source = { key: string; label: string; entries: JournalEntry[] };
 
 export function LegacyJournalImport() {
-  const { userId, userProfile, addEntry, reloadEntries } = useJournal();
+  const { userId, addEntry, reloadEntries } = useJournal();
+  const { userProfile } = useAccount();
   const [sources, setSources] = useState<Source[]>([]);
   const [sourceKey, setSourceKey] = useState('');
   const [busy, setBusy] = useState(false);

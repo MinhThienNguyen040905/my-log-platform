@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import type { UserProfile } from '@/types';
-import { useToast } from '@/lib/toast-context';
+import { useToast } from '@/providers/ToastProvider';
 import { useTranslation } from 'react-i18next';
 import {
   Flame,

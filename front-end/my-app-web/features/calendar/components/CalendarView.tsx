@@ -4,11 +4,12 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { DayPicker, type DayButtonProps } from 'react-day-picker';
 import { useJournal, LegacyJournalImport, journalEmotionLabel, JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, normalizeJournalEmotion } from '@/features/journal';
-import { useToast } from '@/lib/toast-context';
+import { useToast } from '@/providers/ToastProvider';
 import { JournalEntry, JournalEmotion, MoodType } from '@/types';
 import { WashiTape, PolaroidCard } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { NotificationModal } from '@/components/ui/NotificationModal';
+import { averageMoodScore, EMPTY_FILTERS, filterEntries, indexEntriesByDate, type HistoryFilters } from '../utils/calendar-entries';
 import {
   Trash2,
   ChevronLeft,
@@ -25,17 +26,8 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 
-type HistoryFilters = {
-  date: string | null;
-  emotion: JournalEmotion | 'all';
-  favorites: boolean;
-  search: string;
-};
-
-const EMPTY_FILTERS: HistoryFilters = { date: null, emotion: 'all', favorites: false, search: '' };
-
 export function CalendarView() {
-  const { entries, deleteEntry, toggleFavorite, loadEntry, entriesLoading, entriesError, reloadEntries } = useJournal();
+  const { entries, deleteEntry, toggleFavorite, loadEntry, entriesLoading, entriesError, reloadEntries, hasMoreEntries, entriesLoadingMore, loadMoreEntries } = useJournal();
   const { showToast } = useToast();
 
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
@@ -105,36 +97,11 @@ export function CalendarView() {
   };
 
   // Index entries by date for fast calendar queries and stats [FR-JOURNAL-07]
-  const entriesByDate = useMemo(() => {
-    const map: Record<string, JournalEntry[]> = {};
-    for (const entry of entries) {
-      if (!map[entry.date]) map[entry.date] = [];
-      map[entry.date].push(entry);
-    }
-    return map;
-  }, [entries]);
+  const entriesByDate = useMemo(() => indexEntriesByDate(entries), [entries]);
 
   const selectedDateEntries = entriesByDate[selectedDate] || [];
-  const scoredDateEntries = selectedDateEntries.filter((entry) => entry.moodScore !== null);
-  const selectedDateAvgScore = scoredDateEntries.length > 0
-    ? (scoredDateEntries.reduce((sum, e) => sum + (e.moodScore ?? 0), 0) / scoredDateEntries.length).toFixed(1)
-    : null;
-
-  const filteredEntries = entries.filter((entry) => {
-    const matchesMood = appliedFilters.emotion === 'all'
-      || (entry.emotion ? normalizeJournalEmotion(entry.emotion) === appliedFilters.emotion
-        : (appliedFilters.emotion === 'neutral' && entry.mood === 'neutral')
-          || (appliedFilters.emotion === 'happy' && (entry.mood === 'calm-joy' || entry.mood === 'hope-energy'))
-          || (appliedFilters.emotion === 'angry' && entry.mood === 'anxiety-stress')
-          || (appliedFilters.emotion === 'sad' && entry.mood === 'sadness-reflect'));
-    const matchesFavorite = !appliedFilters.favorites || !!entry.isFavorite;
-    const matchesDate = !appliedFilters.date || entry.date === appliedFilters.date;
-    const matchesSearch =
-      entry.title.toLowerCase().includes(appliedFilters.search.toLowerCase()) ||
-      entry.content.replace(/<[^>]*>/g, ' ').toLowerCase().includes(appliedFilters.search.toLowerCase()) ||
-      entry.tags.some((t) => t.toLowerCase().includes(appliedFilters.search.toLowerCase()));
-    return matchesMood && matchesFavorite && matchesDate && matchesSearch;
-  });
+  const selectedDateAvgScore = averageMoodScore(selectedDateEntries);
+  const filteredEntries = filterEntries(entries, appliedFilters);
 
   const monthNames = [
     'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
@@ -423,7 +390,7 @@ export function CalendarView() {
                   </span>
                 ) : (
                   <span className="font-bold text-gray-600">
-                    Ngày {selectedDateLabel}: Chưa có bài viết nhật ký.
+                    Ngày {selectedDateLabel}: {hasMoreEntries ? 'Chưa có bài viết trong các trang đã tải.' : 'Chưa có bài viết nhật ký.'}
                   </span>
                 )}
               </div>
@@ -431,7 +398,7 @@ export function CalendarView() {
 
             {hasPendingFilters && filterByDate && <p className="mt-2 text-xs font-space text-gray-600">Ngày đã chọn. Bấm kính lúp ở bộ lọc phía trên để xem kết quả.</p>}
 
-            <p className="mt-3 text-xs font-space text-gray-600">Số trong ô ngày là số bài viết đã ghi.</p>
+            <p className="mt-3 text-xs font-space text-gray-600">Số trong ô ngày là số bài viết đã tải.</p>
           </div>
 
 
@@ -443,7 +410,7 @@ export function CalendarView() {
         <div className="lg:col-span-8 flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <span className="font-space text-xs font-extrabold text-gray-700">
-              {filteredEntries.length} bài viết{appliedFilters.date ? ` · Ngày ${appliedFilters.date.split('-').reverse().join('/')}` : ''}
+              {filteredEntries.length} bài viết đã tải{appliedFilters.date ? ` · Ngày ${appliedFilters.date.split('-').reverse().join('/')}` : ''}
               {appliedFilters.favorites ? ' · Yêu thích' : ''}
               {appliedFilters.emotion !== 'all' ? ` · ${JOURNAL_EMOTIONS[appliedFilters.emotion].label}` : ''}
               {appliedFilters.search ? ' · Kết quả tìm kiếm' : ''}
@@ -465,11 +432,11 @@ export function CalendarView() {
           {!entriesLoading && !entriesError && filteredEntries.length === 0 ? (
             <div className="bg-surface-card border-neo rounded-3xl p-10 text-center flex flex-col items-center justify-center gap-3 shadow-neo">
               <Calendar className="w-10 h-10 text-gray-400 stroke-[1.5]" />
-              <p className="font-space text-base font-extrabold text-black">{entries.length === 0 ? 'Bạn chưa có trang nhật ký nào' : 'Không tìm thấy bài viết phù hợp'}</p>
+              <p className="font-space text-base font-extrabold text-black">{entries.length === 0 && !hasMoreEntries ? 'Bạn chưa có trang nhật ký nào' : 'Không tìm thấy bài viết phù hợp trong các trang đã tải'}</p>
               <p className="text-xs text-gray-600 max-w-sm">
                 {entries.length === 0 ? 'Viết trang đầu tiên để bắt đầu lưu lại những ngày của bạn.' : 'Thử đổi từ khóa hoặc bỏ các điều kiện lọc hiện tại.'}
               </p>
-              {entries.length === 0 ? <Link href="/journal-editor" className="mt-2"><NeoButton size="sm">Viết trang đầu tiên</NeoButton></Link> : <button type="button" onClick={clearFilters} className="mt-2 min-h-11 px-4 border border-black rounded-lg bg-primary-container font-space text-sm font-bold shadow-neo-sm">Bỏ bộ lọc</button>}
+              {entries.length === 0 && !hasMoreEntries ? <Link href="/journal-editor" className="mt-2"><NeoButton size="sm">Viết trang đầu tiên</NeoButton></Link> : <button type="button" onClick={clearFilters} className="mt-2 min-h-11 px-4 border border-black rounded-lg bg-primary-container font-space text-sm font-bold shadow-neo-sm">Bỏ bộ lọc</button>}
             </div>
           ) : (
             <div className="flex flex-col gap-6">
@@ -617,6 +584,10 @@ export function CalendarView() {
               ))}
             </div>
           )}
+          {hasMoreEntries && <div className="flex flex-col items-center gap-2">
+            <p className="text-xs text-gray-600">Bộ lọc chỉ áp dụng cho các bài đã tải. Tải thêm để xem các bài cũ hơn.</p>
+            <button type="button" disabled={entriesLoadingMore} onClick={() => void loadMoreEntries()} className="min-h-11 rounded-xl border-2 border-black bg-primary-container px-4 py-2 text-sm font-bold disabled:opacity-50">{entriesLoadingMore ? 'Đang tải...' : 'Tải thêm bài viết'}</button>
+          </div>}
         </div>
       </div>
 

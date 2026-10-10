@@ -5,11 +5,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { JournalProvider, useJournal, clearJournalDrafts } from '@/features/journal';
-import type { Profile } from '@/features/user';
+import { AccountProvider, useAccount, type Profile } from '@/features/user';
 import { ApiError } from '@/lib/api/client';
-import { useAppLanguage } from './AppLanguageProvider';
+import { useAppLanguage } from '@/providers/AppLanguageProvider';
 import { isAppLocale } from '@/lib/i18n';
 import { useTranslation } from 'react-i18next';
+import { getDashboard } from '@/features/dashboard';
 
 export function AuthGate({ children, showNavbar = true }: { children: React.ReactNode; showNavbar?: boolean }) {
   return <AuthGateContent showNavbar={showNavbar}>{children}</AuthGateContent>;
@@ -54,8 +55,21 @@ function AuthGateContent({ children, showNavbar }: { children: React.ReactNode; 
   if (session.isError && !(session.error instanceof ApiError && session.error.status === 401)) return <main className="p-8 text-center">{t('common.sessionError')} <button type="button" onClick={() => void session.refetch()} className="underline">{t('common.retry')}</button></main>;
   if (!profile) return <main className="p-8 text-center" role="status">{t('common.sessionLoading')}</main>;
 
-  return <JournalProvider key={profile.userId} userId={profile.userId} profile={profile}>
-    <AuthenticatedContent onLogout={logout} showNavbar={showNavbar}>{children}</AuthenticatedContent>
+  return <AccountProvider key={profile.userId} profile={profile}>
+    <AccountJournalContent onLogout={logout} showNavbar={showNavbar}>{children}</AccountJournalContent>
+  </AccountProvider>;
+}
+
+function AccountJournalContent({ children, onLogout, showNavbar }: {
+  children: React.ReactNode;
+  onLogout: () => Promise<void>;
+  showNavbar: boolean;
+}) {
+  const { userId } = useAccount();
+  const pathname = usePathname();
+  const dashboard = useQuery({ queryKey: ['dashboard', userId, '30d'], queryFn: () => getDashboard('30d'), enabled: showNavbar });
+  return <JournalProvider userId={userId} streakCount={dashboard.data?.currentJournalStreak ?? 0} loadEntries={pathname === '/history-calendar'}>
+    <AuthenticatedContent onLogout={onLogout} showNavbar={showNavbar}>{children}</AuthenticatedContent>
   </JournalProvider>;
 }
 
@@ -65,7 +79,8 @@ function AuthenticatedContent({ children, onLogout, showNavbar }: {
   showNavbar: boolean;
 }) {
   const { t } = useTranslation();
-  const { userProfile, streakCount, updateProfile, hasUnsavedJournalChanges } = useJournal();
+  const { userProfile, updateProfile } = useAccount();
+  const { streakCount, hasUnsavedJournalChanges } = useJournal();
   const pathname = usePathname();
   const router = useRouter();
   const needsOnboarding = !userProfile.isOnboarded && pathname !== '/onboarding';

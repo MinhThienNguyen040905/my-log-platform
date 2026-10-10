@@ -7,7 +7,7 @@ import { getReport, type Report } from '../api/reports';
 import { downloadReportCsv } from '../utils/download-report-csv';
 import { WeeklyEvidenceTimelineChart } from './WeeklyEvidenceTimelineChart';
 import { useTranslation } from 'react-i18next';
-import { useAppLanguage } from '@/app/_components/AppLanguageProvider';
+import { useAppLanguage } from '@/providers/AppLanguageProvider';
 
 function metric(report: Report, key: string, locale: string, noData: string, suffix = ''): string {
   const value = report.metrics[key];

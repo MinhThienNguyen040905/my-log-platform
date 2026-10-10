@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useJournal, SafetyModal } from '@/features/journal';
+import { useJournal, SafetyModal, getRecentEntries } from '@/features/journal';
+import { useAccount } from '@/features/user';
 import { getDashboard, type Dashboard } from '../api/dashboard';
 import { MoodStressTrendChart } from './MoodStressTrendChart';
 import { EmotionDistributionChart } from './EmotionDistributionChart';
@@ -10,7 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { WashiTape, PolaroidCard } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useTranslation } from 'react-i18next';
-import { useAppLanguage } from '@/app/_components/AppLanguageProvider';
+import { useAppLanguage } from '@/providers/AppLanguageProvider';
 import { motion } from 'motion/react';
 import {
   Flame,
@@ -28,8 +29,11 @@ import {
 export function DashboardView() {
   const { t } = useTranslation();
   const { locale } = useAppLanguage();
-  const { entries, streakCount, accountProfile, userId } = useJournal();
+  const { streakCount, userId } = useJournal();
+  const { accountProfile } = useAccount();
   const dashboardQuery = useQuery<Dashboard>({ queryKey: ['dashboard', userId, '30d'], queryFn: () => getDashboard('30d') });
+  const recentQuery = useQuery({ queryKey: ['journal', userId, 'recent', 2], queryFn: () => getRecentEntries(2) });
+  const recentEntries = recentQuery.data ?? [];
   const dashboard = dashboardQuery.data;
   const dashboardError = dashboardQuery.isError;
   const stats = dashboard?.timeline.slice(-14) ?? [];
@@ -42,7 +46,7 @@ export function DashboardView() {
   const energy = average('energyScore');
   const sleep = average('sleepMinutes');
   const greetingName = accountProfile.displayName?.trim() || accountProfile.penName?.trim() || (locale === 'en' ? 'there' : 'bạn');
-  const recordedDays = new Set(entries.map((entry) => entry.date)).size;
+  const recordedDays = dashboard?.timeline.filter((day) => day.journalCount > 0).length ?? 0;
 
   const [trendView, setTrendView] = useState<'both' | 'mood' | 'stress'>('both');
   const [isSafetyModalOpen, setIsSafetyModalOpen] = useState(false);
@@ -306,12 +310,13 @@ export function DashboardView() {
             <div className="flex items-center justify-between pb-3 border-b-2 border-on-background mb-4">
               <h2 className="font-space text-lg font-bold text-on-surface">{t('dashboard.memories')}</h2>
               <Link href="/history-calendar" className="text-xs font-space font-bold underline hover:text-primary">
-                {t('dashboard.viewAll', { count: entries.length })}
+                {t('dashboard.viewAll')}
               </Link>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {entries.slice(0, 2).map((entry, index) => (
+              {recentQuery.isError && <p role="alert" className="text-sm text-red-700">{t('dashboard.metricsError')} <button type="button" className="underline" onClick={() => void recentQuery.refetch()}>{t('common.retry')}</button></p>}
+              {recentEntries.map((entry, index) => (
                 <Link key={entry.id} href="/history-calendar">
                   <PolaroidCard
                     imageUrl={entry.photoUrl || 'https://images.unsplash.com/photo-1517842645767-c639042777db?w=600&auto=format&fit=crop&q=80'}

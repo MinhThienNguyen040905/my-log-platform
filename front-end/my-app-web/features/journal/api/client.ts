@@ -13,6 +13,11 @@ export type JournalDetail = JournalSummary & {
   entryStatus: string; contentVersion: number; updatedAt: string;
 };
 export type JournalPage = { items: JournalSummary[]; nextCursor: string | null };
+
+export async function getRecentEntries(limit = 2): Promise<JournalEntry[]> {
+  const page = await journalJson<JournalPage>(`journal-entries?limit=${limit}`);
+  return page.items.map(toEntry);
+}
 export type JournalTag = { id: string; name: string; color: string | null };
 
 const containers = new Set(['doc', 'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'listItem']);
