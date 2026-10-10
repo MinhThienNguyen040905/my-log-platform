@@ -9,6 +9,7 @@ Tài liệu liên quan:
 - [Kiến trúc backend](BACKEND_ARCHITECTURE.md)
 - [Thiết kế database](DATABASE_OVERVIEW.md)
 - [Database DBML](database/mylog.dbml)
+- [Danh mục use case toàn dự án](USE_CASE_CATALOG.md)
 
 ## 1. Mục tiêu của kế hoạch
 
@@ -186,6 +187,7 @@ Không cần chốt model AI cuối cùng để làm journal; cần chốt provi
 - [x] Hash password bằng BCrypt cost 12; benchmark local ban đầu bên dưới.
 - [x] Tạo user/profile/default USER role trong một transaction.
 - [x] Idempotent email verification token.
+- [x] V16: email chứa liên kết xác minh và mã 8 chữ số dự phòng; mã có TTL, giới hạn thử sai, cả hai cách dùng chung trạng thái đã xác minh.
 - [x] Rate limit theo IP/email pseudonym.
 
 API:
@@ -194,6 +196,7 @@ API:
 POST /api/v1/auth/register
 POST /api/v1/auth/email-verifications
 POST /api/v1/auth/email-verifications:confirm
+POST /api/v1/auth/email-verifications:confirm-code
 ```
 
 ### IDN-002 — Login/token rotation (P0, L)
@@ -265,7 +268,7 @@ POST  /api/v1/me/onboarding:complete
 ### Bằng chứng và giới hạn M1 backend
 
 - Persistence M1 dùng JPA entity trong `identity`/`user` `infrastructure/persistence/entity`, adapter `EntityManager` trong `infrastructure/persistence`, với native SQL qua JPA cho rate-limit upsert và truy vấn consent mới nhất. Flyway V2–V4 vẫn là schema nguồn; Hibernate chỉ `validate`.
-- Flyway V2–V4, register → email verification → login → profile/consent → refresh/reuse chạy qua PostgreSQL Testcontainers. Test có registration race, account pending/suspended, ownership session, ciphertext/tokens, log redaction và key rotation. OpenAPI artifact được xuất từ context bật M1, có các endpoint identity/profile.
+- Flyway V2–V4, register → email verification → login → profile/consent → refresh/reuse chạy qua PostgreSQL Testcontainers. V16 bổ sung mã xác minh email; client web/mobile xử lý liên kết và form nhập mã vẫn chưa triển khai. Test có registration race, account pending/suspended, ownership session, ciphertext/tokens, log redaction và key rotation. OpenAPI artifact được xuất từ context bật M1, có các endpoint identity/profile.
 - BCrypt cost 12 được chọn sau benchmark local ngày 2026-09-30 (Java 25 trên máy phát triển): trung bình khoảng 264 ms cho một cặp encode + verify; cost 10 khoảng 70 ms, cost 11 khoảng 131 ms. Cần đo lại trên hạ tầng triển khai trước release.
 - Local email verification gửi đến Mailpit (`docker compose up -d mailpit`, UI cổng 8025). Production cần SMTP và khóa do secret manager cung cấp; không dùng fallback local.
 - Frontend chưa tích hợp các API M1; điều kiện frontend ở exit criteria cần được xác nhận khi tích hợp.
@@ -688,6 +691,7 @@ M8 chưa đạt exit criteria release. Đã bổ sung quota ghi journal/export, 
 | API-1 | auth + `/me` | login/register/profile |
 | API-2 | journal CRUD + check-in | JournalContext/localStorage |
 | API-3 | analysis status/result | AI reflection drawer |
+| API-3a | authenticated writing suggestions + consent/safety | backend sở hữu quyết định và nội dung; FE debounce/gọi API chỉ khi auth thật và nội dung được duyệt |
 | API-4 | dashboard + insight | dashboard/insight mock data |
 | API-5 | self-care | goal mock data |
 | API-6 | report/export/delete | settings/report flows |
@@ -804,15 +808,20 @@ Task sẵn sàng phát triển khi:
 - Asset upload.
 - Monthly report.
 - Feedback workflow.
+- Đề xuất sau khi kiểm chứng với người dùng: Micro-Wins Vault nhập thủ công, có sửa/xóa và xác nhận trước khi lưu bất kỳ trích xuất AI nào; xem [đặc tả đề xuất](SELF_COMPASSION_FEATURE_PROPOSALS.md).
 
 ### P2 — Sau MVP
 
+- Đề xuất: thư do người dùng viết để tự đọc lại vào ngày khó khăn; lời mời xem tùy chọn, không kích hoạt cứng từ điểm năng lượng và không thay thế safety flow.
+- Đề xuất: bản chuẩn bị buổi tham vấn một trang; chọn mục, xem trước, xuất chủ động, không tự chia sẻ hoặc diễn đạt như chẩn đoán.
 - OAuth/social login nếu local auth đã đủ demo.
 - SSE thay polling.
 - Advanced correlation.
 - Wearable/voice/reminder.
 - Multi-region, microservices, Kafka.
 - Encrypted full-text journal search.
+
+Ba đề xuất trên **chưa có code, API, migration hay acceptance test** và không thay đổi trạng thái M4/M5/M7. Thứ tự P1/P2 là ưu tiên khám phá sản phẩm, sẽ chốt lại sau thử nghiệm với người dùng; trước khi triển khai phải quyết định consent, retention, mã hóa, export/deletion, safety và contract. Không dùng mức sử dụng tính năng làm bằng chứng cải thiện sức khỏe tinh thần.
 
 ## 23. Sprint đầu tiên đề xuất
 

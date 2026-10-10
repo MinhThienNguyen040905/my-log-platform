@@ -46,6 +46,7 @@ MYLOG_APP_PROFILE
 MYLOG_SERVER_PORT
 MYLOG_DB_*
 MYLOG_REDIS_URL
+MYLOG_REDIS_SSL_ENABLED
 MYLOG_ALLOWED_ORIGINS
 MYLOG_OPENAPI_ENABLED
 MYLOG_SWAGGER_UI_ENABLED
@@ -59,6 +60,8 @@ MYLOG_REPORTS_ENABLED
 
 Database local có thể dùng Docker Compose; môi trường được triển khai dùng PostgreSQL do Supabase quản lý qua `MYLOG_DB_URL`, `MYLOG_DB_USERNAME` và `MYLOG_DB_PASSWORD`. Ảnh nhật ký dùng Cloudinary; bật adapter bằng `MYLOG_CLOUDINARY_ENABLED=true` sau khi điền credential server-side.
 
+Redis local trong Compose dùng `MYLOG_REDIS_URL=redis://localhost:6379` và `MYLOG_REDIS_SSL_ENABLED=false`. Với Upstash, sao chép URL từ **Connect → TCP** (bắt đầu bằng `rediss://`) vào `MYLOG_REDIS_URL` và đặt `MYLOG_REDIS_SSL_ENABLED=true`; giữ URL chứa token trong `.env` local hoặc secret manager, không commit. Hiện Redis chưa lưu nghiệp vụ của mylog.
+
 ## Chạy local
 
 Nếu `.env` trỏ PostgreSQL tới Supabase, khởi động Redis và Mailpit để chạy identity/email verification:
@@ -71,6 +74,22 @@ docker compose up -d redis mailpit
 Nếu muốn phát triển hoàn toàn offline bằng PostgreSQL/pgvector local, đổi `MYLOG_DB_*` về giá trị trong `.env.example` rồi chạy `docker compose up -d`. Các biến `MYLOG_LOCAL_DB_*` của Compose được tách riêng để credential Supabase không bị dùng cho container local.
 
 Mailpit UI: `http://localhost:8025`. Nếu dùng PostgreSQL local thay Supabase, chạy `docker compose up -d` để khởi động cả ba service.
+
+### Gửi email xác minh bằng Gmail trong profile local
+
+Mặc định local gửi đến Mailpit, không cần tài khoản hay mật khẩu Gmail. Nếu muốn gửi email thật bằng Gmail, bật xác minh 2 bước trên tài khoản Google, tạo **mật khẩu ứng dụng** dành riêng cho mylog tại [Google App Passwords](https://myaccount.google.com/apppasswords), rồi thêm các dòng sau vào file `.env` **trên máy của bạn** (không commit, không gửi mật khẩu vào chat):
+
+```properties
+MYLOG_MAIL_HOST=smtp.gmail.com
+MYLOG_MAIL_PORT=587
+MYLOG_MAIL_USERNAME=<địa chỉ Gmail gửi thư>
+MYLOG_MAIL_PASSWORD=<mật khẩu ứng dụng Google>
+MYLOG_MAIL_FROM=<cùng địa chỉ Gmail ở trên>
+MYLOG_MAIL_SMTP_AUTH=true
+MYLOG_MAIL_STARTTLS_ENABLED=true
+```
+
+Ghi mật khẩu ứng dụng liền nhau, không có dấu cách hoặc dấu ngoặc nhọn; đừng dùng mật khẩu đăng nhập Google. Khởi động lại backend sau khi sửa `.env`. Email xác minh hiển thị người gửi là `mylog <địa chỉ trong MYLOG_MAIL_FROM>`; tên hiển thị không che địa chỉ gửi. Với Gmail, có thể chỉ khởi động `redis` từ Compose nếu database đang dùng Supabase; không cần Mailpit. Kiểm tra bằng luồng đăng ký/xác minh ở mục M1 và xem email nhận được (kể cả Spam). Nếu tài khoản Google không cho tạo mật khẩu ứng dụng, cần dùng dịch vụ SMTP khác hoặc cơ chế xác thực mà tài khoản đó hỗ trợ. Cấu hình trên dùng cổng 587 với STARTTLS và xác thực SMTP; tham khảo [hướng dẫn SMTP của Gmail](https://support.google.com/mail/answer/7104828) và [hướng dẫn mật khẩu ứng dụng](https://support.google.com/mail/answer/185833).
 
 Chạy ứng dụng:
 
@@ -111,9 +130,11 @@ metadata queue, kết quả, token, chi phí và độ trễ.
 Các endpoint M1 được bật trong profile `local`, `staging`, `prod`; profile `test` chỉ bật khi integration test yêu cầu. Luồng local:
 
 1. `POST /api/v1/auth/register` với email, password (tối thiểu 12 ký tự), timezone IANA, locale, `termsVersion`, `privacyVersion`, `acceptTerms=true`, `acceptPrivacy=true`.
-2. Lấy mã xác minh từ Mailpit rồi gọi `POST /api/v1/auth/email-verifications:confirm` với `{ "token": "..." }`.
+2. Email chứa liên kết `MYLOG_VERIFICATION_URL?token=...` (token dài, hạn 24 giờ) và mã 8 chữ số (hạn 10 phút). Backend không xử lý liên kết bằng `GET`: trang web/app nhận liên kết phải để người dùng bấm xác nhận rồi gọi `POST /api/v1/auth/email-verifications:confirm` với `{ "token": "..." }`. Nếu nhập mã trên thiết bị khác, gọi `POST /api/v1/auth/email-verifications:confirm-code` với `{ "email": "...", "code": "12345678" }`. Có thể yêu cầu gửi lại bằng `POST /api/v1/auth/email-verifications` với `{ "email": "..." }`; mã và liên kết cũ hết hiệu lực khi gửi lại.
 3. `POST /api/v1/auth/login` trả access JWT 10 phút và refresh token opaque 30 ngày. `POST /api/v1/auth/refresh` đổi refresh token mỗi lần; dùng lại token cũ sẽ revoke session family.
 4. Dùng `Authorization: Bearer <accessToken>` cho `GET/PATCH /api/v1/me`, consent và session APIs. `PATCH /me` dùng `If-Match` từ ETag của `GET /me`.
+
+`MYLOG_VERIFICATION_URL` phải là URL HTTPS của trang xác minh trên web ở staging/prod; profile local/test cho phép HTTP. Backend chỉ tạo email và xác minh qua POST, chưa có trang web hoặc mobile xử lý liên kết. Khi client được nối, dùng cùng URL qua iOS Universal Links/Android App Links, cho phép nhập mã ở cả web và app, không xác minh tự động khi GET và không lưu token trong log, analytics hoặc lịch sử điều hướng. Mã ngắn chỉ dùng một lần, tối đa 5 lần nhập sai cho mỗi email được gửi; sau khi xác minh bằng liên kết hoặc mã, phương thức còn lại hết hiệu lực. Không tự tạo phiên đăng nhập ở bước xác minh.
 
 M1 dùng BCrypt cost 12, mã hóa email/profile bằng AES-GCM envelope, HMAC có khóa cho email lookup và token hash. Khóa AES dùng để mã hóa payload có thể rotate bằng `MYLOG_IDENTITY_PREVIOUS_KEYS`; `MYLOG_IDENTITY_LOOKUP_KEY` phải giữ ổn định. JWT có thể chuyển khóa ký bằng `MYLOG_JWT_PREVIOUS_PUBLIC_KEYS`. Local/test có khóa phát triển mặc định; staging/prod yêu cầu khóa và SMTP từ secret manager/environment, không có fallback.
 

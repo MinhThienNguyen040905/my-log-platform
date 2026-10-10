@@ -4,7 +4,7 @@
 > PostgreSQL 17 + pgvector + Flyway  
 > Phạm vi: MVP và đường mở rộng đã xác định trong kiến trúc backend
 
-Tài liệu này là nguồn thiết kế chính cho schema. File DBML đi kèm để dựng sơ đồ trực quan: [database/mylog.dbml](database/mylog.dbml).
+Tài liệu này là nguồn thiết kế chính cho schema. File DBML đi kèm để dựng sơ đồ trực quan: [database/mylog.dbml](database/mylog.dbml). Đọc [giải thích 43 bảng Flyway](DATABASE_TABLES_EXPLAINED.md) để xem mục đích, khóa, dữ liệu và luồng sử dụng của từng bảng ở schema hiện hành.
 
 ## 1. Mục tiêu thiết kế
 
@@ -195,7 +195,7 @@ Unique theo `code`, composite PK cho join table. `assigned_by` FK users với `O
 
 Index `(user_id, revoked_at, expires_at)` và cleanup index `(expires_at)`.
 
-`auth_refresh_history` có `id UUID` làm khóa chính và `token_hash BYTEA NOT NULL UNIQUE` để tra cứu HMAC của token đã dùng, phát hiện replay và revoke toàn bộ `token_family_id`. V4 backfill UUID cho dòng cũ; dòng mới nhận UUIDv7 từ application. Token verify/reset dùng table chung `auth_action_tokens` với `token_hash`, `purpose`, `expires_at`, `consumed_at`; tuyệt đối không lưu token thô. `auth_rate_limits` lưu HMAC của IP/email pseudonym và cửa sổ giới hạn, được cleanup định kỳ.
+`auth_refresh_history` có `id UUID` làm khóa chính và `token_hash BYTEA NOT NULL UNIQUE` để tra cứu HMAC của token đã dùng, phát hiện replay và revoke toàn bộ `token_family_id`. V4 backfill UUID cho dòng cũ; dòng mới nhận UUIDv7 từ application. Token verify/reset dùng table chung `auth_action_tokens` với `token_hash`, `purpose`, `expires_at`, `consumed_at`; tuyệt đối không lưu token thô. V16 bổ sung `code_hash`, `code_expires_at`, `code_failed_attempts` cho mã xác minh email 8 chữ số. Link và mã dùng chung `consumed_at`; gửi lại hoặc dùng thành công một phương thức sẽ vô hiệu hóa các challenge cũ. `auth_rate_limits` lưu HMAC của IP/email pseudonym và cửa sổ giới hạn, được cleanup định kỳ.
 
 Chọn khóa chính theo vai trò dữ liệu: bản ghi có vòng đời hoặc cần tham chiếu độc lập dùng `id UUID`; bảng nối thuần túy dùng khóa ghép của hai khóa ngoại nếu mỗi cặp chỉ được tồn tại một lần; quan hệ một–một như `user_profiles` có thể dùng `user_id` vừa là PK vừa là FK; bảng trạng thái chỉ có một dòng cho mỗi subject như `auth_rate_limits` có thể dùng subject hash làm PK. Nếu thêm `id` cho bảng vốn được định danh bằng giá trị khác, vẫn phải giữ `UNIQUE` trên giá trị đó. Tránh dùng `byte[]` làm `@Id` cho bản ghi có vòng đời trong JPA. Xác định PK, unique và mục đích truy vấn trước khi viết migration; không thêm `id` chỉ để mọi bảng giống nhau.
 
@@ -843,8 +843,9 @@ ADR-0009 adds classifier training/inference and a worker-only provider adapter w
 rewrite. `safety_events` already stores classifier/policy version and confidence;
 `ai_analyses` already stores provider/model/prompt/policy provenance. Training datasets and
 artifacts are managed outside the application database with separate `MODEL_TRAINING` consent,
-access control and deletion handling. Any future application schema change starts at V16;
-the applied V1–V15 migrations remain immutable.
+access control and deletion handling. V16 extends `auth_action_tokens` for email verification
+codes; any subsequent application schema change needs V17 or later. The applied V1–V15
+migrations remain immutable.
 
 | Dữ liệu | Xử lý đề xuất |
 |---|---|

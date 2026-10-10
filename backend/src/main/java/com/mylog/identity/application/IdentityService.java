@@ -100,7 +100,23 @@ public class IdentityService {
             if (store.actionTokenAlreadyConsumed(hash, "VERIFY_EMAIL")) return;
             throw new InvalidCredentialsException();
         }
+        store.invalidateVerificationTokens(user);
         store.activate(user, clock.instant());
+    }
+
+    @Transactional(noRollbackFor = InvalidCredentialsException.class)
+    public void confirmVerificationCode(String email, String code, String remoteAddress) {
+        Instant now = clock.instant();
+        String normalized = normalizeEmail(email);
+        rate("verify-code-ip:" + remoteAddress, now, 30);
+        rate("verify-code-email:" + normalized, now, 10);
+        UUID user = store.accountByEmailHash(cipher.lookupHash(normalized))
+                .filter(account -> "PENDING".equals(account.status()))
+                .map(Account::id).orElseThrow(InvalidCredentialsException::new);
+        byte[] codeHash = cipher.tokenHash("VERIFY_EMAIL_CODE:" + user + ":" + code);
+        if (store.consumeActionCode(user, codeHash, now).isEmpty()) throw new InvalidCredentialsException();
+        store.invalidateVerificationTokens(user);
+        store.activate(user, now);
     }
 
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
@@ -226,9 +242,13 @@ public class IdentityService {
     }
 
     private void sendVerification(UUID id, String email, Instant now) {
+        store.invalidateVerificationTokens(id);
         String token = randomToken();
-        store.createActionToken(ids.next(), id, cipher.tokenHash(token), "VERIFY_EMAIL", now.plus(24, ChronoUnit.HOURS), now);
-        delivery.send(email, token);
+        String code = String.format(Locale.ROOT, "%08d", random.nextInt(100_000_000));
+        byte[] codeHash = cipher.tokenHash("VERIFY_EMAIL_CODE:" + id + ":" + code);
+        store.createActionToken(ids.next(), id, cipher.tokenHash(token), codeHash, "VERIFY_EMAIL",
+                now.plus(24, ChronoUnit.HOURS), now.plus(10, ChronoUnit.MINUTES), now);
+        delivery.send(email, token, code);
     }
 
     private void rate(String subject, Instant now, int maximum) {

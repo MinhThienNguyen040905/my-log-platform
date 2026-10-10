@@ -150,9 +150,7 @@ function JournalEditorContent() {
       <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-start justify-center transition-all duration-300">
         {/* PHYSICAL NOTEBOOK DESK CANVAS (Max-w 850px centered) */}
         <div
-          className={`w-full transition-all duration-300 ${
-            isAiDrawerOpen ? 'lg:max-w-3xl lg:mr-[420px]' : 'max-w-[850px]'
-          }`}
+          className="w-full max-w-[850px] transition-all duration-300"
         >
           <article className="relative bg-paper-warm border-[2.5px] border-black rounded-3xl p-6 sm:p-10 shadow-neo-lg transition-all overflow-visible flex flex-col gap-6">
             {/* Washi Tape and Page Number Stamp */}
@@ -434,15 +432,15 @@ function JournalEditorContent() {
             </div>
           </article>
         </div>
-
-        {/* AI REFLECTION DRAWER (ON-DEMAND) */}
-        <AiReflectionDrawer
-          isOpen={isAiDrawerOpen}
-          onClose={() => setIsAiDrawerOpen(false)}
-          entryId={editId}
-          contentVersion={contentVersion}
-        />
       </main>
+
+      {/* AI REFLECTION DRAWER */}
+      <AiReflectionDrawer
+        isOpen={isAiDrawerOpen}
+        onClose={() => setIsAiDrawerOpen(false)}
+        entryId={editId}
+        contentVersion={contentVersion}
+      />
 
       {/* ADD TOPIC MODAL */}
       <AddTopicModal

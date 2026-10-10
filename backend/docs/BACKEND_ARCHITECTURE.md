@@ -16,6 +16,8 @@ mylog là nền tảng nhật ký cá nhân có dữ liệu đặc biệt nhạy
 
 Sản phẩm chỉ hỗ trợ mental wellness và self-reflection, không chẩn đoán, điều trị hoặc thay thế chuyên gia.
 
+Danh mục tác nhân, luồng chính/ngoại lệ và trạng thái triển khai của từng nghiệp vụ nằm ở [USE_CASE_CATALOG.md](USE_CASE_CATALOG.md).
+
 ## 2. Lựa chọn kiến trúc
 
 ### 2.1 Modular monolith
@@ -160,7 +162,7 @@ my-log-platform/
 │           │   ├── safety/
 │           │   └── support/
 │           └── resources/
-└── front-end/my-app/
+└── front-end/my-app-web/
 ```
 
 MVP chưa cần multi-module Maven. Package boundary + ArchUnit ít ceremony hơn. Chỉ tách Maven module khi build time, ownership hoặc deploy độc lập thực sự yêu cầu.
@@ -361,6 +363,15 @@ Chỉ tính/hiển thị correlation khi đạt minimum sample size được c�
 - Metrics/evidence tách khỏi narrative do LLM sinh.
 - Regenerate tạo version mới, không overwrite âm thầm.
 
+### Đề xuất sản phẩm sau M5: self-compassion và bản chuẩn bị tham vấn
+
+Ba luồng **chưa triển khai** được mô tả trong [đề xuất tính năng](SELF_COMPASSION_FEATURE_PROPOSALS.md): thư do người dùng viết để tự đọc lại, kho điểm sáng nhỏ có xác nhận trước khi lưu, và bản tóm tắt chọn lọc do người dùng duyệt trước khi xuất. Đây không phải đầu ra mặc định của `JournalAnalyzer` hoặc report hiện có.
+
+- Một điểm check-in thấp có thể gợi ý *lựa chọn* xem thư; không tự mở/gửi thư và không thay thế `SAFETY_FLOW` bằng nội dung cũ.
+- Trích xuất điểm sáng, nếu được bổ sung, chỉ dùng bài/phiên bản đã lưu, sau consent và safety; người dùng sửa hoặc từ chối trước khi tạo mục riêng. Không dùng `sentiment` làm bằng chứng một sự kiện đã xảy ra.
+- Bản chuẩn bị tham vấn chỉ dùng dữ liệu tổng hợp và các mục người dùng chọn, kèm nguồn/số mẫu; không mặc định kèm nguyên văn journal hoặc suy luận chẩn đoán. Người dùng chủ động xem trước và xuất, không chia sẻ tự động. Luồng này khác export toàn bộ dữ liệu cá nhân.
+- Dữ liệu nhạy cảm mới phải mã hóa, owner-scope, thuộc export/deletion; persistence/API chỉ được chốt sau khi có contract, retention và migration riêng. Các module truy cập nhau qua application port/facade.
+
 ### 7.5 Xóa tài khoản
 
 1. Re-authenticate và tạo `deletion_request` có grace period.
@@ -479,6 +490,7 @@ Base path `/api/v1`. JSON `camelCase`; enum `UPPER_SNAKE_CASE`; ID là UUID stri
 POST   /auth/register
 POST   /auth/email-verifications
 POST   /auth/email-verifications:confirm
+POST   /auth/email-verifications:confirm-code
 POST   /auth/login
 POST   /auth/refresh
 POST   /auth/logout
@@ -629,6 +641,8 @@ Audit lưu `actorId`, `action`, `targetType`, `targetId`, `reason`, `timestamp`,
 - Admin analytics chỉ dùng aggregate và minimum cohort size.
 
 ## 11. Safety pipeline
+
+Gợi ý khi đang viết là use case riêng với phân tích bài đã lưu. API `POST /api/v1/journal-writing-suggestions` (JWT, plain text tối đa 4.000 ký tự, 20 lần/15 phút/user) kiểm tra consent `AI_PROCESSING` và dùng `SafetyScreeningUseCase` trước khi trả câu hỏi mẫu do backend sở hữu. Nó không lưu draft, không tạo outbox/job và mặc định tắt bằng `MYLOG_WRITING_SUGGESTIONS_ENABLED=false`. Frontend login/journal còn mock nên chưa gọi API này; FE không tự quyết định safety hoặc nội dung gợi ý. Xem [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md) cho trạng thái triển khai.
 
 ```text
 Input validation

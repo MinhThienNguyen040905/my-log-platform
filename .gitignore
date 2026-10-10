@@ -2,3 +2,6 @@
 **/.agents/reports/
 .playwright-mcp/
 scratch/
+# Node.js dependencies and TypeScript build caches across web/mobile projects.
+**/node_modules/
+**/*.tsbuildinfo

@@ -171,8 +171,9 @@ export function useJournalEditor() {
           if (parsed.sleepHours) setSleepHours(parsed.sleepHours);
           if (parsed.topics) setTopics(parsed.topics);
         }
-      } catch (e) {
-        console.error('Draft load error:', e);
+      }
+      catch (error) {
+        console.error('Error occurred while restoring draft:', error);
       }
       }, 0);
       return () => clearTimeout(timer);

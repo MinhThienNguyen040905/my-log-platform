@@ -116,6 +116,9 @@ Table auth_action_tokens {
   id uuid [pk]
   user_id uuid [not null, ref: > users.id]
   token_hash bytea [not null, unique]
+  code_hash bytea
+  code_expires_at timestamptz
+  code_failed_attempts integer [not null, default: 0]
   purpose varchar(32) [not null]
   expires_at timestamptz [not null]
   consumed_at timestamptz
