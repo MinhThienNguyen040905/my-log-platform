@@ -18,6 +18,8 @@ spring:
   data:
     redis:
       url: ${MYLOG_REDIS_URL:redis://localhost:6379}
+      ssl:
+        enabled: ${MYLOG_REDIS_SSL_ENABLED:false}
 
 logging:
   level:

@@ -20,6 +20,8 @@ spring:
   data:
     redis:
       url: ${MYLOG_REDIS_URL}
+      ssl:
+        enabled: ${MYLOG_REDIS_SSL_ENABLED:false}
 
 management:
   endpoint:

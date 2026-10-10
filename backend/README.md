@@ -46,6 +46,7 @@ MYLOG_APP_PROFILE
 MYLOG_SERVER_PORT
 MYLOG_DB_*
 MYLOG_REDIS_URL
+MYLOG_REDIS_SSL_ENABLED
 MYLOG_ALLOWED_ORIGINS
 MYLOG_OPENAPI_ENABLED
 MYLOG_SWAGGER_UI_ENABLED
@@ -58,6 +59,8 @@ MYLOG_REPORTS_ENABLED
 ```
 
 Database local có thể dùng Docker Compose; môi trường được triển khai dùng PostgreSQL do Supabase quản lý qua `MYLOG_DB_URL`, `MYLOG_DB_USERNAME` và `MYLOG_DB_PASSWORD`. Ảnh nhật ký dùng Cloudinary; bật adapter bằng `MYLOG_CLOUDINARY_ENABLED=true` sau khi điền credential server-side.
+
+Redis local trong Compose dùng `MYLOG_REDIS_URL=redis://localhost:6379` và `MYLOG_REDIS_SSL_ENABLED=false`. Với Upstash, sao chép URL từ **Connect → TCP** (bắt đầu bằng `rediss://`) vào `MYLOG_REDIS_URL` và đặt `MYLOG_REDIS_SSL_ENABLED=true`; giữ URL chứa token trong `.env` local hoặc secret manager, không commit. Hiện Redis chưa lưu nghiệp vụ của mylog.
 
 ## Chạy local
 
