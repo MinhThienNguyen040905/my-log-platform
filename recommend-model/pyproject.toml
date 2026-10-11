@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mylog-recommend-model"
+version = "0.1.0"
+description = "Local prototype for reflection questions from reviewed knowledge cards"
+requires-python = ">=3.11"
+
+[project.scripts]
+recommend-lab = "recommend_model.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["recommend_model*"]
