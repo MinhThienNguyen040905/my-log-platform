@@ -1,0 +1,45 @@
+{
+  "sources": {
+    "soq": {
+      "file": "socratic_question_generation.json",
+      "url": "https://aclanthology.org/2023.eacl-main.12/",
+      "source_kind": "research_method",
+      "citation_review": "pending",
+      "rights": {"store_in_db": "unknown", "send_to_embedding_provider": "unknown", "send_to_generation_provider": "unknown", "display_excerpt": "unknown"},
+      "rights_evidence": null
+    },
+    "nqg": {
+      "file": "neural_question_generation_survey.json",
+      "url": "https://www.ijcai.org/proceedings/2024/889",
+      "source_kind": "research_method",
+      "citation_review": "pending",
+      "rights": {"store_in_db": "unknown", "send_to_embedding_provider": "unknown", "send_to_generation_provider": "unknown", "display_excerpt": "unknown"},
+      "rights_evidence": null
+    },
+    "ref": {
+      "file": "automatic_reflection_generation.json",
+      "url": "https://aclanthology.org/2023.gem-1.6/",
+      "source_kind": "research_method",
+      "citation_review": "pending",
+      "rights": {"store_in_db": "unknown", "send_to_embedding_provider": "unknown", "send_to_generation_provider": "unknown", "display_excerpt": "unknown"},
+      "rights_evidence": null
+    },
+    "who_2020": {
+      "file": "psychological_knowledge_additional.json",
+      "url": "https://www.who.int/publications-detail-redirect/9789240003927",
+      "source_kind": "self_reflection_content",
+      "citation_review": "pending",
+      "rights": {"store_in_db": "unknown", "send_to_embedding_provider": "unknown", "send_to_generation_provider": "unknown", "display_excerpt": "unknown"},
+      "rights_evidence": null
+    },
+    "thought_record_user": {
+      "file": "psychological_knowledge_additional.json",
+      "url": null,
+      "source_kind": "self_reflection_content",
+      "citation_review": "unresolved",
+      "possible_reference": "https://www.nhs.uk/every-mind-matters/mental-wellbeing-tips/self-help-cbt-techniques/thought-record/",
+      "rights": {"store_in_db": "unknown", "send_to_embedding_provider": "unknown", "send_to_generation_provider": "unknown", "display_excerpt": "unknown"},
+      "rights_evidence": null
+    }
+  }
+}

@@ -1,0 +1,1076 @@
+{
+  "document_metadata": {
+    "title": "Combined knowledge cards from three uploaded papers",
+    "authors": [],
+    "publication_year": null,
+    "document_type": "curated multi-document dataset",
+    "language": "English (sources); Vietnamese (annotations and generated questions)",
+    "total_pages": 43,
+    "extraction_date": "2026-10-11"
+  },
+  "knowledge_cards": [
+    {
+      "id": "soq_001",
+      "framework": "Socratic Question Generation",
+      "concept": "Socratic Questioning",
+      "concept_vi": "Đặt câu hỏi Socrates",
+      "definition": "Kỹ thuật sử dụng câu hỏi thăm dò nhằm khơi gợi suy xét về niềm tin và góc nhìn của một người.",
+      "psychological_mechanism": "Câu hỏi nhắm tới quan điểm cá nhân và khuyến khích xem xét lại lập luận thay vì tìm một đáp án có sẵn.",
+      "observable_signals": [
+        {
+          "signal": "Người viết trình bày một quan điểm cá nhân về một vấn đề.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Explore personal beliefs",
+      "question_templates": [
+        {
+          "question": "Bạn đang dựa trên điều gì để hình thành quan điểm này?",
+          "purpose": "Explore personal beliefs"
+        },
+        {
+          "question": "Có góc nhìn nào khác mà bạn muốn cân nhắc không?",
+          "purpose": "Explore personal beliefs"
+        }
+      ],
+      "application_contexts": [
+        "personal reflection",
+        "education",
+        "coaching"
+      ],
+      "limitations": [
+        "Bài báo nghiên cứu sinh câu hỏi; không xác nhận hiệu quả điều trị của các câu hỏi được tạo."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 1,
+        "page_end": 1,
+        "section": "Abstract; 1 Introduction",
+        "supporting_excerpt": "Socratic questioning is a form of reflective in- quiry"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "socratic",
+        "reflection"
+      ]
+    },
+    {
+      "id": "soq_002",
+      "framework": "Socratic Question Generation",
+      "concept": "Clarification",
+      "concept_vi": "Làm rõ ý nghĩa",
+      "definition": "Loại câu hỏi tìm hiểu điểm mơ hồ trong một suy nghĩ hoặc phát biểu.",
+      "psychological_mechanism": "Yêu cầu người nói làm rõ thuật ngữ hoặc ý định trước khi tiếp tục lập luận.",
+      "observable_signals": [
+        {
+          "signal": "Phát biểu có khái niệm chưa được định nghĩa rõ.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Clarify meaning",
+      "question_templates": [
+        {
+          "question": "Khi nói điều đó, bạn đang muốn diễn đạt cụ thể điều gì?",
+          "purpose": "Clarify meaning"
+        },
+        {
+          "question": "Bạn có thể đưa ra một ví dụ để làm rõ ý này không?",
+          "purpose": "Clarify meaning"
+        }
+      ],
+      "application_contexts": [
+        "journal",
+        "conversation"
+      ],
+      "limitations": [
+        "Không xem sự mơ hồ là bằng chứng về sai lệch nhận thức."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "Table 1",
+        "supporting_excerpt": "Question probing the ambiguities of a thought."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "clarification",
+        "socratic"
+      ]
+    },
+    {
+      "id": "soq_003",
+      "framework": "Socratic Question Generation",
+      "concept": "Probing assumptions",
+      "concept_vi": "Thăm dò giả định",
+      "definition": "Loại câu hỏi khám phá các giả định nằm phía sau một suy nghĩ.",
+      "psychological_mechanism": "Làm lộ những tiền đề có thể chưa được kiểm tra.",
+      "observable_signals": [
+        {
+          "signal": "Người viết đưa ra kết luận mà không nêu rõ tiền đề.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Examine assumptions",
+      "question_templates": [
+        {
+          "question": "Bạn đang ngầm giả định điều gì khi đi đến kết luận đó?",
+          "purpose": "Examine assumptions"
+        },
+        {
+          "question": "Nếu giả định ấy không đúng, cách nhìn của bạn sẽ thay đổi thế nào?",
+          "purpose": "Examine assumptions"
+        }
+      ],
+      "application_contexts": [
+        "decision making",
+        "self-reflection"
+      ],
+      "limitations": [
+        "Không mặc định giả định là sai."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "Table 1",
+        "supporting_excerpt": "Question probing the assumptions behind a thought."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "assumptions",
+        "socratic"
+      ]
+    },
+    {
+      "id": "soq_004",
+      "framework": "Socratic Question Generation",
+      "concept": "Probing reasons and evidences",
+      "concept_vi": "Thăm dò lý do và bằng chứng",
+      "definition": "Loại câu hỏi yêu cầu lý do hoặc bằng chứng cụ thể hỗ trợ một nhận định.",
+      "psychological_mechanism": "Hướng sự chú ý đến cơ sở biện minh cho một suy nghĩ.",
+      "observable_signals": [
+        {
+          "signal": "Người viết đưa ra khẳng định nhưng chưa nói căn cứ.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Examine evidence",
+      "question_templates": [
+        {
+          "question": "Những trải nghiệm hoặc bằng chứng nào khiến bạn tin điều đó?",
+          "purpose": "Examine evidence"
+        },
+        {
+          "question": "Có thông tin nào chưa phù hợp với nhận định này không?",
+          "purpose": "Examine evidence"
+        }
+      ],
+      "application_contexts": [
+        "learning",
+        "work",
+        "reflection"
+      ],
+      "limitations": [
+        "Thiếu bằng chứng trong nhật ký không đồng nghĩa khẳng định là sai."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "Table 1",
+        "supporting_excerpt": "Question probing the justifications or concrete evidences"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "evidence",
+        "socratic"
+      ]
+    },
+    {
+      "id": "soq_005",
+      "framework": "Socratic Question Generation",
+      "concept": "Probing implications and consequences",
+      "concept_vi": "Thăm dò hệ quả",
+      "definition": "Loại câu hỏi tìm hiểu tác động hoặc hệ quả có thể phát sinh từ một suy nghĩ.",
+      "psychological_mechanism": "Mở rộng suy xét từ quan điểm hiện tại sang các kết quả có thể xảy ra.",
+      "observable_signals": [
+        {
+          "signal": "Người viết dự định hành động hoặc đưa ra kết luận có hệ quả.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Explore consequences",
+      "question_templates": [
+        {
+          "question": "Nếu bạn hành động theo suy nghĩ đó, điều gì có thể xảy ra tiếp theo?",
+          "purpose": "Explore consequences"
+        },
+        {
+          "question": "Kết quả đó có thể ảnh hưởng đến điều gì bạn coi trọng?",
+          "purpose": "Explore consequences"
+        }
+      ],
+      "application_contexts": [
+        "choices",
+        "planning"
+      ],
+      "limitations": [
+        "Các hệ quả được thảo luận chỉ là khả năng, không phải dự báo chắc chắn."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "Table 1",
+        "supporting_excerpt": "Question probing the impacts or implications of a thought."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "consequences",
+        "socratic"
+      ]
+    },
+    {
+      "id": "soq_006",
+      "framework": "Socratic Question Generation",
+      "concept": "Probing alternative viewpoints and perspectives",
+      "concept_vi": "Khám phá góc nhìn thay thế",
+      "definition": "Loại câu hỏi gợi mở những góc nhìn khả dĩ khác về cùng vấn đề.",
+      "psychological_mechanism": "Khuyến khích xem xét nhiều cách diễn giải thay vì chỉ một quan điểm.",
+      "observable_signals": [
+        {
+          "signal": "Người viết thể hiện một cách nhìn duy nhất.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Consider alternatives",
+      "question_templates": [
+        {
+          "question": "Một người khác có thể nhìn tình huống này theo cách nào?",
+          "purpose": "Consider alternatives"
+        },
+        {
+          "question": "Có cách giải thích nào khác mà bạn chưa cân nhắc không?",
+          "purpose": "Consider alternatives"
+        }
+      ],
+      "application_contexts": [
+        "conflict",
+        "self-reflection"
+      ],
+      "limitations": [
+        "Không áp đặt rằng mọi góc nhìn đều có giá trị bằng nhau."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "Table 1",
+        "supporting_excerpt": "Question probing other possible viewpoints."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "perspective",
+        "socratic"
+      ]
+    },
+    {
+      "id": "soq_007",
+      "framework": "Socratic Question Generation",
+      "concept": "SocratiQ dataset",
+      "concept_vi": "Bộ dữ liệu SocratiQ",
+      "definition": "Bộ dữ liệu gồm 110.050 cặp ngữ cảnh–câu hỏi tiếng Anh được thu thập từ Reddit r/changemyview.",
+      "psychological_mechanism": "Ghép câu hỏi trong bình luận với ngữ cảnh có độ tương đồng bằng Sentence-BERT, sau đó lọc theo ngưỡng.",
+      "observable_signals": [
+        {
+          "signal": "Ngữ cảnh diễn đạt quan điểm và được liên kết với câu hỏi thăm dò.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Design question dataset",
+      "question_templates": [
+        {
+          "question": "Câu hỏi nào phù hợp nhất để tìm hiểu thêm về quan điểm vừa nêu?",
+          "purpose": "Design question dataset"
+        },
+        {
+          "question": "Cần thêm ngữ cảnh gì để câu hỏi không bị lệch ý?",
+          "purpose": "Design question dataset"
+        }
+      ],
+      "application_contexts": [
+        "dataset design",
+        "question generation"
+      ],
+      "limitations": [
+        "Dữ liệu Reddit không tương đương dữ liệu lâm sàng; không tự suy ra khả năng khái quát sang nhật ký cá nhân."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 2,
+        "page_end": 2,
+        "section": "2 Dataset Collection",
+        "supporting_excerpt": "110, 050 English"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "dataset",
+        "sentence-bert",
+        "retrieval"
+      ]
+    },
+    {
+      "id": "soq_008",
+      "framework": "Socratic Question Generation",
+      "concept": "Type-sensitive question generation",
+      "concept_vi": "Sinh câu hỏi theo loại",
+      "definition": "Cách tạo câu hỏi có điều kiện dựa trên loại câu hỏi Socrates và ngữ cảnh.",
+      "psychological_mechanism": "Bổ sung nhãn loại câu hỏi vào đầu vào của mô hình sinh câu hỏi để kiểm soát hướng thăm dò.",
+      "observable_signals": [
+        {
+          "signal": "Ngữ cảnh có thể được đặt nhiều câu hỏi với mục tiêu khác nhau.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Control question intent",
+      "question_templates": [
+        {
+          "question": "Bạn muốn làm rõ điều gì nhất trong suy nghĩ này?",
+          "purpose": "Control question intent"
+        },
+        {
+          "question": "Bạn muốn xem xét bằng chứng hay một góc nhìn khác trước?",
+          "purpose": "Control question intent"
+        }
+      ],
+      "application_contexts": [
+        "question generation",
+        "MVP design"
+      ],
+      "limitations": [
+        "Các mô hình được đánh giá trên dữ liệu SocratiQ, không trực tiếp trên ứng dụng tự phản tư cá nhân."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 4,
+        "page_end": 4,
+        "section": "3 Socratic Question Generation",
+        "supporting_excerpt": "we use the Socratic question-types as prompts"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "prompting",
+        "question-type"
+      ]
+    },
+    {
+      "id": "nqg_001",
+      "framework": "Neural Question Generation",
+      "concept": "Neural Question Generation",
+      "concept_vi": "Sinh câu hỏi bằng mạng nơ-ron",
+      "definition": "Bài toán tự động tạo câu hỏi từ nguồn đầu vào như cơ sở tri thức, văn bản và hình ảnh.",
+      "psychological_mechanism": "Mô hình học ánh xạ từ đầu vào và tùy chọn đáp án mục tiêu sang câu hỏi văn bản.",
+      "observable_signals": [
+        {
+          "signal": "Có nội dung đầu vào làm căn cứ để tạo câu hỏi.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Generate grounded questions",
+      "question_templates": [
+        {
+          "question": "Từ nội dung bạn vừa viết, câu hỏi nào giúp bạn hiểu rõ hơn suy nghĩ của mình?",
+          "purpose": "Generate grounded questions"
+        },
+        {
+          "question": "Phần nào trong câu chuyện này bạn muốn khám phá sâu hơn?",
+          "purpose": "Generate grounded questions"
+        }
+      ],
+      "application_contexts": [
+        "question generation",
+        "NLP"
+      ],
+      "limitations": [
+        "Định nghĩa chung về NQG, không phải phương pháp tâm lý trị liệu."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 2,
+        "page_end": 2,
+        "section": "2.1 Problem Formulation",
+        "supporting_excerpt": "NQG task aims to automatically generate textual ques- tions"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "nqg",
+        "formulation"
+      ]
+    },
+    {
+      "id": "nqg_002",
+      "framework": "Neural Question Generation",
+      "concept": "Structured NQG",
+      "concept_vi": "Sinh câu hỏi từ dữ liệu có cấu trúc",
+      "definition": "Nhóm phương pháp sinh câu hỏi từ nguồn dữ liệu có tổ chức, điển hình là knowledge base.",
+      "psychological_mechanism": "Biểu diễn sự kiện trong đồ thị tri thức hoặc các cấu trúc tương tự để sinh câu hỏi.",
+      "observable_signals": [
+        {
+          "signal": "Dữ liệu đầu vào có các trường và quan hệ xác định.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Use structured knowledge",
+      "question_templates": [
+        {
+          "question": "Khái niệm nào trong tài liệu giúp bạn soi chiếu trải nghiệm này?",
+          "purpose": "Use structured knowledge"
+        },
+        {
+          "question": "Thông tin nào còn thiếu để đặt một câu hỏi phù hợp?",
+          "purpose": "Use structured knowledge"
+        }
+      ],
+      "application_contexts": [
+        "knowledge cards",
+        "RAG design"
+      ],
+      "limitations": [
+        "Bài báo không trực tiếp thử nghiệm Psychological Knowledge Cards dạng JSON."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 4,
+        "page_end": 4,
+        "section": "3 Structured Neural Question Generation",
+        "supporting_excerpt": "Structured NQG is designed to create pertinent questions"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "structured",
+        "knowledge-base"
+      ]
+    },
+    {
+      "id": "nqg_003",
+      "framework": "Neural Question Generation",
+      "concept": "Unstructured NQG",
+      "concept_vi": "Sinh câu hỏi từ dữ liệu phi cấu trúc",
+      "definition": "Nhóm phương pháp sinh câu hỏi từ dữ liệu ít cấu trúc hơn, gồm văn bản và hình ảnh.",
+      "psychological_mechanism": "Mô hình xử lý ngữ cảnh tự nhiên thay vì chỉ các bộ ba tri thức có cấu trúc.",
+      "observable_signals": [
+        {
+          "signal": "Đầu vào là một đoạn nhật ký tự do.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Generate from free text",
+      "question_templates": [
+        {
+          "question": "Chi tiết nào trong đoạn nhật ký khiến bạn muốn tìm hiểu thêm?",
+          "purpose": "Generate from free text"
+        },
+        {
+          "question": "Bạn muốn đặt câu hỏi về sự kiện, cảm xúc hay lựa chọn của mình?",
+          "purpose": "Generate from free text"
+        }
+      ],
+      "application_contexts": [
+        "journal text",
+        "NLP"
+      ],
+      "limitations": [
+        "Ứng dụng nhật ký là ví dụ triển khai do AI đề xuất."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 2,
+        "page_end": 2,
+        "section": "Figure 1; 1 Introduction",
+        "supporting_excerpt": "Unstructured NQG (§4)"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "unstructured",
+        "text"
+      ]
+    },
+    {
+      "id": "nqg_004",
+      "framework": "Neural Question Generation",
+      "concept": "Hybrid NQG",
+      "concept_vi": "Sinh câu hỏi từ nguồn kết hợp",
+      "definition": "Nhóm phương pháp kết hợp các loại nguồn đầu vào khác nhau để tạo câu hỏi.",
+      "psychological_mechanism": "Tổng hợp thông tin từ nhiều dạng biểu diễn hoặc phương thức dữ liệu.",
+      "observable_signals": [
+        {
+          "signal": "Bối cảnh gồm nhật ký và dữ liệu có cấu trúc liên quan.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Combine contexts",
+      "question_templates": [
+        {
+          "question": "Có thông tin nào trong trải nghiệm trước đây giúp bạn nhìn tình huống này rõ hơn?",
+          "purpose": "Combine contexts"
+        },
+        {
+          "question": "Giữa mục tiêu của bạn và điều đang xảy ra, bạn thấy điểm nào đáng suy ngẫm?",
+          "purpose": "Combine contexts"
+        }
+      ],
+      "application_contexts": [
+        "hybrid input",
+        "system design"
+      ],
+      "limitations": [
+        "Việc kết hợp nhật ký và knowledge cards là suy rộng thiết kế, không phải kết quả thực nghiệm của bài báo."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 2,
+        "page_end": 2,
+        "section": "Figure 1; 1 Introduction",
+        "supporting_excerpt": "Hybrid NQG (§5)"
+      },
+      "evidence_type": "inferred",
+      "review_status": "pending",
+      "tags": [
+        "hybrid",
+        "nqg"
+      ]
+    },
+    {
+      "id": "nqg_005",
+      "framework": "Neural Question Generation",
+      "concept": "Pre-trained sequence-to-sequence models",
+      "concept_vi": "Mô hình Seq2Seq tiền huấn luyện",
+      "definition": "Các mô hình tiền huấn luyện như T5 và BART được tổng quan như một hướng quan trọng trong sinh câu hỏi.",
+      "psychological_mechanism": "Tiền huấn luyện cung cấp biểu diễn ngữ nghĩa trước khi thích nghi cho tác vụ tạo câu hỏi.",
+      "observable_signals": [
+        {
+          "signal": "Bài toán cần chuyển đầu vào ngôn ngữ thành câu hỏi.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Choose model architecture",
+      "question_templates": [
+        {
+          "question": "Câu hỏi nào phản ánh sát nhất ý bạn vừa viết?",
+          "purpose": "Choose model architecture"
+        },
+        {
+          "question": "Bạn muốn câu hỏi ngắn gọn hay đi sâu vào một chi tiết cụ thể?",
+          "purpose": "Choose model architecture"
+        }
+      ],
+      "application_contexts": [
+        "model selection"
+      ],
+      "limitations": [
+        "Không suy ra rằng cần fine-tune cho MVP; bài báo là tổng quan phương pháp."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 1,
+        "page_end": 1,
+        "section": "1 Introduction",
+        "supporting_excerpt": "such as T5 [Raffel et al., 2020] and BART"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "t5",
+        "bart",
+        "seq2seq"
+      ]
+    },
+    {
+      "id": "nqg_006",
+      "framework": "Neural Question Generation",
+      "concept": "In-Context Learning for QG",
+      "concept_vi": "Học theo ngữ cảnh để sinh câu hỏi",
+      "definition": "Sử dụng prompt và ngữ cảnh để hướng mô hình ngôn ngữ lớn tạo câu hỏi mong muốn.",
+      "psychological_mechanism": "Cung cấp hướng dẫn hoặc ví dụ ngay trong ngữ cảnh suy luận thay vì nhất thiết cập nhật trọng số.",
+      "observable_signals": [
+        {
+          "signal": "Cần kiểm soát loại câu hỏi dựa trên prompt.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Prompt question generation",
+      "question_templates": [
+        {
+          "question": "Bạn muốn hiểu rõ điều gì nhất từ trải nghiệm vừa kể?",
+          "purpose": "Prompt question generation"
+        },
+        {
+          "question": "Có điều gì bạn muốn tự hỏi mà chưa biết bắt đầu từ đâu?",
+          "purpose": "Prompt question generation"
+        }
+      ],
+      "application_contexts": [
+        "prompt engineering",
+        "MVP"
+      ],
+      "limitations": [
+        "Bài báo khảo sát ICL; không đo hiệu quả riêng cho self-reflection."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 2,
+        "page_end": 2,
+        "section": "1 Introduction",
+        "supporting_excerpt": "In-Context Learning (ICL)"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "icl",
+        "llm",
+        "prompt"
+      ]
+    },
+    {
+      "id": "nqg_007",
+      "framework": "Neural Question Generation",
+      "concept": "N-gram evaluation metrics",
+      "concept_vi": "Đánh giá dựa trên n-gram",
+      "definition": "BLEU, ROUGE và METEOR đo sự tương đồng ở mức từ/cụm từ giữa câu hỏi sinh ra và câu hỏi tham chiếu.",
+      "psychological_mechanism": "So sánh chuỗi n-gram hoặc độ chính xác/độ bao phủ theo các công thức tương ứng.",
+      "observable_signals": [
+        {
+          "signal": "Có câu hỏi tham chiếu để so sánh đầu ra.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Evaluate lexical quality",
+      "question_templates": [
+        {
+          "question": "Câu hỏi này có diễn đạt rõ ràng điều bạn đang nghĩ không?",
+          "purpose": "Evaluate lexical quality"
+        },
+        {
+          "question": "Cách đặt câu hỏi này có gần với ngôn ngữ bạn sử dụng không?",
+          "purpose": "Evaluate lexical quality"
+        }
+      ],
+      "application_contexts": [
+        "evaluation"
+      ],
+      "limitations": [
+        "Điểm trùng từ không đủ để kết luận câu hỏi phản tư hữu ích."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "2.3 Evaluation",
+        "supporting_excerpt": "N-gram-based Metrics."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "bleu",
+        "rouge",
+        "meteor"
+      ]
+    },
+    {
+      "id": "nqg_008",
+      "framework": "Neural Question Generation",
+      "concept": "Semantic similarity and diversity evaluation",
+      "concept_vi": "Đánh giá tương đồng ngữ nghĩa và đa dạng",
+      "definition": "BERTScore đo tương đồng ngữ nghĩa; Distinct-n phản ánh mức đa dạng n-gram trong câu hỏi được tạo.",
+      "psychological_mechanism": "Sử dụng embedding ngữ cảnh hoặc tỷ lệ n-gram độc nhất để đánh giá các khía cạnh khác nhau.",
+      "observable_signals": [
+        {
+          "signal": "Có nhiều câu hỏi được sinh ra cần so sánh.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Evaluate relevance and diversity",
+      "question_templates": [
+        {
+          "question": "Ba câu hỏi này có đang hỏi cùng một điều theo những cách khác nhau không?",
+          "purpose": "Evaluate relevance and diversity"
+        },
+        {
+          "question": "Câu hỏi nào giúp bạn mở ra góc nhìn mới nhất?",
+          "purpose": "Evaluate relevance and diversity"
+        }
+      ],
+      "application_contexts": [
+        "evaluation",
+        "question ranking"
+      ],
+      "limitations": [
+        "Các chỉ số tự động không thay thế đánh giá của người dùng về an toàn và tính hữu ích."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "2.3 Evaluation",
+        "supporting_excerpt": "Distinct-n"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "bertscore",
+        "distinct-n",
+        "evaluation"
+      ]
+    },
+    {
+      "id": "ref_001",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Reflective Listening",
+      "concept_vi": "Lắng nghe phản ánh",
+      "definition": "Kỹ năng nắm bắt và phản hồi lại điều người đối thoại đã nói.",
+      "psychological_mechanism": "Phản hồi nội dung hoặc cảm xúc người nói thể hiện để truyền đạt rằng họ được thấu hiểu.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng mô tả trải nghiệm và cảm xúc của bản thân.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Reflect expressed experience",
+      "question_templates": [
+        {
+          "question": "Mình hiểu rằng chuyện này đang khiến bạn bận tâm; mình hiểu đúng không?",
+          "purpose": "Reflect expressed experience"
+        },
+        {
+          "question": "Điều gì trong trải nghiệm đó quan trọng nhất đối với bạn?",
+          "purpose": "Reflect expressed experience"
+        }
+      ],
+      "application_contexts": [
+        "supportive conversation",
+        "reflection"
+      ],
+      "limitations": [
+        "Nghiên cứu tập trung vào phản hồi của counselor, không trực tiếp đánh giá câu hỏi tự vấn."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 1,
+        "page_end": 1,
+        "section": "Abstract; 1 Introduction",
+        "supporting_excerpt": "reflective listening, i.e., cap- turing and returning"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "reflective-listening",
+        "empathy"
+      ]
+    },
+    {
+      "id": "ref_002",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Reflection resemblance",
+      "concept_vi": "Mức độ phản ánh đúng nội dung",
+      "definition": "Tiêu chí đánh giá liệu phản hồi có nắm bắt và trả lại nội dung người nói đã chia sẻ hay không.",
+      "psychological_mechanism": "Đánh giá sự phù hợp giữa phản hồi sinh ra và ngữ cảnh hội thoại.",
+      "observable_signals": [
+        {
+          "signal": "Có phản hồi tóm lược hoặc diễn giải lời người dùng.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Check grounding",
+      "question_templates": [
+        {
+          "question": "Cách diễn đạt lại này có đúng với điều bạn muốn nói không?",
+          "purpose": "Check grounding"
+        },
+        {
+          "question": "Có phần nào trong trải nghiệm của bạn chưa được hiểu đúng?",
+          "purpose": "Check grounding"
+        }
+      ],
+      "application_contexts": [
+        "response validation",
+        "evaluation"
+      ],
+      "limitations": [
+        "Không xem đây là phép đo độ chính xác tâm lý hoặc chẩn đoán."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 6,
+        "page_end": 6,
+        "section": "Evaluation; Reflection resemblance",
+        "supporting_excerpt": "captures and returns to the client something"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "evaluation",
+        "reflection"
+      ]
+    },
+    {
+      "id": "ref_003",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Conversational context for reflection",
+      "concept_vi": "Ngữ cảnh hội thoại để tạo phản ánh",
+      "definition": "Đầu vào của mô hình bao gồm các lượt nói trước đó cho đến lời nói gần nhất của người nhận hỗ trợ.",
+      "psychological_mechanism": "Dùng lịch sử hội thoại liền trước làm điều kiện sinh phản hồi.",
+      "observable_signals": [
+        {
+          "signal": "Lời nói hiện tại có liên hệ đến trao đổi trước đó.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Use relevant context",
+      "question_templates": [
+        {
+          "question": "Khi nhắc đến chuyện này, bạn đang liên hệ với trải nghiệm nào trước đó?",
+          "purpose": "Use relevant context"
+        },
+        {
+          "question": "Có điều gì từ cuộc trao đổi trước mà bạn muốn xem lại không?",
+          "purpose": "Use relevant context"
+        }
+      ],
+      "application_contexts": [
+        "context assembly",
+        "conversation"
+      ],
+      "limitations": [
+        "Ngữ cảnh giới hạn có thể bỏ sót thông tin xa hơn trong lịch sử."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "3.1 Data",
+        "supporting_excerpt": "conversational context and counselor reflection."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "context",
+        "dialogue"
+      ]
+    },
+    {
+      "id": "ref_004",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Few-shot reflection generation",
+      "concept_vi": "Sinh phản ánh bằng few-shot",
+      "definition": "Cách cung cấp hướng dẫn và một số ví dụ hội thoại–phản hồi trong prompt để mô hình sinh phản ánh.",
+      "psychological_mechanism": "Mô hình được điều kiện hóa bởi ví dụ tại thời điểm suy luận mà không cập nhật trọng số.",
+      "observable_signals": [
+        {
+          "signal": "Có ví dụ phản hồi mẫu đạt yêu cầu.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Guide output with examples",
+      "question_templates": [
+        {
+          "question": "Bạn muốn được lắng nghe và làm rõ điều gì trước tiên?",
+          "purpose": "Guide output with examples"
+        },
+        {
+          "question": "Mình có thể hiểu cảm giác bạn mô tả theo cách nào khác không?",
+          "purpose": "Guide output with examples"
+        }
+      ],
+      "application_contexts": [
+        "prompt engineering",
+        "MVP"
+      ],
+      "limitations": [
+        "17 ví dụ thuộc cấu hình nghiên cứu, không phải số lượng tối ưu phổ quát."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "3.2 Model overview",
+        "supporting_excerpt": "prompt consisting of an instructional state- ment and 17 examples"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "few-shot",
+        "prompt"
+      ]
+    },
+    {
+      "id": "ref_005",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Fine-tuning reflection generation",
+      "concept_vi": "Fine-tuning để sinh phản ánh",
+      "definition": "Cách cập nhật trọng số GPT-3 bằng các cặp ngữ cảnh–phản hồi chuyên biệt.",
+      "psychological_mechanism": "Mô hình học từ dữ liệu phản ánh do counselor hoặc người viết tham chiếu tạo ra.",
+      "observable_signals": [
+        {
+          "signal": "Có bộ dữ liệu cặp ngữ cảnh và phản hồi được đánh giá.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Assess fine-tuning need",
+      "question_templates": [
+        {
+          "question": "Câu hỏi nào sẽ giúp bạn cảm thấy trải nghiệm của mình được hiểu chính xác hơn?",
+          "purpose": "Assess fine-tuning need"
+        },
+        {
+          "question": "Phản hồi nào đang làm rõ ý bạn thay vì thêm nhận định mới?",
+          "purpose": "Assess fine-tuning need"
+        }
+      ],
+      "application_contexts": [
+        "model development",
+        "evaluation"
+      ],
+      "limitations": [
+        "Kết quả nghiên cứu không chứng minh fine-tuning luôn vượt few-shot."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "3.2 Model overview",
+        "supporting_excerpt": "We fine-tune a model on 350"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "fine-tuning",
+        "gpt-3"
+      ]
+    },
+    {
+      "id": "ref_006",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Quality of training examples",
+      "concept_vi": "Chất lượng ví dụ huấn luyện",
+      "definition": "Chất lượng phản ánh trong dữ liệu huấn luyện ảnh hưởng đến chất lượng phản hồi do mô hình tạo ra.",
+      "psychological_mechanism": "Fine-tuning trên phản ánh tham chiếu chất lượng cao cho phản hồi được đánh giá tốt hơn so với dữ liệu phản hồi thực tế chất lượng thấp hơn.",
+      "observable_signals": [
+        {
+          "signal": "Có nhiều nguồn ví dụ với chất lượng khác nhau.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Curate examples",
+      "question_templates": [
+        {
+          "question": "Câu hỏi này có thực sự dựa trên điều người dùng đã nói không?",
+          "purpose": "Curate examples"
+        },
+        {
+          "question": "Nó có khiến người dùng thấy bị phán xét hoặc bị diễn giải quá mức không?",
+          "purpose": "Curate examples"
+        }
+      ],
+      "application_contexts": [
+        "dataset curation",
+        "quality assurance"
+      ],
+      "limitations": [
+        "Không suy rộng từ GPT-3 và bộ dữ liệu nghiên cứu sang mọi mô hình mới."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 1,
+        "page_end": 1,
+        "section": "Abstract",
+        "supporting_excerpt": "high-quality responses gen- erate substantially better reflections"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "data-quality",
+        "fine-tuning"
+      ]
+    },
+    {
+      "id": "ref_007",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Empathetic reflection prompt design",
+      "concept_vi": "Thiết kế prompt phản ánh đồng cảm",
+      "definition": "Nghiên cứu sử dụng mô tả tình huống, vai người nói và chỉ dẫn phản ánh để định hướng câu trả lời.",
+      "psychological_mechanism": "Chỉ dẫn yêu cầu lắng nghe, tử tế, phản ánh cảm xúc và diễn giải lại thông điệp người nói.",
+      "observable_signals": [
+        {
+          "signal": "Phản hồi cần giữ trọng tâm ở trải nghiệm người dùng.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Avoid judgmental response",
+      "question_templates": [
+        {
+          "question": "Mình hiểu rằng bạn đang có nhiều suy nghĩ về chuyện này; điều gì khiến bạn chú ý nhất?",
+          "purpose": "Avoid judgmental response"
+        },
+        {
+          "question": "Bạn có muốn làm rõ cảm giác của mình trước khi nghĩ đến giải pháp không?",
+          "purpose": "Avoid judgmental response"
+        }
+      ],
+      "application_contexts": [
+        "prompt design",
+        "response generation"
+      ],
+      "limitations": [
+        "Các câu hỏi tiếng Việt là ví dụ ứng dụng do AI đề xuất, không phải đầu ra đã kiểm định trong bài báo."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 4,
+        "page_end": 4,
+        "section": "3.4 Prompt design",
+        "supporting_excerpt": "listens empathetically, is kind, and reflects back"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "empathy",
+        "prompt"
+      ]
+    }
+  ]
+}

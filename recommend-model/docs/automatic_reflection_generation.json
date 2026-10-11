@@ -1,0 +1,341 @@
+{
+  "document_metadata": {
+    "title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+    "authors": [
+      "Emma O’Neil",
+      "João Sedoc",
+      "Diyi Yang",
+      "Haiyi Zhu",
+      "Lyle Ungar"
+    ],
+    "publication_year": 2023,
+    "document_type": "research article",
+    "language": "English",
+    "total_pages": 14,
+    "extraction_date": "2026-10-11"
+  },
+  "knowledge_cards": [
+    {
+      "id": "ref_001",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Reflective Listening",
+      "concept_vi": "Lắng nghe phản ánh",
+      "definition": "Kỹ năng nắm bắt và phản hồi lại điều người đối thoại đã nói.",
+      "psychological_mechanism": "Phản hồi nội dung hoặc cảm xúc người nói thể hiện để truyền đạt rằng họ được thấu hiểu.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng mô tả trải nghiệm và cảm xúc của bản thân.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Reflect expressed experience",
+      "question_templates": [
+        {
+          "question": "Mình hiểu rằng chuyện này đang khiến bạn bận tâm; mình hiểu đúng không?",
+          "purpose": "Reflect expressed experience"
+        },
+        {
+          "question": "Điều gì trong trải nghiệm đó quan trọng nhất đối với bạn?",
+          "purpose": "Reflect expressed experience"
+        }
+      ],
+      "application_contexts": [
+        "supportive conversation",
+        "reflection"
+      ],
+      "limitations": [
+        "Nghiên cứu tập trung vào phản hồi của counselor, không trực tiếp đánh giá câu hỏi tự vấn."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 1,
+        "page_end": 1,
+        "section": "Abstract; 1 Introduction",
+        "supporting_excerpt": "reflective listening, i.e., cap- turing and returning"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "reflective-listening",
+        "empathy"
+      ]
+    },
+    {
+      "id": "ref_002",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Reflection resemblance",
+      "concept_vi": "Mức độ phản ánh đúng nội dung",
+      "definition": "Tiêu chí đánh giá liệu phản hồi có nắm bắt và trả lại nội dung người nói đã chia sẻ hay không.",
+      "psychological_mechanism": "Đánh giá sự phù hợp giữa phản hồi sinh ra và ngữ cảnh hội thoại.",
+      "observable_signals": [
+        {
+          "signal": "Có phản hồi tóm lược hoặc diễn giải lời người dùng.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Check grounding",
+      "question_templates": [
+        {
+          "question": "Cách diễn đạt lại này có đúng với điều bạn muốn nói không?",
+          "purpose": "Check grounding"
+        },
+        {
+          "question": "Có phần nào trong trải nghiệm của bạn chưa được hiểu đúng?",
+          "purpose": "Check grounding"
+        }
+      ],
+      "application_contexts": [
+        "response validation",
+        "evaluation"
+      ],
+      "limitations": [
+        "Không xem đây là phép đo độ chính xác tâm lý hoặc chẩn đoán."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 6,
+        "page_end": 6,
+        "section": "Evaluation; Reflection resemblance",
+        "supporting_excerpt": "captures and returns to the client something"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "evaluation",
+        "reflection"
+      ]
+    },
+    {
+      "id": "ref_003",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Conversational context for reflection",
+      "concept_vi": "Ngữ cảnh hội thoại để tạo phản ánh",
+      "definition": "Đầu vào của mô hình bao gồm các lượt nói trước đó cho đến lời nói gần nhất của người nhận hỗ trợ.",
+      "psychological_mechanism": "Dùng lịch sử hội thoại liền trước làm điều kiện sinh phản hồi.",
+      "observable_signals": [
+        {
+          "signal": "Lời nói hiện tại có liên hệ đến trao đổi trước đó.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Use relevant context",
+      "question_templates": [
+        {
+          "question": "Khi nhắc đến chuyện này, bạn đang liên hệ với trải nghiệm nào trước đó?",
+          "purpose": "Use relevant context"
+        },
+        {
+          "question": "Có điều gì từ cuộc trao đổi trước mà bạn muốn xem lại không?",
+          "purpose": "Use relevant context"
+        }
+      ],
+      "application_contexts": [
+        "context assembly",
+        "conversation"
+      ],
+      "limitations": [
+        "Ngữ cảnh giới hạn có thể bỏ sót thông tin xa hơn trong lịch sử."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "3.1 Data",
+        "supporting_excerpt": "conversational context and counselor reflection."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "context",
+        "dialogue"
+      ]
+    },
+    {
+      "id": "ref_004",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Few-shot reflection generation",
+      "concept_vi": "Sinh phản ánh bằng few-shot",
+      "definition": "Cách cung cấp hướng dẫn và một số ví dụ hội thoại–phản hồi trong prompt để mô hình sinh phản ánh.",
+      "psychological_mechanism": "Mô hình được điều kiện hóa bởi ví dụ tại thời điểm suy luận mà không cập nhật trọng số.",
+      "observable_signals": [
+        {
+          "signal": "Có ví dụ phản hồi mẫu đạt yêu cầu.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Guide output with examples",
+      "question_templates": [
+        {
+          "question": "Bạn muốn được lắng nghe và làm rõ điều gì trước tiên?",
+          "purpose": "Guide output with examples"
+        },
+        {
+          "question": "Mình có thể hiểu cảm giác bạn mô tả theo cách nào khác không?",
+          "purpose": "Guide output with examples"
+        }
+      ],
+      "application_contexts": [
+        "prompt engineering",
+        "MVP"
+      ],
+      "limitations": [
+        "17 ví dụ thuộc cấu hình nghiên cứu, không phải số lượng tối ưu phổ quát."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "3.2 Model overview",
+        "supporting_excerpt": "prompt consisting of an instructional state- ment and 17 examples"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "few-shot",
+        "prompt"
+      ]
+    },
+    {
+      "id": "ref_005",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Fine-tuning reflection generation",
+      "concept_vi": "Fine-tuning để sinh phản ánh",
+      "definition": "Cách cập nhật trọng số GPT-3 bằng các cặp ngữ cảnh–phản hồi chuyên biệt.",
+      "psychological_mechanism": "Mô hình học từ dữ liệu phản ánh do counselor hoặc người viết tham chiếu tạo ra.",
+      "observable_signals": [
+        {
+          "signal": "Có bộ dữ liệu cặp ngữ cảnh và phản hồi được đánh giá.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Assess fine-tuning need",
+      "question_templates": [
+        {
+          "question": "Câu hỏi nào sẽ giúp bạn cảm thấy trải nghiệm của mình được hiểu chính xác hơn?",
+          "purpose": "Assess fine-tuning need"
+        },
+        {
+          "question": "Phản hồi nào đang làm rõ ý bạn thay vì thêm nhận định mới?",
+          "purpose": "Assess fine-tuning need"
+        }
+      ],
+      "application_contexts": [
+        "model development",
+        "evaluation"
+      ],
+      "limitations": [
+        "Kết quả nghiên cứu không chứng minh fine-tuning luôn vượt few-shot."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "3.2 Model overview",
+        "supporting_excerpt": "We fine-tune a model on 350"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "fine-tuning",
+        "gpt-3"
+      ]
+    },
+    {
+      "id": "ref_006",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Quality of training examples",
+      "concept_vi": "Chất lượng ví dụ huấn luyện",
+      "definition": "Chất lượng phản ánh trong dữ liệu huấn luyện ảnh hưởng đến chất lượng phản hồi do mô hình tạo ra.",
+      "psychological_mechanism": "Fine-tuning trên phản ánh tham chiếu chất lượng cao cho phản hồi được đánh giá tốt hơn so với dữ liệu phản hồi thực tế chất lượng thấp hơn.",
+      "observable_signals": [
+        {
+          "signal": "Có nhiều nguồn ví dụ với chất lượng khác nhau.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Curate examples",
+      "question_templates": [
+        {
+          "question": "Câu hỏi này có thực sự dựa trên điều người dùng đã nói không?",
+          "purpose": "Curate examples"
+        },
+        {
+          "question": "Nó có khiến người dùng thấy bị phán xét hoặc bị diễn giải quá mức không?",
+          "purpose": "Curate examples"
+        }
+      ],
+      "application_contexts": [
+        "dataset curation",
+        "quality assurance"
+      ],
+      "limitations": [
+        "Không suy rộng từ GPT-3 và bộ dữ liệu nghiên cứu sang mọi mô hình mới."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 1,
+        "page_end": 1,
+        "section": "Abstract",
+        "supporting_excerpt": "high-quality responses gen- erate substantially better reflections"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "data-quality",
+        "fine-tuning"
+      ]
+    },
+    {
+      "id": "ref_007",
+      "framework": "Reflective Listening / NLP",
+      "concept": "Empathetic reflection prompt design",
+      "concept_vi": "Thiết kế prompt phản ánh đồng cảm",
+      "definition": "Nghiên cứu sử dụng mô tả tình huống, vai người nói và chỉ dẫn phản ánh để định hướng câu trả lời.",
+      "psychological_mechanism": "Chỉ dẫn yêu cầu lắng nghe, tử tế, phản ánh cảm xúc và diễn giải lại thông điệp người nói.",
+      "observable_signals": [
+        {
+          "signal": "Phản hồi cần giữ trọng tâm ở trải nghiệm người dùng.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Avoid judgmental response",
+      "question_templates": [
+        {
+          "question": "Mình hiểu rằng bạn đang có nhiều suy nghĩ về chuyện này; điều gì khiến bạn chú ý nhất?",
+          "purpose": "Avoid judgmental response"
+        },
+        {
+          "question": "Bạn có muốn làm rõ cảm giác của mình trước khi nghĩ đến giải pháp không?",
+          "purpose": "Avoid judgmental response"
+        }
+      ],
+      "application_contexts": [
+        "prompt design",
+        "response generation"
+      ],
+      "limitations": [
+        "Các câu hỏi tiếng Việt là ví dụ ứng dụng do AI đề xuất, không phải đầu ra đã kiểm định trong bài báo."
+      ],
+      "source_reference": {
+        "document_title": "Automatic Reflection Generation for Peer-to-Peer Counseling",
+        "page_start": 4,
+        "page_end": 4,
+        "section": "3.4 Prompt design",
+        "supporting_excerpt": "listens empathetically, is kind, and reflects back"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "empathy",
+        "prompt"
+      ]
+    }
+  ]
+}
