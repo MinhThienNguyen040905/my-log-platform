@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface UserProfileUseCase {
+    void validateRegistrationPreferences(String timezone, String locale);
     void createDefault(UUID userId, String timezone, String locale, String termsVersion,
                        String privacyVersion, Instant now);
     ProfileView get(UUID userId);

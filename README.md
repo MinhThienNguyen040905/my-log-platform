@@ -15,7 +15,7 @@ Repository gồm backend Spring Boot, giao diện web Next.js, ứng dụng mobi
 
 ## Trạng thái kết nối API
 
-Backend có API cho xác thực, hồ sơ, nhật ký, check-in và các tính năng khác. Web đã nối luồng đăng ký, xác minh email bằng liên kết hoặc mã 8 chữ số, đăng nhập và lưu/tải nhật ký với backend. Bản nháp chưa lưu vẫn có thể nằm trong `localStorage`; xem [trạng thái web](front-end/my-app-web/README.md). Web cũng gọi `GET /api/v1/safety/resources` để lấy các nguồn hỗ trợ đã được duyệt khi mở hộp hỗ trợ an toàn; backend có thể trả danh sách rỗng nếu chưa có nguồn được xác minh. Mobile chưa gọi backend API.
+Backend có API cho xác thực, hồ sơ, nhật ký, check-in và các tính năng khác. Đăng ký chỉ tạo lượt tạm; xác minh email mới tạo tài khoản thật, và có thể đăng ký lại bằng cùng email khi chưa xác minh. Web đã nối luồng đăng ký, xác minh email bằng liên kết hoặc mã 8 chữ số, đăng nhập và lưu/tải nhật ký với backend. Bản nháp chưa lưu vẫn có thể nằm trong `localStorage`; xem [trạng thái web](front-end/my-app-web/README.md). Web cũng gọi `GET /api/v1/safety/resources` để lấy các nguồn hỗ trợ đã được duyệt khi mở hộp hỗ trợ an toàn; backend có thể trả danh sách rỗng nếu chưa có nguồn được xác minh. Mobile chưa gọi backend API.
 
 Không coi bản nháp trong `localStorage` là bản lưu trên máy chủ hoặc đánh giá rằng toàn bộ luồng safety/AI đã hoạt động từ đầu đến cuối. Xem [hướng dẫn backend](backend/README.md) và [trạng thái web](front-end/my-app-web/README.md) trước khi nối thêm API.
 

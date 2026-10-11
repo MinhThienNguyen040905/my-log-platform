@@ -3,6 +3,7 @@ package com.mylog.identity;
 import com.mylog.TestcontainersConfiguration;
 import com.mylog.identity.application.VerificationDelivery;
 import com.mylog.identity.application.IdentityService;
+import com.mylog.identity.application.IdentityStore;
 import com.mylog.platform.crypto.SensitiveDataCipher;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,7 @@ class IdentityFlowIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired DataSource dataSource;
     @Autowired IdentityService identity;
+    @Autowired IdentityStore identityStore;
     @Autowired SensitiveDataCipher cipher;
     @MockitoBean VerificationDelivery delivery;
 
@@ -96,27 +98,49 @@ class IdentityFlowIntegrationTest {
                  "acceptTerms":true,"acceptPrivacy":true}
                 """.formatted(email);
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(payload))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted()).andExpect(jsonPath("$.registrationId").exists());
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbc.queryForObject(
+                "SELECT count(*) FROM users WHERE email_lookup_hash=?", Integer.class,
+                cipher.lookupHash(IdentityService.normalizeEmail(email))));
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbc.queryForObject(
+                "SELECT count(*) FROM user_profiles WHERE user_id=(SELECT id FROM pending_registrations WHERE email_lookup_hash=?)",
+                Integer.class, cipher.lookupHash(IdentityService.normalizeEmail(email))));
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(payload))
-                .andExpect(status().isConflict());
+                .andExpect(status().isAccepted());
 
         org.mockito.ArgumentCaptor<String> token = org.mockito.ArgumentCaptor.forClass(String.class);
-        verify(delivery).send(eq(email), token.capture(), org.mockito.ArgumentMatchers.anyString());
-        byte[] storedVerification = jdbc.queryForObject("SELECT token_hash FROM auth_action_tokens ORDER BY created_at DESC LIMIT 1", byte[].class);
+        org.mockito.Mockito.verify(delivery, org.mockito.Mockito.times(2))
+                .send(eq(email), token.capture(), org.mockito.ArgumentMatchers.anyString());
+        byte[] storedVerification = jdbc.queryForObject("SELECT token_hash FROM pending_registrations WHERE email_lookup_hash=?",
+                byte[].class, cipher.lookupHash(IdentityService.normalizeEmail(email)));
         org.junit.jupiter.api.Assertions.assertFalse(java.util.Arrays.equals(storedVerification,
-                token.getValue().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+                token.getAllValues().get(1).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         mvc.perform(post("/api/v1/auth/email-verifications:confirm").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"" + token.getValue() + "\"}"))
-                .andExpect(status().isNoContent());
+                .content("{\"token\":\"" + token.getAllValues().get(0) + "\"}"))
+                .andExpect(status().isUnauthorized());
         mvc.perform(post("/api/v1/auth/email-verifications:confirm").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"" + token.getValue() + "\"}"))
+                .content("{\"token\":\"" + token.getAllValues().get(1) + "\"}"))
                 .andExpect(status().isNoContent());
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbc.queryForObject(
+                "SELECT count(*) FROM pending_registrations WHERE email_lookup_hash=?", Integer.class,
+                cipher.lookupHash(IdentityService.normalizeEmail(email))));
+        mvc.perform(post("/api/v1/auth/email-verifications:confirm").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"" + token.getAllValues().get(1) + "\"}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(payload))
+                .andExpect(status().isConflict());
 
         String login = "{\"email\":\"" + email + "\",\"password\":\"Correct Horse Battery Staple!\"}";
         String body = mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content(login))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String access = mapper.readTree(body).get("accessToken").asText();
         String refresh = mapper.readTree(body).get("refreshToken").asText();
+        org.junit.jupiter.api.Assertions.assertEquals("ACTIVE", jdbc.queryForObject(
+                "SELECT status FROM users WHERE id=?", String.class,
+                UUID.fromString(mapper.readTree(body).get("userId").asText())));
+        org.junit.jupiter.api.Assertions.assertEquals(1, jdbc.queryForObject(
+                "SELECT count(*) FROM users WHERE id=? AND email_verified_at IS NOT NULL", Integer.class,
+                UUID.fromString(mapper.readTree(body).get("userId").asText())));
         byte[] storedRefresh = jdbc.queryForObject("SELECT current_token_hash FROM auth_sessions WHERE user_id=?", byte[].class,
                 UUID.fromString(mapper.readTree(body).get("userId").asText()));
         org.junit.jupiter.api.Assertions.assertFalse(java.util.Arrays.equals(storedRefresh,
@@ -150,7 +174,7 @@ class IdentityFlowIntegrationTest {
         String otherEmail = "other-" + UUID.randomUUID() + "@example.test";
         String otherRegistration = payload.replace(email, otherEmail);
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(otherRegistration))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted());
         org.mockito.ArgumentCaptor<String> otherVerification = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(delivery).send(eq(otherEmail), otherVerification.capture(), org.mockito.ArgumentMatchers.anyString());
         mvc.perform(post("/api/v1/auth/email-verifications:confirm").contentType(MediaType.APPLICATION_JSON)
@@ -189,12 +213,12 @@ class IdentityFlowIntegrationTest {
                  "acceptTerms":true,"acceptPrivacy":true}
                 """.formatted(email);
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(payload))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted());
         var token = org.mockito.ArgumentCaptor.forClass(String.class);
         var code = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(delivery).send(eq(email), token.capture(), code.capture());
         org.junit.jupiter.api.Assertions.assertTrue(code.getValue().matches("[0-9]{8}"));
-        byte[] storedCode = jdbc.queryForObject("SELECT code_hash FROM auth_action_tokens WHERE token_hash=?",
+        byte[] storedCode = jdbc.queryForObject("SELECT code_hash FROM pending_registrations WHERE token_hash=?",
                 byte[].class, cipher.tokenHash(token.getValue()));
         org.junit.jupiter.api.Assertions.assertFalse(java.util.Arrays.equals(storedCode,
                 code.getValue().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
@@ -223,7 +247,7 @@ class IdentityFlowIntegrationTest {
                  "acceptTerms":true,"acceptPrivacy":true}
                 """.formatted(email);
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(payload))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted());
         var code = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(delivery).send(eq(email), org.mockito.ArgumentMatchers.anyString(), code.capture());
         String badCode = code.getValue().equals("00000000") ? "00000001" : "00000000";
@@ -235,7 +259,7 @@ class IdentityFlowIntegrationTest {
         mvc.perform(post("/api/v1/auth/email-verifications:confirm-code").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"" + email + "\",\"code\":\"" + code.getValue() + "\"}"))
                 .andExpect(status().isUnauthorized());
-        Integer attempts = jdbc.queryForObject("SELECT code_failed_attempts FROM auth_action_tokens WHERE user_id=(SELECT id FROM users WHERE email_lookup_hash=?)",
+        Integer attempts = jdbc.queryForObject("SELECT code_failed_attempts FROM pending_registrations WHERE email_lookup_hash=?",
                 Integer.class, cipher.lookupHash(IdentityService.normalizeEmail(email)));
         org.junit.jupiter.api.Assertions.assertEquals(5, attempts);
     }
@@ -249,7 +273,7 @@ class IdentityFlowIntegrationTest {
                  "acceptTerms":true,"acceptPrivacy":true}
                 """.formatted(email);
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(payload))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted());
         mvc.perform(post("/api/v1/auth/email-verifications").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"" + email + "\"}"))
                 .andExpect(status().isAccepted());
@@ -273,11 +297,11 @@ class IdentityFlowIntegrationTest {
                  "acceptTerms":true,"acceptPrivacy":true}
                 """.formatted(email);
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(payload))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted());
         var token = org.mockito.ArgumentCaptor.forClass(String.class);
         var code = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(delivery).send(eq(email), token.capture(), code.capture());
-        jdbc.update("UPDATE auth_action_tokens SET code_expires_at=now() - interval '1 minute' WHERE token_hash=?",
+        jdbc.update("UPDATE pending_registrations SET code_expires_at=now() - interval '1 minute' WHERE token_hash=?",
                 cipher.tokenHash(token.getValue()));
         mvc.perform(post("/api/v1/auth/email-verifications:confirm-code").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"" + email + "\",\"code\":\"" + code.getValue() + "\"}"))
@@ -285,6 +309,63 @@ class IdentityFlowIntegrationTest {
         mvc.perform(post("/api/v1/auth/email-verifications:confirm").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"token\":\"" + token.getValue() + "\"}"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void expiredUnverifiedRegistrationCanBeReplacedWithoutCreatingAUser() throws Exception {
+        String email = "retry-" + UUID.randomUUID() + "@example.test";
+        String first = """
+                {"email":"%s","password":"First Synthetic Password 123!","timezone":"UTC",
+                 "locale":"en","termsVersion":"v1","privacyVersion":"v1",
+                 "acceptTerms":true,"acceptPrivacy":true}
+                """.formatted(email);
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(first))
+                .andExpect(status().isAccepted());
+        jdbc.update("UPDATE pending_registrations SET expires_at=now() - interval '1 minute' WHERE email_lookup_hash=?",
+                cipher.lookupHash(IdentityService.normalizeEmail(email)));
+        identityStore.purgeExpired(java.time.Instant.now());
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbc.queryForObject(
+                "SELECT count(*) FROM pending_registrations WHERE email_lookup_hash=?", Integer.class,
+                cipher.lookupHash(IdentityService.normalizeEmail(email))));
+        String second = first.replace("First Synthetic Password 123!", "Second Synthetic Password 456!");
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(second))
+                .andExpect(status().isAccepted());
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbc.queryForObject(
+                "SELECT count(*) FROM users WHERE email_lookup_hash=?", Integer.class,
+                cipher.lookupHash(IdentityService.normalizeEmail(email))));
+        org.junit.jupiter.api.Assertions.assertEquals(1, jdbc.queryForObject(
+                "SELECT count(*) FROM pending_registrations WHERE email_lookup_hash=?", Integer.class,
+                cipher.lookupHash(IdentityService.normalizeEmail(email))));
+        var tokens = org.mockito.ArgumentCaptor.forClass(String.class);
+        var codes = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(delivery, org.mockito.Mockito.times(2))
+                .send(eq(email), tokens.capture(), codes.capture());
+        mvc.perform(post("/api/v1/auth/email-verifications:confirm").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"" + tokens.getAllValues().get(0) + "\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/auth/email-verifications:confirm-code").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"code\":\"" + codes.getAllValues().get(1) + "\"}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"password\":\"First Synthetic Password 123!\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"password\":\"Second Synthetic Password 456!\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void invalidPreferencesAreRejectedBeforeEmailIsSent() throws Exception {
+        String email = "invalid-zone-" + UUID.randomUUID() + "@example.test";
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                {"email":"%s","password":"Correct Horse Battery Staple!","timezone":"Invalid/Zone",
+                 "locale":"en","termsVersion":"v1","privacyVersion":"v1",
+                 "acceptTerms":true,"acceptPrivacy":true}
+                """.formatted(email))).andExpect(status().isBadRequest());
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbc.queryForObject(
+                "SELECT count(*) FROM pending_registrations WHERE email_lookup_hash=?", Integer.class,
+                cipher.lookupHash(IdentityService.normalizeEmail(email))));
+        org.mockito.Mockito.verifyNoInteractions(delivery);
     }
 
     @Test
@@ -296,7 +377,7 @@ class IdentityFlowIntegrationTest {
                  "acceptTerms":true,"acceptPrivacy":true}
                 """.formatted(email);
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content(register))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted());
         String login = "{\"email\":\"" + email + "\",\"password\":\"Correct Horse Battery Staple!\"}";
         mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content(login))
                 .andExpect(status().isUnauthorized());
@@ -330,7 +411,7 @@ class IdentityFlowIntegrationTest {
     }
 
     @Test
-    void concurrentRegistrationCreatesOneAccount() throws Exception {
+    void concurrentRegistrationKeepsOnePendingAttempt() throws Exception {
         String email = "race-" + UUID.randomUUID() + "@example.test";
         var gate = new java.util.concurrent.CountDownLatch(1);
         var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
@@ -345,10 +426,13 @@ class IdentityFlowIntegrationTest {
             gate.countDown();
             int created = 0;
             for (var attempt : attempts) if (attempt.get()) created++;
-            org.junit.jupiter.api.Assertions.assertEquals(1, created);
-            Integer count = jdbc.queryForObject("SELECT count(*) FROM users WHERE email_lookup_hash=?", Integer.class,
+            org.junit.jupiter.api.Assertions.assertEquals(2, created);
+            Integer count = jdbc.queryForObject("SELECT count(*) FROM pending_registrations WHERE email_lookup_hash=?", Integer.class,
                     cipher.lookupHash(IdentityService.normalizeEmail(email)));
             org.junit.jupiter.api.Assertions.assertEquals(1, count);
+            org.junit.jupiter.api.Assertions.assertEquals(0, jdbc.queryForObject(
+                    "SELECT count(*) FROM users WHERE email_lookup_hash=?", Integer.class,
+                    cipher.lookupHash(IdentityService.normalizeEmail(email))));
         } finally { pool.shutdownNow(); }
     }
 
@@ -359,7 +443,7 @@ class IdentityFlowIntegrationTest {
                 {"email":"%s","password":"Correct Horse Battery Staple!","timezone":"UTC",
                  "locale":"en","termsVersion":"v1","privacyVersion":"v1",
                  "acceptTerms":true,"acceptPrivacy":true}
-                """.formatted(email))).andExpect(status().isCreated());
+                """.formatted(email))).andExpect(status().isAccepted());
         org.mockito.ArgumentCaptor<String> token = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(delivery).send(eq(email), token.capture(), org.mockito.ArgumentMatchers.anyString());
         mvc.perform(post("/api/v1/auth/email-verifications:confirm").contentType(MediaType.APPLICATION_JSON)
@@ -383,7 +467,7 @@ class IdentityFlowIntegrationTest {
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
                 {"email":"%s","password":"%s","timezone":"UTC","locale":"en",
                  "termsVersion":"v1","privacyVersion":"v1","acceptTerms":true,"acceptPrivacy":true}
-                """.formatted(email, password))).andExpect(status().isCreated());
+                """.formatted(email, password))).andExpect(status().isAccepted());
         org.mockito.ArgumentCaptor<String> token = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(delivery).send(eq(email), token.capture(), org.mockito.ArgumentMatchers.anyString());
         String body = token.getValue();

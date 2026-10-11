@@ -185,7 +185,7 @@ Không cần chốt model AI cuối cùng để làm journal; cần chốt provi
 - [x] Normalize email theo policy cố định.
 - [x] HMAC email lookup + encrypted email.
 - [x] Hash password bằng BCrypt cost 12; benchmark local ban đầu bên dưới.
-- [x] Tạo user/profile/default USER role trong một transaction.
+- [x] V17: lưu đăng ký tạm; chỉ tạo user/profile/default USER role trong transaction xác minh.
 - [x] Idempotent email verification token.
 - [x] V16: email chứa liên kết xác minh và mã 8 chữ số dự phòng; mã có TTL, giới hạn thử sai, cả hai cách dùng chung trạng thái đã xác minh.
 - [x] Rate limit theo IP/email pseudonym.
@@ -268,7 +268,7 @@ POST  /api/v1/me/onboarding:complete
 ### Bằng chứng và giới hạn M1 backend
 
 - Persistence M1 dùng JPA entity trong `identity`/`user` `infrastructure/persistence/entity`, adapter `EntityManager` trong `infrastructure/persistence`, với native SQL qua JPA cho rate-limit upsert và truy vấn consent mới nhất. Flyway V2–V4 vẫn là schema nguồn; Hibernate chỉ `validate`.
-- Flyway V2–V4, register → email verification → login → profile/consent → refresh/reuse chạy qua PostgreSQL Testcontainers. V16 bổ sung mã xác minh email; client web/mobile xử lý liên kết và form nhập mã vẫn chưa triển khai. Test có registration race, account pending/suspended, ownership session, ciphertext/tokens, log redaction và key rotation. OpenAPI artifact được xuất từ context bật M1, có các endpoint identity/profile.
+- Flyway V2–V4, register → email verification → login → profile/consent → refresh/reuse chạy qua PostgreSQL Testcontainers. V16 bổ sung mã xác minh email; V17 chuyển đăng ký chưa xác minh sang bảng tạm, xác minh mới tạo user. Web đã xử lý liên kết và form nhập mã; mobile chưa nối. Test có registration race, account chưa xác minh/suspended, ownership session, ciphertext/tokens, log redaction và key rotation. OpenAPI artifact được xuất từ context bật M1, có các endpoint identity/profile.
 - BCrypt cost 12 được chọn sau benchmark local ngày 2026-09-30 (Java 25 trên máy phát triển): trung bình khoảng 264 ms cho một cặp encode + verify; cost 10 khoảng 70 ms, cost 11 khoảng 131 ms. Cần đo lại trên hạ tầng triển khai trước release.
 - Local email verification gửi đến Mailpit (`docker compose up -d mailpit`, UI cổng 8025). Production cần SMTP và khóa do secret manager cung cấp; không dùng fallback local.
 - Frontend chưa tích hợp các API M1; điều kiện frontend ở exit criteria cần được xác nhận khi tích hợp.
@@ -847,11 +847,12 @@ POST /api/v1/auth/register
   → validate
   → normalize/HMAC/encrypt email
   → hash password
-  → create user/profile/role
-  → return safe user response
+  → lưu pending_registrations và gửi challenge
+  → trả 202 với registrationId
+  → xác minh thành công mới tạo user/profile/role
 ```
 
-Database phải chứng minh không có plaintext email/password và duplicate concurrent registration chỉ tạo một user.
+Database phải chứng minh không có plaintext email/password; đăng ký đồng thời chỉ giữ một lượt tạm cho mỗi email và không tạo user trước xác minh.
 
 ## 24. Theo dõi tiến độ
 

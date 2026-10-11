@@ -37,6 +37,12 @@ public class UserProfileService implements UserProfileUseCase {
 
     private record ProfilePayload(String displayName, String penName, List<String> onboardingGoals) {}
 
+    @Override
+    public void validateRegistrationPreferences(String timezone, String locale) {
+        validTimezone(timezone);
+        validLocale(locale);
+    }
+
     @Override @Transactional
     public void createDefault(UUID userId, String timezone, String locale, String termsVersion,
                               String privacyVersion, Instant now) {
