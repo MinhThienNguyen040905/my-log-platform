@@ -8,6 +8,7 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.HtmlUtils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -40,14 +41,27 @@ final class SmtpVerificationDelivery implements VerificationDelivery {
     @Override public void send(String email, String token, String code) {
         try {
             var message = sender.createMimeMessage();
-            var helper = new MimeMessageHelper(message, StandardCharsets.UTF_8.name());
+            var helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
             helper.setFrom(from, "mylog");
             helper.setTo(email);
             helper.setSubject("mylog: xác minh email");
-            helper.setText("Xác minh email mylog: " + verificationUrl + "?token=" + token
+            String link = verificationUrl + "?token=" + token;
+            String plainText = "Xác minh email mylog: " + link
                     + "\nLiên kết hết hạn sau 24 giờ. Trang xác minh chỉ gửi yêu cầu khi bạn bấm xác nhận."
                     + "\nNếu mở email trên thiết bị khác, nhập mã: " + code
-                    + "\nMã gồm 8 chữ số và hết hạn sau 10 phút. Nếu đã xác minh bằng một cách, cách còn lại sẽ không dùng được nữa.");
+                    + "\nMã gồm 8 chữ số và hết hạn sau 10 phút. Nếu đã xác minh bằng một cách, cách còn lại sẽ không dùng được nữa.";
+            String html = """
+                    <!doctype html>
+                    <html lang="vi"><body style="font-family:Arial,sans-serif;color:#1f2937;line-height:1.6">
+                    <h1 style="font-size:22px">Xác minh email mylog</h1>
+                    <p>Bấm nút dưới đây để mở trang xác minh, sau đó bấm xác nhận trên trang.</p>
+                    <p><a href="%s" style="display:inline-block;background-color:#2563eb;color:#ffffff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:bold">Mở trang xác minh email</a></p>
+                    <p>Liên kết hết hạn sau 24 giờ.</p>
+                    <p>Nếu mở email trên thiết bị khác, nhập mã: <strong>%s</strong></p>
+                    <p>Mã gồm 8 chữ số và hết hạn sau 10 phút. Nếu đã xác minh bằng một cách, cách còn lại sẽ không dùng được nữa.</p>
+                    </body></html>
+                    """.formatted(HtmlUtils.htmlEscape(link), HtmlUtils.htmlEscape(code));
+            helper.setText(plainText, html);
             sender.send(message);
         } catch (MailException | MessagingException | UnsupportedEncodingException e) {
             throw new DependencyUnavailableException();
