@@ -6,8 +6,9 @@ export async function authPost(path: string, body: unknown): Promise<Response> {
   });
 }
 
-export async function authError(response: Response, locale: 'vi' | 'en' = 'vi'): Promise<string> {
+export async function authError(response: Response, locale: 'vi' | 'en' = 'vi', context: 'login' | 'verification' = 'login'): Promise<string> {
   const en = locale === 'en';
+  if (context === 'verification' && response.status === 401) return en ? 'The verification link or code is invalid or expired.' : 'Liên kết hoặc mã xác minh không hợp lệ hoặc đã hết hạn.';
   if (response.status === 503) return en ? 'Could not connect to the server. Please try again.' : 'Không thể kết nối máy chủ. Vui lòng thử lại.';
   if (response.status === 429) return en ? 'Too many attempts. Please wait and try again.' : 'Bạn đã thử quá nhiều lần. Vui lòng đợi rồi thử lại.';
   try {
