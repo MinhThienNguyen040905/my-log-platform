@@ -13,7 +13,7 @@ class JournalAnalyzerConfiguration {
     @Bean
     JournalAnalyzer journalAnalyzer(@Value("${mylog.ai.fake-enabled:false}") boolean fake,
                                     @Value("${mylog.ai.provider:none}") String provider,
-                                    @Value("${mylog.ai.endpoint:https://api.openai.com/v1/chat/completions}") String endpoint,
+                                    @Value("${mylog.ai.endpoint:}") String endpoint,
                                     @Value("${mylog.ai.model:}") String model,
                                     @Value("${mylog.ai.api-key:}") String apiKey,
                                     @Value("${mylog.ai.timeout-ms:30000}") int timeoutMs,
@@ -26,10 +26,14 @@ class JournalAnalyzerConfiguration {
             throw new IllegalArgumentException("Choose either fake or configured AI provider");
         if (fake) return new FakeJournalAnalyzer();
         if ("none".equals(provider)) return new UnavailableJournalAnalyzer();
-        if ("openai".equals(provider)) {
+        if ("openai".equals(provider) || "groq".equals(provider)) {
             if (!providerDataApproved || !outputSafetyApproved)
                 throw new IllegalArgumentException("AI provider and output safety approval required");
-            return new OpenAiJournalAnalyzer(endpoint, model, apiKey, timeoutMs,
+            String resolvedEndpoint = endpoint.isBlank()
+                    ? ("groq".equals(provider) ? "https://api.groq.com/openai/v1/chat/completions"
+                    : "https://api.openai.com/v1/chat/completions") : endpoint;
+            return new ChatCompletionsJournalAnalyzer(provider.toUpperCase(java.util.Locale.ROOT),
+                    resolvedEndpoint, model, apiKey, timeoutMs,
                     inputPrice, outputPrice, mapper);
         }
         throw new IllegalArgumentException("Unsupported AI provider");

@@ -13,7 +13,10 @@ class JournalAnalyzerConfigurationTest {
     @Test void providerRequiresBothRecordedApprovals() {
         assertThrows(IllegalArgumentException.class, () -> analyzer(false, true));
         assertThrows(IllegalArgumentException.class, () -> analyzer(true, false));
-        assertInstanceOf(OpenAiJournalAnalyzer.class, analyzer(true, true));
+        assertInstanceOf(ChatCompletionsJournalAnalyzer.class, analyzer(true, true));
+        assertInstanceOf(ChatCompletionsJournalAnalyzer.class, configuration.journalAnalyzer(false, "groq",
+                "", "openai/gpt-oss-20b", "test-key", 30000, BigDecimal.ONE, BigDecimal.ONE,
+                true, true, mapper));
     }
 
     private com.mylog.analysis.application.JournalAnalyzer analyzer(boolean providerApproved,

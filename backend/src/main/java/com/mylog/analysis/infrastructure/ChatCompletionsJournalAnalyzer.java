@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /** Provider adapter; only the worker can instantiate and call it. */
-final class OpenAiJournalAnalyzer implements JournalAnalyzer {
+final class ChatCompletionsJournalAnalyzer implements JournalAnalyzer {
     private static final String PROMPT_VERSION = "journal-structured-v1";
     private static final String INSTRUCTIONS = """
             You help a journaling app with reflection, not diagnosis or treatment. Analyze the provided
@@ -43,6 +43,7 @@ final class OpenAiJournalAnalyzer implements JournalAnalyzer {
             "required", List.of("sentiment", "sentimentScore", "emotions", "topics", "reflection"));
 
     private final URI endpoint;
+    private final String provider;
     private final String model;
     private final String apiKey;
     private final Duration timeout;
@@ -51,26 +52,32 @@ final class OpenAiJournalAnalyzer implements JournalAnalyzer {
     private final ObjectMapper mapper;
     private final HttpClient client;
 
-    OpenAiJournalAnalyzer(String endpoint, String model, String apiKey, int timeoutMs,
+    ChatCompletionsJournalAnalyzer(String provider, String endpoint, String model, String apiKey, int timeoutMs,
                           BigDecimal inputPrice, BigDecimal outputPrice, ObjectMapper mapper) {
-        this(endpoint, model, apiKey, timeoutMs, inputPrice, outputPrice,
+        this(provider, endpoint, model, apiKey, timeoutMs, inputPrice, outputPrice,
                 mapper, HttpClient.newHttpClient());
     }
 
-    OpenAiJournalAnalyzer(String endpoint, String model, String apiKey, int timeoutMs,
+    ChatCompletionsJournalAnalyzer(String provider, String endpoint, String model, String apiKey, int timeoutMs,
                           BigDecimal inputPrice, BigDecimal outputPrice,
                           ObjectMapper mapper, HttpClient client) {
         URI uri = URI.create(endpoint);
         boolean localHttp = "http".equalsIgnoreCase(uri.getScheme())
                 && ("localhost".equalsIgnoreCase(uri.getHost()) || "127.0.0.1".equals(uri.getHost()));
+        boolean groqEndpoint = "https".equalsIgnoreCase(uri.getScheme())
+                && "api.groq.com".equalsIgnoreCase(uri.getHost())
+                && "/openai/v1/chat/completions".equals(uri.getPath());
         if (!("https".equalsIgnoreCase(uri.getScheme()) || localHttp) || uri.getHost() == null
                 || uri.getUserInfo() != null || uri.getQuery() != null || uri.getFragment() != null
-                || model == null || !model.matches("[A-Za-z0-9._:-]{1,120}")
+                || !("OPENAI".equals(provider) || "GROQ".equals(provider))
+                || "GROQ".equals(provider) && !(groqEndpoint || localHttp)
+                || model == null || !model.matches("[A-Za-z0-9._:/-]{1,120}")
                 || apiKey == null || apiKey.isBlank() || timeoutMs < 1000 || timeoutMs > 120000
                 || inputPrice == null || inputPrice.signum() <= 0
                 || outputPrice == null || outputPrice.signum() <= 0)
             throw new IllegalArgumentException("Invalid AI provider configuration");
         this.endpoint = uri;
+        this.provider = provider;
         this.model = model;
         this.apiKey = apiKey;
         this.timeout = Duration.ofMillis(timeoutMs);
@@ -123,10 +130,10 @@ final class OpenAiJournalAnalyzer implements JournalAnalyzer {
                     .add(outputPrice.multiply(BigDecimal.valueOf(outputTokens)))
                     .divide(BigDecimal.valueOf(1_000_000), 6, RoundingMode.HALF_UP);
             String reportedModel = text(envelope, "model");
-            if (!reportedModel.matches("[A-Za-z0-9._:-]{1,120}")) throw new InvalidProviderOutputException();
+            if (!reportedModel.matches("[A-Za-z0-9._:/-]{1,120}")) throw new InvalidProviderOutputException();
             Result result = new Result(text(output, "sentiment"), decimal(output, "sentimentScore"),
                     codes(output.get("emotions")), codes(output.get("topics")), text(output, "reflection"),
-                    "OPENAI", model, reportedModel, PROMPT_VERSION,
+                    provider, model, reportedModel, PROMPT_VERSION,
                     inputTokens, outputTokens, cost);
             AnalysisOutputValidator.validate(result);
             return result;

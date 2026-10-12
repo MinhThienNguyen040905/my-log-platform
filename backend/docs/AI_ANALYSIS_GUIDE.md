@@ -21,7 +21,7 @@ flowchart TD
     F -->|Chưa kiểm tra được| M[Giữ bài viết, chờ kiểm tra lại]
 ```
 
-Có **hai loại phản hồi ở hai thời điểm**: lúc đang viết là câu hỏi gợi ý để viết tiếp; sau khi lưu là kết quả phân tích của bài đã lưu, gồm reflection và các nhãn cảm xúc/chủ đề. Nhánh đang viết là trải nghiệm dự kiến: backend hiện chỉ có câu hỏi mẫu, mặc định tắt, chưa gọi AI tạo sinh và frontend chưa kết nối. Bài viết được lưu trước khi có kết quả phân tích AI. Sơ đồ chi tiết về outbox và worker nằm ở mục 3.
+Có **hai loại phản hồi ở hai thời điểm**: lúc đang viết là câu hỏi gợi ý để viết tiếp; sau khi lưu là kết quả phân tích của bài đã lưu, gồm reflection và các nhãn cảm xúc/chủ đề. Backend có đường gọi Groq cho nhánh đang viết nhưng mặc định tắt và frontend chưa kết nối. Bài viết được lưu trước khi có kết quả phân tích AI. Sơ đồ chi tiết về outbox và worker nằm ở mục 3.
 
 ## 1. Bốn khái niệm dễ bị gọi chung là “AI”
 
@@ -36,9 +36,9 @@ AI không chẩn đoán hoặc điều trị. Risk classifier phục vụ quyế
 
 ### Gợi ý khi đang viết và phân tích sau khi lưu
 
-Safety và nội dung gợi ý theo bản nháp đều thuộc backend. Editor hiện **không tự sinh gợi ý sau khi ngừng gõ và không tự kết luận safety**. FE đăng nhập/journal vẫn dùng `JournalContext`/`localStorage` mock, chưa cấp JWT thật để gọi API bản nháp; bản nháp/bài viết local chưa được mã hóa theo backend và không phù hợp production. Editor đã bỏ đường tạo reflection giả trước khi lưu. Khi tích hợp auth thật, FE chỉ debounce 3–5 giây, gửi plain text qua API có xác thực và hiển thị `status`/`suggestion` backend trả về; nếu người dùng gõ tiếp thì hủy hoặc bỏ kết quả cũ. Gợi ý không được dùng thay cho safety trên request lưu bài.
+Safety và nội dung gợi ý theo bản nháp đều thuộc backend. Editor hiện **không tự sinh gợi ý sau khi ngừng gõ và không tự kết luận safety**. Web đã dùng backend cho đăng nhập/journal và trạng thái phân tích, nhưng chưa gọi API gợi ý bản nháp. Bản nháp chưa lưu ở localStorage; khi nối API, FE debounce 3–5 giây, gửi plain text qua API có xác thực và hiển thị `status`/`suggestion` backend trả về; nếu người dùng gõ tiếp thì hủy hoặc bỏ kết quả cũ. Gợi ý không được dùng thay cho safety trên request lưu bài.
 
-Backend có `POST /api/v1/journal-writing-suggestions` cho lần tích hợp FE có xác thực sau này. Request `{ "text": "..." }` nhận plain text tối đa 4.000 ký tự; response gồm `status`, `suggestion`, `promptVersion`. Endpoint yêu cầu JWT, giới hạn 20 lần/15 phút/user, kiểm tra consent `AI_PROCESSING` trước khi screen, không lưu bản nháp. Chỉ `ALLOW` mới trả câu hỏi mẫu cố định **do backend sở hữu**; `SAFETY_FLOW`/`CONSTRAIN` không trả gợi ý; `FAIL_SAFE` trả `UNAVAILABLE`. Cờ `MYLOG_WRITING_SUGGESTIONS_ENABLED` mặc định `false` vì nội dung câu hỏi, classifier và policy chưa được duyệt. API này **không gọi LLM**; muốn sinh câu hỏi theo ngữ cảnh bằng provider phải bổ sung output validation, kiểm tra chính sách dữ liệu và đánh giá riêng.
+Backend có `POST /api/v1/journal-writing-suggestions` cho lần tích hợp FE có xác thực sau này. Request `{ "text": "..." }` nhận plain text tối đa 4.000 ký tự; response gồm `status`, `suggestion`, `promptVersion`. Endpoint yêu cầu JWT, giới hạn 20 lần/15 phút/user, kiểm tra consent `AI_PROCESSING` trước khi screen, không lưu bản nháp. Chỉ `ALLOW` mới tạo gợi ý; `SAFETY_FLOW`/`CONSTRAIN` không trả gợi ý; `FAIL_SAFE` trả `UNAVAILABLE`. Cờ `MYLOG_WRITING_SUGGESTIONS_ENABLED` mặc định `false`. Khi `MYLOG_WRITING_SUGGESTIONS_AI_ENABLED=false`, backend trả câu hỏi mẫu cố định; khi bật cờ này cùng `MYLOG_AI_PROVIDER=groq` và hai cờ phê duyệt provider/output safety, backend gọi Groq đồng bộ, kiểm tra cấu trúc và nội dung câu hỏi rồi mới trả. Lỗi provider trả `UNAVAILABLE`. Đây vẫn là baseline cần đánh giá chất lượng và safety trước khi dùng với dữ liệu thật.
 
 Sau khi FE được nối với journal API, thao tác lưu vẫn đi qua safety đồng bộ ở `JournalService` rồi mới tạo outbox/job phân tích bất đồng bộ. Kết quả `sentiment`/`emotions`/`topics`/reflection chỉ thuộc **phiên bản bài đã lưu**, không thuộc bản nháp. Mỗi lần sửa và lưu lại tăng `contentVersion`; kết quả cũ không được kích hoạt cho phiên bản mới.
 
@@ -177,7 +177,7 @@ private endpoint. Backend gọi endpoint bằng `HttpRiskClassifier` trong bư�
 với timeout tối đa 10 giây và mặc định 2 giây. Nếu service lỗi, journal vẫn lưu và kết quả là
 `FAIL_SAFE`. Không có luồng tự động trích journal production làm dữ liệu train.
 
-Adapter `OpenAiJournalAnalyzer` chỉ tồn tại ở worker khi `MYLOG_AI_PROVIDER=openai` và hai
+Adapter `ChatCompletionsJournalAnalyzer` chỉ tồn tại ở worker khi `MYLOG_AI_PROVIDER=openai` hoặc `groq` và hai
 cờ phê duyệt dữ liệu provider/output safety được bật rõ. Nó không được gọi trong transaction
 PostgreSQL. Mô hình safety nội bộ, model tạo reflection qua API key và embedding cho RAG là
 ba trách nhiệm khác nhau; hiện embedding vẫn để mở. Xem [ADR-0009](adr/0009-hybrid-ai-inference.md).
@@ -187,13 +187,16 @@ Kế hoạch chi tiết cho model team sẽ train nằm ở [SAFETY_CLASSIFIER_M
 |---|---|---|
 | `MYLOG_JOBS_ENABLED` | `false` | Bật outbox/AI job worker khi môi trường và policy phù hợp. |
 | `MYLOG_AI_FAKE_ENABLED` | `false` | `true` dùng analyzer cố định cho local/test; không gọi mạng. |
-| `MYLOG_AI_PROVIDER` | `none` | `openai` bật adapter Chat Completions trong worker; cần model, API key và provider approval. |
+| `MYLOG_AI_PROVIDER` | `none` | `openai` hoặc `groq` bật adapter Chat Completions trong worker; cần model, API key và provider approval. |
+| `MYLOG_WRITING_SUGGESTIONS_ENABLED`, `MYLOG_WRITING_SUGGESTIONS_AI_ENABLED` | `false` | Cờ thứ nhất bật endpoint gợi ý; cờ thứ hai chuyển từ câu hỏi mẫu sang Groq sau consent và safety. Cần key ở API instance; không đưa key xuống client. |
+| `MYLOG_AI_ENDPOINT` | rỗng | Chọn endpoint chính thức theo provider. Với Groq, chỉ chấp nhận endpoint chính thức hoặc HTTP loopback khi test local. |
+| `MYLOG_AI_MODEL`, `MYLOG_AI_API_KEY` | rỗng | Model hỗ trợ JSON Schema strict và API key của provider đã chọn; ví dụ Groq: `openai/gpt-oss-20b`. |
 | `MYLOG_AI_INPUT_USD_PER_MILLION`, `MYLOG_AI_OUTPUT_USD_PER_MILLION` | `0` | Khi bật provider phải cấu hình giá dương của model để tính chi phí ước lượng từ token usage. |
 | `MYLOG_AI_PROVIDER_DATA_APPROVED`, `MYLOG_AI_OUTPUT_SAFETY_APPROVED` | `false` | Cả hai phải được bật sau khi có hồ sơ duyệt; thiếu một trong hai thì cấu hình provider bị từ chối. |
 | `MYLOG_SAFETY_CLASSIFIER_URL` | rỗng | HTTPS endpoint nội bộ `/classify`; rỗng dùng classifier unavailable. |
 | `MYLOG_APP_PROFILE` | `all` | `api` không chạy scheduled workers; `worker` dành cho xử lý nền. |
 
-`JournalAnalyzer` mặc định là [`UnavailableJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/UnavailableJournalAnalyzer.java). [`FakeJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/FakeJournalAnalyzer.java) chỉ trả kết quả mẫu cố định. Adapter [`OpenAiJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/OpenAiJournalAnalyzer.java) gửi title/plain text tối thiểu qua HTTPS khi được bật rõ (HTTP chỉ cho loopback local/test), yêu cầu JSON schema, không gửi ID/email và không log raw request/response. API key chỉ có ở worker; `store=false` không thay thế việc thẩm định retention/no-training/region của provider. Backend còn có [`HttpRiskClassifier`](../src/main/java/com/mylog/safety/infrastructure/HttpRiskClassifier.java) cho model nội bộ; pipeline train/inference mẫu ở [`safety-model`](../../safety-model/README.md). Bật adapter **không đồng nghĩa với được phê duyệt production**. Chưa có model classifier được duyệt, policy/safety content hoàn chỉnh, output safety eval hoặc provider data-handling sign-off. Frontend còn các phần mock và chưa hoàn tất trải nghiệm status/retry của M3.
+`JournalAnalyzer` mặc định là [`UnavailableJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/UnavailableJournalAnalyzer.java). [`FakeJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/FakeJournalAnalyzer.java) chỉ trả kết quả mẫu cố định. Adapter [`ChatCompletionsJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/ChatCompletionsJournalAnalyzer.java) gửi title/plain text tối thiểu qua HTTPS khi được bật rõ (HTTP chỉ cho loopback local/test), yêu cầu JSON schema, không gửi ID/email và không log raw request/response. Key cho phân tích cần ở worker; khi bật gợi ý Groq, API instance cũng cần key. `store=false` không thay thế việc thẩm định retention/no-training/region của provider. Backend còn có [`HttpRiskClassifier`](../src/main/java/com/mylog/safety/infrastructure/HttpRiskClassifier.java) cho model nội bộ; pipeline train/inference mẫu ở [`safety-model`](../../safety-model/README.md). Bật adapter **không đồng nghĩa với được phê duyệt production**. Chưa có model classifier được duyệt, policy/safety content hoàn chỉnh, output safety eval hoặc provider data-handling sign-off. Web đã có trạng thái/retry cho phân tích nhưng chưa nối gợi ý bản nháp.
 
 Các việc chính còn mở trước production:
 

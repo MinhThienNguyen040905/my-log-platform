@@ -15,7 +15,7 @@ Use synthetic data only in staging. The release owner records date, image digest
 ## AI rollout gate
 
 The adapters added by ADR-0009 are disabled by default. Before setting
-`MYLOG_SAFETY_CLASSIFIER_URL` or `MYLOG_AI_PROVIDER=openai` on a worker:
+`MYLOG_SAFETY_CLASSIFIER_URL` or `MYLOG_AI_PROVIDER=openai|groq` on a worker:
 
 1. Review the classifier artifact and holdout evaluation, including HIGH/CRITICAL misses,
    Vietnamese/English slices, negation and quotations. Record model version, checksum,

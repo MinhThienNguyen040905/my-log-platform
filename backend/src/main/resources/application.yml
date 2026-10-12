@@ -49,7 +49,7 @@ mylog:
   ai:
     fake-enabled: ${MYLOG_AI_FAKE_ENABLED:false}
     provider: ${MYLOG_AI_PROVIDER:none}
-    endpoint: ${MYLOG_AI_ENDPOINT:https://api.openai.com/v1/chat/completions}
+    endpoint: ${MYLOG_AI_ENDPOINT:}
     model: ${MYLOG_AI_MODEL:}
     api-key: ${MYLOG_AI_API_KEY:}
     timeout-ms: ${MYLOG_AI_TIMEOUT_MS:30000}
@@ -64,6 +64,7 @@ mylog:
       timeout-ms: ${MYLOG_SAFETY_CLASSIFIER_TIMEOUT_MS:2000}
   writing-suggestions:
     enabled: ${MYLOG_WRITING_SUGGESTIONS_ENABLED:false}
+    ai-enabled: ${MYLOG_WRITING_SUGGESTIONS_AI_ENABLED:false}
   insights:
     minimum-samples: ${MYLOG_INSIGHTS_MINIMUM_SAMPLES:7}
   reports:

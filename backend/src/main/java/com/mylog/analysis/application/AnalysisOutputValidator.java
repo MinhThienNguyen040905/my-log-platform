@@ -19,7 +19,7 @@ public final class AnalysisOutputValidator {
                 || output.inputTokens() < 0 || output.outputTokens() < 0
                 || output.estimatedCostUsd() == null || output.estimatedCostUsd().signum() < 0
                 || output.provider() == null || !output.provider().matches("[A-Za-z0-9._:-]{1,40}")
-                || output.model() == null || !output.model().matches("[A-Za-z0-9._:-]{1,120}")
+                || output.model() == null || !output.model().matches("[A-Za-z0-9._:/-]{1,120}")
                 || output.promptVersion() == null || !output.promptVersion().matches("[A-Za-z0-9._:-]{1,40}"))
             throw new InvalidAnalysisOutputException();
         checkCodes(output.emotions(), EMOTIONS);

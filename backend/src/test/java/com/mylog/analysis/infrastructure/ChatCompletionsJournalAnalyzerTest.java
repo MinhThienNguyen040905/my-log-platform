@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class OpenAiJournalAnalyzerTest {
+class ChatCompletionsJournalAnalyzerTest {
     @Test void sendsMinimalJournalAndParsesStructuredResponse() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         AtomicReference<String> body = new AtomicReference<>();
@@ -25,7 +25,7 @@ class OpenAiJournalAnalyzerTest {
                      "topics":[{"code":"OTHER","score":0.5}],"reflection":"Bạn có thể suy ngẫm thêm."}
                     """;
             byte[] result = mapper.writeValueAsString(java.util.Map.of(
-                    "model", "test-model",
+                    "model", "openai/gpt-oss-20b",
                     "choices", java.util.List.of(java.util.Map.of("finish_reason", "stop",
                             "message", java.util.Map.of("content", content))),
                     "usage", java.util.Map.of("prompt_tokens", 10, "completion_tokens", 20)))
@@ -36,16 +36,20 @@ class OpenAiJournalAnalyzerTest {
         });
         server.start();
         try {
-            var analyzer = new OpenAiJournalAnalyzer(
+            var analyzer = new ChatCompletionsJournalAnalyzer("GROQ",
                     "http://127.0.0.1:" + server.getAddress().getPort() + "/v1/chat/completions",
-                    "test-model", "test-key", 2000, BigDecimal.ONE, BigDecimal.ONE, mapper);
+                    "openai/gpt-oss-20b", "test-key", 2000, BigDecimal.ONE, BigDecimal.ONE, mapper);
             var result = analyzer.analyze("Synthetic title", "Synthetic text");
             assertEquals("NEUTRAL", result.sentiment());
+            assertEquals("GROQ", result.provider());
+            assertEquals("openai/gpt-oss-20b", result.model());
+            assertEquals("openai/gpt-oss-20b", result.modelVersion());
             assertEquals(10, result.inputTokens());
             assertEquals(new BigDecimal("0.000030"), result.estimatedCostUsd());
             assertEquals("Bearer test-key", authorization.get());
             var request = mapper.readTree(body.get());
             assertFalse(request.get("store").asBoolean());
+            assertEquals("openai/gpt-oss-20b", request.get("model").asText());
             assertEquals("json_schema", request.get("response_format").get("type").asText());
             assertTrue(body.get().contains("Synthetic text"));
             assertFalse(body.get().contains("userId"));
@@ -55,8 +59,14 @@ class OpenAiJournalAnalyzerTest {
     }
 
     @Test void rejectsNonTlsRemoteEndpoint() {
-        assertThrows(IllegalArgumentException.class, () -> new OpenAiJournalAnalyzer(
+        assertThrows(IllegalArgumentException.class, () -> new ChatCompletionsJournalAnalyzer("GROQ",
                 "http://example.com/v1/chat/completions", "model", "key", 2000,
+                BigDecimal.ONE, BigDecimal.ONE, new ObjectMapper()));
+    }
+
+    @Test void groqKeyCannotBeSentToAnotherRemoteHost() {
+        assertThrows(IllegalArgumentException.class, () -> new ChatCompletionsJournalAnalyzer("GROQ",
+                "https://api.openai.com/v1/chat/completions", "openai/gpt-oss-20b", "key", 2000,
                 BigDecimal.ONE, BigDecimal.ONE, new ObjectMapper()));
     }
 }
