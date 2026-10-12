@@ -14,6 +14,8 @@ Khi thử nghiệm local, mở `/dev/users` để xem email của các tài kho�
 
 ## Đăng ký và xác minh email
 
+Onboarding đọc trạng thái đồng ý từ backend. `TERMS` và `PRIVACY` đã được ghi nhận khi đăng ký. Các quyền tùy chọn `AI_PROCESSING`, `ANALYTICS`, `MODEL_TRAINING` mặc định chưa được cấp; trang chỉ hiển thị trạng thái vì chưa có tài liệu đồng ý công bố để người dùng bật quyền. Nếu một quyền đã được cấp từ trước, người dùng có thể bỏ chọn để thu hồi. Không hiển thị checkbox bị khóa cho quyền chưa được cấp.
+
 1. `/auth/register` gửi thông tin đăng ký tới `POST /api/v1/auth/register`. Backend lưu lượt đăng ký tạm và gửi email; tài khoản thật chỉ được tạo khi xác minh thành công. Người dùng có thể đăng ký lại bằng cùng email nếu chưa xác minh; lần mới thay mã/link và thông tin tạm. Web giữ tạm email đã nhập trong `sessionStorage` tối đa 30 phút rồi mở trang xác minh, nên form không yêu cầu nhập lại email và vẫn hoạt động khi tải lại trang. Trang đăng nhập cũng dùng cách này khi người dùng chọn xác minh bằng mã. Email được xóa khỏi `sessionStorage` sau khi xác minh thành công.
 2. Người dùng nhập mã **8 chữ số** từ email vào 8 ô. Web gửi `{ email, code }` tới `POST /api/v1/auth/email-verifications:confirm-code`. Mã có hiệu lực 10 phút.
 3. Người dùng cũng có thể mở liên kết trong email, sau đó bấm nút xác nhận trên `/auth/verify-email`. Web gửi token của liên kết tới `POST /api/v1/auth/email-verifications:confirm`. Liên kết có hiệu lực 24 giờ; mở trang bằng GET không tự xác minh.
