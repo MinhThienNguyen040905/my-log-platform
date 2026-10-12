@@ -2,7 +2,7 @@ import { JournalEditor } from '@/features/journal';
 
 export const metadata = {
   title: 'Soạn thảo nhật ký - MyLog',
-  description: 'Không gian viết nhật ký tĩnh lặng và phản chiếu cảm xúc cùng AI',
+  description: 'Không gian viết nhật ký và ghi lại cảm xúc của bạn',
 };
 
 export default function JournalEditorPage() {

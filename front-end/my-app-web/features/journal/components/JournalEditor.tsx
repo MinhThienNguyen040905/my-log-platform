@@ -10,6 +10,7 @@ import { AiReflectionDrawer } from './AiReflectionDrawer';
 import { AddTopicModal } from './AddTopicModal';
 import { JournalTipTapEditor } from './JournalTipTapEditor';
 import { useJournalEditor } from '../hooks/useJournalEditor';
+import { useWritingSuggestion } from '../hooks/useWritingSuggestion';
 import { JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER } from '../utils/journal-emotions';
 import type { JournalEmotion } from '@/types';
 import {
@@ -101,6 +102,7 @@ function JournalEditorContent() {
     router,
     streakCount,
   } = useJournalEditor();
+  const writingSuggestion = useWritingSuggestion(content);
   const selectedMoodScore = MOOD_ICONS.reduce((closest, candidate) =>
     Math.abs(candidate.score - moodScore) < Math.abs(closest - moodScore) ? candidate.score : closest,
     MOOD_ICONS[0].score);
@@ -263,6 +265,48 @@ function JournalEditorContent() {
 
             {/* Prompt Helper Bar */}
             <div className="relative">
+              <div className="mb-3 rounded-2xl border border-black bg-white p-3 shadow-neo-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-space text-xs font-bold">Gợi ý theo trang viết</p>
+                    <p className="text-xs text-gray-600">Chỉ gửi nội dung khi bạn bấm yêu cầu.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={writingSuggestion.loading}
+                    onClick={() => {
+                      const text = editorRef.current?.getText().trim() ?? '';
+                      if (!text) {
+                        showToast({ title: 'Hãy viết vài dòng trước', type: 'info' });
+                      } else if (text.length > 4000) {
+                        showToast({ title: 'Nội dung quá dài để gợi ý', message: 'Hãy chọn tối đa 4.000 ký tự.', type: 'info' });
+                      } else {
+                        void writingSuggestion.request(text);
+                      }
+                    }}
+                    className="rounded-xl border border-black bg-primary-container px-3 py-1.5 font-space text-xs font-bold disabled:opacity-50"
+                  >
+                    {writingSuggestion.loading ? 'Đang tìm gợi ý...' : 'Gợi ý để viết tiếp'}
+                  </button>
+                </div>
+                {writingSuggestion.result?.status === 'SUGGESTION' && writingSuggestion.result.suggestion && (
+                  <p className="mt-3 border-t border-black/10 pt-3 font-serif text-sm" role="status">
+                    {writingSuggestion.result.suggestion}
+                  </p>
+                )}
+                {writingSuggestion.result?.status === 'CONSENT_REQUIRED' && (
+                  <p className="mt-2 text-xs text-gray-700" role="status">Quyền xử lý AI chưa được cấp. Bạn có thể đọc thông tin và bật trong <Link href="/setting" className="underline">Cài đặt</Link>.</p>
+                )}
+                {writingSuggestion.result?.status === 'SAFETY_FLOW' && (
+                  <p className="mt-2 text-xs text-gray-700" role="status">Gợi ý viết thông thường hiện không phù hợp với nội dung này.</p>
+                )}
+                {writingSuggestion.result?.status === 'BLOCKED' && (
+                  <p className="mt-2 text-xs text-gray-700" role="status">Hiện chưa có gợi ý phù hợp. Bạn vẫn có thể tiếp tục viết và lưu bài.</p>
+                )}
+                {(writingSuggestion.result?.status === 'UNAVAILABLE' || writingSuggestion.error) && (
+                  <p className="mt-2 text-xs text-gray-700" role="status">Gợi ý tạm thời chưa khả dụng. Bạn vẫn có thể tiếp tục viết và lưu bài.</p>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setShowPromptModal(!showPromptModal)}

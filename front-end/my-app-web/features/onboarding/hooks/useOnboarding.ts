@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AccountApiError, getConsents, setConsent, useAccount, type Consent } from '@/features/user';
+import { AccountApiError, AI_PROCESSING_CONSENT_VERSION, getConsents, setConsent, useAccount, type Consent } from '@/features/user';
 import { createOnboardingProfileSchema } from '../schemas/onboarding-profile';
 import { useAppLanguage } from '@/providers/AppLanguageProvider';
 
@@ -30,6 +30,7 @@ export function useOnboarding() {
   const [writingTime, setWritingTime] = useState('evening');
   const [consents, setConsents] = useState<Consent[]>([]);
   const [revocations, setRevocations] = useState<string[]>([]);
+  const [grantAiProcessing, setGrantAiProcessing] = useState(false);
   const [loadingConsents, setLoadingConsents] = useState(true);
   const [consentError, setConsentError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -96,6 +97,11 @@ export function useOnboarding() {
           await setConsent(type, current.documentVersion, false);
           setConsents((previous) => previous.map((item) => item.type === type ? { ...item, granted: false } : item));
         }
+        if (grantAiProcessing
+          && !consents.some((item) => item.type === 'AI_PROCESSING' && item.granted
+            && item.documentVersion === AI_PROCESSING_CONSENT_VERSION)) {
+          await setConsent('AI_PROCESSING', AI_PROCESSING_CONSENT_VERSION, true);
+        }
         if (revocations.length && !await loadConsents()) throw new Error('Không thể xác nhận quyền đồng ý đã lưu. Vui lòng thử lại.');
       }
       const completed = await completeOnboarding();
@@ -117,7 +123,8 @@ export function useOnboarding() {
   return {
     displayName, setDisplayName, penName, setPenName, fieldErrors, goals, toggleGoal,
     avatar, setAvatar, writingTime, setWritingTime,
-    consents, revocations, toggleRevocation, loadingConsents, consentError, loadConsents,
+    consents, revocations, toggleRevocation, grantAiProcessing, setGrantAiProcessing,
+    loadingConsents, consentError, loadConsents,
     submitting, submit,
   };
 }

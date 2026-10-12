@@ -26,8 +26,8 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "MyLog - AI Mental Wellness & Journaling",
-  description: "Không gian nhật ký thông minh phong cách scrapbook hỗ trợ sức khỏe tinh thần và tự thấu cảm.",
+  title: "MyLog - Nhật ký và tự suy ngẫm",
+  description: "Không gian viết nhật ký và theo dõi cảm xúc của bạn.",
 };
 
 export default async function RootLayout({

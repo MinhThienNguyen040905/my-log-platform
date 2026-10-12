@@ -14,6 +14,7 @@ Các quyết định nền tảng của backend **mylog** được ghi lại dư
 | [0008](0008-backend-only-database-api.md) | Backend-only access to application tables | Accepted |
 | [0009](0009-hybrid-ai-inference.md) | Hybrid AI inference and separate safety model training | Accepted |
 | [0010](0010-groq-draft-suggestions.md) | Groq for ephemeral writing suggestions | Accepted |
+| [0011](0011-groq-ai-mvp.md) | Groq AI for the backend and web MVP | Accepted |
 
 ## Quy ước
 

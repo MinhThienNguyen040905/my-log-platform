@@ -65,15 +65,18 @@ class GroqWritingSuggestionGeneratorTest {
         ObjectMapper mapper = new ObjectMapper();
         assertInstanceOf(TemplateWritingSuggestionGenerator.class,
                 configuration.writingSuggestionGenerator(false, "none", "", "", "", 30000,
-                        false, false, mapper));
+                        false, false, false, mapper));
         assertThrows(IllegalArgumentException.class, () -> configuration.writingSuggestionGenerator(
                 true, "openai", "", "openai/gpt-oss-20b", "test-key", 30000,
-                true, true, mapper));
+                true, true, false, mapper));
         assertThrows(IllegalArgumentException.class, () -> configuration.writingSuggestionGenerator(
                 true, "groq", "", "openai/gpt-oss-20b", "test-key", 30000,
-                false, true, mapper));
+                false, true, false, mapper));
         assertInstanceOf(GroqWritingSuggestionGenerator.class,
                 configuration.writingSuggestionGenerator(true, "groq", "", "openai/gpt-oss-20b",
-                        "test-key", 30000, true, true, mapper));
+                        "test-key", 30000, true, true, false, mapper));
+        assertInstanceOf(GroqWritingSuggestionGenerator.class,
+                configuration.writingSuggestionGenerator(true, "groq", "", "openai/gpt-oss-20b",
+                        "test-key", 30000, false, false, true, mapper));
     }
 }

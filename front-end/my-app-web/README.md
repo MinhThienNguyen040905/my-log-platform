@@ -21,7 +21,7 @@ Import theo chiều `app → features → components/providers/lib`. Bên trong 
 
 `/auth/register` gửi thông tin tới backend để tạo lượt đăng ký tạm. Email có liên kết xác minh hạn 24 giờ và mã 8 chữ số hạn 10 phút. Chỉ sau khi người dùng xác minh bằng một trong hai cách thì tài khoản thật mới được tạo. Web giữ email tạm trong `sessionStorage` tối đa 30 phút để nhập mã hoặc gửi lại thư; đăng ký lại bằng cùng email sẽ thay lượt tạm và vô hiệu hóa mã/link cũ. Trang `/auth/verify-email` không tự xác minh khi mở link bằng GET: người dùng phải bấm xác nhận để web gọi `POST /api/v1/auth/email-verifications:confirm`. Token được xóa khỏi thanh địa chỉ và không lưu trong browser storage. Sau khi xác minh, người dùng đăng nhập riêng.
 
-Onboarding đọc trạng thái đồng ý từ backend. `TERMS` và `PRIVACY` đã ghi nhận khi đăng ký. Các quyền tùy chọn `AI_PROCESSING`, `ANALYTICS`, `MODEL_TRAINING` mặc định chưa được cấp; trang hiển thị trạng thái vì chưa có tài liệu đồng ý công bố để bật quyền. Quyền đã được cấp từ trước có thể bỏ chọn để thu hồi.
+Onboarding đọc trạng thái đồng ý từ backend. `TERMS` và `PRIVACY` đã ghi nhận khi đăng ký. Các quyền tùy chọn mặc định chưa được cấp. Người dùng có thể đọc thông tin và cấp `AI_PROCESSING` phiên bản `groq-v1` ở onboarding hoặc Cài đặt, rồi thu hồi tại Cài đặt. `ANALYTICS` và `MODEL_TRAINING` vẫn chưa có luồng cấp quyền trên web.
 
 ## Công cụ tài khoản local
 
@@ -42,4 +42,4 @@ Kiểm tra trên trình duyệt: đăng nhập/đăng ký với dữ liệu hợ
 
 Build dùng `next/font/google` cho Playfair Display, Plus Jakarta Sans và Space Grotesk. Môi trường không truy cập được `fonts.googleapis.com` sẽ dừng build khi tải font; trường hợp đó chưa được tính là build đạt.
 
-Trang nhật ký lưu bài viết trên backend; `localStorage` chỉ dùng cho bản nháp chưa lưu và dữ liệu cũ để nhập lại. Backend sở hữu kiểm tra an toàn bản nháp và gợi ý viết tại `POST /api/v1/journal-writing-suggestions`; web chưa gọi endpoint gợi ý viết đó. Xem [AI Analysis Guide](../../backend/docs/AI_ANALYSIS_GUIDE.md).
+Trang nhật ký lưu bài viết trên backend; `localStorage` chỉ dùng cho bản nháp chưa lưu và dữ liệu cũ để nhập lại. Hai nút AI trong trình soạn thảo luôn hiển thị; backend quyết định tính sẵn sàng và quyền đồng ý. Nút “Gợi ý để viết tiếp” gửi bản nháp qua route có xác thực tới `POST /api/v1/journal-writing-suggestions` khi người dùng bấm; backend sở hữu consent, safety và nội dung gợi ý. Kết quả hết hiệu lực khi người dùng sửa bài. Xem [AI MVP setup](../../backend/docs/AI_MVP_SETUP.md) và [AI Analysis Guide](../../backend/docs/AI_ANALYSIS_GUIDE.md).

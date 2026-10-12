@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountRequest } from '../api/client';
 import { useAccount } from '../context/AccountContext';
+import { AiProcessingConsentText, AI_PROCESSING_CONSENT_VERSION } from './AiProcessingConsentText';
 
 type Consent = { type: string; documentVersion: string; granted: boolean; decidedAt: string };
 type Session = { id: string; deviceName: string | null; createdAt: string; lastUsedAt: string | null; expiresAt: string };
@@ -37,6 +38,19 @@ export function AccountAccessPanel() {
     {access.isPending && <p role="status" className="text-sm">Đang tải quyền dữ liệu và phiên đăng nhập...</p>}
     <div className="space-y-2">
       <h3 className="font-space font-bold">Đồng ý đã ghi nhận</h3>
+      {!access.isPending && !access.error
+        && !consents.some((consent) => consent.type === 'AI_PROCESSING' && consent.granted
+          && consent.documentVersion === AI_PROCESSING_CONSENT_VERSION) && (
+          <div className="space-y-2 rounded-xl border border-black p-4">
+            <h4 className="font-space font-bold">Bật AI</h4>
+            <AiProcessingConsentText />
+            <button type="button" disabled={busy} className="rounded-lg border border-black bg-primary-container px-3 py-2 font-bold disabled:opacity-50"
+              onClick={() => void perform(() => accountRequest('/consents/AI_PROCESSING', {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documentVersion: AI_PROCESSING_CONSENT_VERSION, granted: true }),
+              }))}>Tôi đồng ý bật AI</button>
+          </div>
+        )}
       {consents.length === 0 && <p className="text-sm">Chưa có lựa chọn nào.</p>}
       {consents.map((consent) => <div key={consent.type} className="flex items-center justify-between gap-3 text-sm">
         <span>{consent.type} · phiên bản {consent.documentVersion} · {consent.granted ? 'Đã đồng ý' : 'Đã từ chối'}</span>

@@ -20,9 +20,10 @@ class WritingSuggestionGeneratorConfiguration {
             @Value("${mylog.ai.timeout-ms:30000}") int timeoutMs,
             @Value("${mylog.ai.provider-data-approved:false}") boolean providerDataApproved,
             @Value("${mylog.ai.output-safety-approved:false}") boolean outputSafetyApproved,
+            @Value("${mylog.ai.mvp-enabled:false}") boolean mvpEnabled,
             ObjectMapper mapper) {
         if (!aiEnabled) return new TemplateWritingSuggestionGenerator();
-        if (!"groq".equals(provider) || !providerDataApproved || !outputSafetyApproved)
+        if (!"groq".equals(provider) || !mvpEnabled && (!providerDataApproved || !outputSafetyApproved))
             throw new IllegalArgumentException("Groq writing suggestions require provider and safety approval");
         String resolvedEndpoint = endpoint.isBlank()
                 ? "https://api.groq.com/openai/v1/chat/completions" : endpoint;

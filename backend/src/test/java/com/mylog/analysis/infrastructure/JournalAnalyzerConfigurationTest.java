@@ -16,7 +16,10 @@ class JournalAnalyzerConfigurationTest {
         assertInstanceOf(ChatCompletionsJournalAnalyzer.class, analyzer(true, true));
         assertInstanceOf(ChatCompletionsJournalAnalyzer.class, configuration.journalAnalyzer(false, "groq",
                 "", "openai/gpt-oss-20b", "test-key", 30000, BigDecimal.ONE, BigDecimal.ONE,
-                true, true, mapper));
+                true, true, false, mapper));
+        assertInstanceOf(ChatCompletionsJournalAnalyzer.class, configuration.journalAnalyzer(false, "groq",
+                "", "openai/gpt-oss-20b", "test-key", 30000, BigDecimal.ONE, BigDecimal.ONE,
+                false, false, true, mapper));
     }
 
     private com.mylog.analysis.application.JournalAnalyzer analyzer(boolean providerApproved,
@@ -24,6 +27,6 @@ class JournalAnalyzerConfigurationTest {
         return configuration.journalAnalyzer(false, "openai",
                 "https://api.openai.com/v1/chat/completions", "test-model", "test-key", 30000,
                 BigDecimal.ONE, BigDecimal.ONE,
-                providerApproved, outputApproved, mapper);
+                providerApproved, outputApproved, false, mapper);
     }
 }

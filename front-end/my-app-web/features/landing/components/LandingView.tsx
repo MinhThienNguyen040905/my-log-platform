@@ -151,7 +151,7 @@ export function LandingView() {
 
           {/* Concrete Description: Understandable in 5 seconds */}
           <p className='font-sans text-base sm:text-lg md:text-xl text-on-surface-variant max-w-2xl mt-3 leading-relaxed'>
-            Viết điều bạn đang trải qua. MyLog giúp bạn nhận diện cảm xúc, tìm ra những khuôn mẫu lặp lại và gợi ý bước nhỏ để hiểu bản thân hơn mỗi ngày.
+            Viết điều bạn đang trải qua, ghi lại cảm xúc và xem lại những ngày đã qua theo cách của riêng bạn.
           </p>
 
           {/* Action CTAs: Clear Dominant Hierarchy */}
@@ -184,7 +184,7 @@ export function LandingView() {
               <CheckCircle2 className='w-4 h-4 text-green-700 shrink-0' /> Hoàn toàn riêng tư
             </span>
             <span className='flex items-center gap-1.5'>
-              <CheckCircle2 className='w-4 h-4 text-green-700 shrink-0' /> AI thấu cảm không phán xét
+              <CheckCircle2 className='w-4 h-4 text-green-700 shrink-0' /> Tự ghi lại cảm xúc mỗi ngày
             </span>
             <span className='flex items-center gap-1.5'>
               <CheckCircle2 className='w-4 h-4 text-green-700 shrink-0' /> Không cần đắn đo cấu trúc
@@ -229,9 +229,9 @@ export function LandingView() {
                 </div>
                 <span className='font-space text-xs font-bold text-gray-500 uppercase tracking-wider'>Bước 2</span>
               </div>
-              <h3 className='font-space text-xl font-bold text-on-surface'>AI Thấu Cảm Phân Tích</h3>
+              <h3 className='font-space text-xl font-bold text-on-surface'>Ghi Lại Cảm Xúc</h3>
               <p className='font-sans text-base text-on-surface-variant leading-relaxed'>
-                Mô hình AI riêng tư tự động nhận diện sắc thái cảm xúc, mức độ năng lượng và bóc tách những chủ đề bạn thường bận tâm nhất.
+                Chọn cảm xúc, ghi lại mức năng lượng và thêm chủ đề cho mỗi trang viết theo ý bạn.
               </p>
             </div>
 
@@ -245,7 +245,7 @@ export function LandingView() {
               </div>
               <h3 className='font-space text-xl font-bold text-on-surface'>Nhận Diện Mẫu Hình & Hành Động</h3>
               <p className='font-sans text-base text-on-surface-variant leading-relaxed'>
-                Nhìn ra xu hướng cảm xúc qua các tuần, nhận các gợi ý bước nhỏ thực tế (micro-steps) để cân bằng và giải tỏa áp lực.
+                Xem lại các chỉ số bạn đã ghi theo thời gian để tự nhận ra điều mình muốn chú ý.
               </p>
             </div>
           </div>
@@ -289,10 +289,10 @@ export function LandingView() {
               </div>
               <div>
                 <span className='font-space text-xs font-extrabold uppercase text-primary tracking-wider'>Đồng hành</span>
-                <h3 className='font-space text-xl font-bold text-on-surface mt-0.5'>AI Phản Tư Không Phán Xét</h3>
+                <h3 className='font-space text-xl font-bold text-on-surface mt-0.5'>Không Gian Tự Suy Ngẫm</h3>
               </div>
               <p className='font-sans text-base text-on-surface-variant leading-relaxed'>
-                Lắng nghe trọn vẹn và phản hồi dịu dàng. AI giúp bạn gọi tên cảm xúc và làm sáng tỏ dòng suy nghĩ mà bạn đang mắc kẹt.
+                Viết theo nhịp riêng, chọn câu hỏi gợi mở và đọc lại những điều bạn đã ghi.
               </p>
             </div>
 
@@ -347,7 +347,7 @@ export function LandingView() {
                   Viết dễ hơn ngay cả khi bạn không biết bắt đầu từ đâu
                 </h3>
                 <p className='font-sans text-base text-on-surface-variant max-w-xl leading-relaxed'>
-                  Không còn cảm giác sợ trang giấy trắng. Bạn chỉ cần gõ vài dòng ngắn, AI sẽ tự động phân tích phổ cảm xúc và giúp bạn mở khóa mạch suy nghĩ.
+                  Bạn có thể bắt đầu bằng vài dòng ngắn hoặc chọn một câu hỏi gợi mở có sẵn.
                 </p>
               </div>
 
@@ -435,14 +435,14 @@ export function LandingView() {
               <div>
                 <div className='flex items-center gap-2 mb-3'>
                   <span className='px-3 py-1 bg-paper-warm font-space text-xs font-extrabold border-neo-sm rounded-md shadow-neo-sm'>
-                    AI PSYCHOLOGICAL INSIGHTS
+                    NHÌN LẠI NHẬT KÝ
                   </span>
                 </div>
                 <h3 className='font-space text-2xl font-bold text-on-surface mb-2'>
                   Nhận ra khuôn mẫu lặp lại trong suy nghĩ
                 </h3>
                 <p className='font-sans text-base text-on-surface-variant leading-relaxed'>
-                  Tìm ra những yếu tố vô hình kích hoạt năng lượng tốt hoặc kéo tụt tinh thần của bạn, kèm gợi ý hành động chăm sóc bản thân cụ thể.
+                  Xem lại cảm xúc và các chỉ số bạn đã tự ghi để nhận ra những điều lặp lại theo thời gian.
                 </p>
               </div>
 
@@ -491,7 +491,7 @@ export function LandingView() {
               </div>
               <h3 className='font-space text-xl font-bold text-on-surface'>Bạn Toàn Quyền Quyết Định</h3>
               <p className='font-sans text-base text-on-surface-variant leading-relaxed'>
-                AI chỉ đóng vai trò gợi ý. Nếu AI nhận diện chưa đúng cảm xúc hay chủ đề, bạn luôn có quyền chỉnh sửa lại phổ cảm xúc và tag theo ý mình.
+                Bạn tự chọn và chỉnh sửa cảm xúc, chỉ số cùng chủ đề của từng trang viết.
               </p>
             </div>
 
@@ -509,72 +509,7 @@ export function LandingView() {
         </div>
       </section>
 
-      {/* 6. TESTIMONIALS (IMPROVED AUTHENTICITY & READABILITY) */}
-      <section id='reviews' className='w-full py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-paper-warm border-b-2 border-on-background scroll-mt-20'>
-        <div className='max-w-6xl mx-auto flex flex-col gap-10'>
-          <div className='text-center'>
-            <StickerBadge label='TIẾNG NÓI ĐỒNG ĐIỆU' variant='pink' rotate={-2} />
-            <h2 className='font-space text-3xl sm:text-4xl font-extrabold text-on-surface mt-3'>
-              Được tin tưởng bởi những người muốn hiểu rõ bản thân
-            </h2>
-          </div>
-
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-            {/* Note 1 */}
-            <div className='bg-surface-card border-neo rounded-2xl p-6 sm:p-7 shadow-neo rotate-[-1deg] relative flex flex-col justify-between hover:rotate-0 transition-transform'>
-              <WashiTape color='lime' rotate={-3} className='absolute -top-3 left-8 w-24' />
-              <p className='font-sans text-base text-on-surface italic leading-relaxed pt-2'>
-                &ldquo;Trước đây mình hay bỏ dở việc viết nhật ký vì sợ phải viết dài. Với MyLog, mình chỉ cần gõ 3 dòng trước khi ngủ, AI phản hồi rất ấm áp và tinh tế.&rdquo;
-              </p>
-              <div className='mt-6 pt-4 border-t border-border-soft flex items-center gap-3'>
-                <div className='w-9 h-9 rounded-full bg-primary-container border-neo-sm flex items-center justify-center font-space font-bold text-xs'>
-                  MA
-                </div>
-                <div>
-                  <div className='font-space text-sm font-bold text-on-surface'>Minh Anh</div>
-                  <div className='font-sans text-xs text-gray-600'>Sinh viên Kiến Trúc • 14 ngày streak</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Note 2 */}
-            <div className='bg-surface-card border-neo rounded-2xl p-6 sm:p-7 shadow-neo rotate-[1.5deg] relative flex flex-col justify-between hover:rotate-0 transition-transform'>
-              <WashiTape color='peach' rotate={2} className='absolute -top-3 right-8 w-24' />
-              <p className='font-sans text-base text-on-surface italic leading-relaxed pt-2'>
-                &ldquo;Nhờ bảng tổng hợp cảm xúc tuần, mình mới giật mình nhận ra cứ hôm nào làm việc qua 9h tối là ngày hôm sau tâm trạng xuống dốc. Nhận thức này đã giúp mình biết cách thiết lập ranh giới tốt hơn.&rdquo;
-              </p>
-              <div className='mt-6 pt-4 border-t border-border-soft flex items-center gap-3'>
-                <div className='w-9 h-9 rounded-full bg-secondary-container border-neo-sm flex items-center justify-center font-space font-bold text-xs'>
-                  HL
-                </div>
-                <div>
-                  <div className='font-space text-sm font-bold text-on-surface'>Hoàng Long</div>
-                  <div className='font-sans text-xs text-gray-600'>Product Designer • 28 ngày streak</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Note 3 */}
-            <div className='bg-surface-card border-neo rounded-2xl p-6 sm:p-7 shadow-neo rotate-[-1.5deg] relative flex flex-col justify-between hover:rotate-0 transition-transform'>
-              <WashiTape color='blue' rotate={-2} className='absolute -top-3 left-10 w-24' />
-              <p className='font-sans text-base text-on-surface italic leading-relaxed pt-2'>
-                &ldquo;Giao diện scrapbook cực kỳ có hồn! Cảm giác dán ảnh polaroid và chọn sticker làm mình thấy như đang ngồi trước cuốn sổ thật sự sau một ngày bận rộn trên máy tính.&rdquo;
-              </p>
-              <div className='mt-6 pt-4 border-t border-border-soft flex items-center gap-3'>
-                <div className='w-9 h-9 rounded-full bg-tertiary-container border-neo-sm flex items-center justify-center font-space font-bold text-xs'>
-                  TH
-                </div>
-                <div>
-                  <div className='font-space text-sm font-bold text-on-surface'>Thu Hương</div>
-                  <div className='font-sans text-xs text-gray-600'>Content Creator • 35 ngày streak</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. FINAL ACTION CTA (LIME DOMINANT & REASSURING) */}
+      {/* 6. FINAL ACTION CTA (LIME DOMINANT & REASSURING) */}
       <section className='w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-bg-canvas border-t-2 border-on-background'>
         <div className='max-w-4xl mx-auto bg-primary-container/70 border-neo rounded-3xl p-8 sm:p-14 shadow-neo-lg text-center flex flex-col items-center gap-6 relative overflow-visible'>
           <WashiTape color='lavender' rotate={-3} className='absolute -top-3 left-16 w-36 z-10' />
@@ -598,7 +533,7 @@ export function LandingView() {
         </div>
       </section>
 
-      {/* 8. NEO-BRUTALIST FOOTER */}
+      {/* 7. NEO-BRUTALIST FOOTER */}
       <footer className='w-full bg-surface-card border-t-2 border-on-background py-12 px-4 sm:px-6 lg:px-8'>
         <div className='max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6'>
           <div className='flex items-center gap-3'>

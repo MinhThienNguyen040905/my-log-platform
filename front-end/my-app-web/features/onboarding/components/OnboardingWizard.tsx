@@ -7,6 +7,7 @@ import { Cat, Coffee, Palette, Sprout } from 'lucide-react';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useToast } from '@/providers/ToastProvider';
 import { GOALS, OPTIONAL_CONSENTS, useOnboarding } from '../hooks/useOnboarding';
+import { AiProcessingConsentText, AI_PROCESSING_CONSENT_VERSION } from '@/features/user';
 import { useTranslation } from 'react-i18next';
 
 const AVATARS = [
@@ -106,10 +107,16 @@ export function OnboardingWizard() {
                 const current = form.consents.find((item) => item.type === type);
                 const revoked = form.revocations.includes(type);
                 return <div key={type} className='border-2 border-on-background rounded-xl p-4'>
-                  {current?.granted ? <label className='flex items-start gap-3'>
+                  {current?.granted && (type !== 'AI_PROCESSING' || current.documentVersion === AI_PROCESSING_CONSENT_VERSION) ? <label className='flex items-start gap-3'>
                     <input type='checkbox' checked={!revoked} onChange={() => form.toggleRevocation(type)} className='h-5 w-5 mt-0.5' />
                     <span><strong>{t(`onboardingExtra.${type}`)}</strong><span className='block text-sm text-on-surface-variant'>{t('onboardingExtra.consentGranted', { version: current.documentVersion })}</span></span>
-                  </label> : <div>
+                  </label> : type === 'AI_PROCESSING' ? <div className='space-y-2'>
+                    <label className='flex items-start gap-3'>
+                      <input type='checkbox' checked={form.grantAiProcessing} onChange={(event) => form.setGrantAiProcessing(event.target.checked)} className='h-5 w-5 mt-0.5' />
+                      <strong>Cho phép AI xử lý nhật ký của tôi</strong>
+                    </label>
+                    <AiProcessingConsentText />
+                  </div> : <div>
                     <strong>{t(`onboardingExtra.${type}`)}</strong>
                     <p className='text-sm text-on-surface-variant'>{t('onboardingExtra.consentUnavailable')}</p>
                   </div>}

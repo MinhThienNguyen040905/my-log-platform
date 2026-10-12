@@ -21,13 +21,16 @@ class JournalAnalyzerConfiguration {
                                     @Value("${mylog.ai.output-usd-per-million:0}") java.math.BigDecimal outputPrice,
                                     @Value("${mylog.ai.provider-data-approved:false}") boolean providerDataApproved,
                                     @Value("${mylog.ai.output-safety-approved:false}") boolean outputSafetyApproved,
+                                    @Value("${mylog.ai.mvp-enabled:false}") boolean mvpEnabled,
                                     ObjectMapper mapper) {
         if (fake && !"none".equals(provider))
             throw new IllegalArgumentException("Choose either fake or configured AI provider");
+        if (mvpEnabled && !"groq".equals(provider))
+            throw new IllegalArgumentException("AI MVP mode requires Groq");
         if (fake) return new FakeJournalAnalyzer();
         if ("none".equals(provider)) return new UnavailableJournalAnalyzer();
         if ("openai".equals(provider) || "groq".equals(provider)) {
-            if (!providerDataApproved || !outputSafetyApproved)
+            if (!mvpEnabled && (!providerDataApproved || !outputSafetyApproved))
                 throw new IllegalArgumentException("AI provider and output safety approval required");
             String resolvedEndpoint = endpoint.isBlank()
                     ? ("groq".equals(provider) ? "https://api.groq.com/openai/v1/chat/completions"

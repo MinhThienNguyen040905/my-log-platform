@@ -8,6 +8,7 @@ import com.mylog.platform.web.ConflictException;
 import com.mylog.platform.web.ResourceNotFoundException;
 import com.mylog.platform.web.InvalidRequestException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
@@ -25,14 +26,18 @@ import java.util.UUID;
 public class UserProfileService implements UserProfileUseCase {
     private static final Set<String> CONSENT_TYPES = Set.of("TERMS", "PRIVACY", "AI_PROCESSING", "ANALYTICS", "MODEL_TRAINING");
     private static final Set<String> WELLNESS_GOALS = Set.of("REFLECTION", "SLEEP", "MINDFULNESS", "EXERCISE", "SOCIAL");
+    private static final String AI_PROCESSING_VERSION = "groq-v1";
     private final UserStore store;
     private final SensitiveDataCipher cipher;
     private final IdGenerator ids;
     private final Clock clock;
     private final ObjectMapper mapper;
+    private final boolean aiMvpEnabled;
 
-    public UserProfileService(UserStore store, SensitiveDataCipher cipher, IdGenerator ids, Clock clock, ObjectMapper mapper) {
+    public UserProfileService(UserStore store, SensitiveDataCipher cipher, IdGenerator ids, Clock clock,
+                              ObjectMapper mapper, @Value("${mylog.ai.mvp-enabled:false}") boolean aiMvpEnabled) {
         this.store = store; this.cipher = cipher; this.ids = ids; this.clock = clock; this.mapper = mapper;
+        this.aiMvpEnabled = aiMvpEnabled;
     }
 
     private record ProfilePayload(String displayName, String penName, List<String> onboardingGoals) {}
@@ -106,7 +111,9 @@ public class UserProfileService implements UserProfileUseCase {
 
     @Override @Transactional(readOnly = true)
     public boolean isConsentGranted(UUID userId, String type) {
-        return consents(userId).stream().anyMatch(c -> c.type().equals(type) && c.granted());
+        return consents(userId).stream().anyMatch(c -> c.type().equals(type) && c.granted()
+                && (!aiMvpEnabled || !"AI_PROCESSING".equals(type)
+                    || AI_PROCESSING_VERSION.equals(c.documentVersion())));
     }
 
     private UserStore.Profile require(UUID userId) {

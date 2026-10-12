@@ -131,12 +131,17 @@ Structured Outputs strict (ví dụ `openai/gpt-oss-20b`), `MYLOG_AI_API_KEY` t�
 để `MYLOG_AI_ENDPOINT` rỗng để chọn `https://api.groq.com/openai/v1/chat/completions`.
 `MYLOG_AI_INPUT_USD_PER_MILLION` và `MYLOG_AI_OUTPUT_USD_PER_MILLION` phải là giá dương đã kiểm tra
 cho model khi chạy worker. Hai cờ `MYLOG_AI_PROVIDER_DATA_APPROVED` và
-`MYLOG_AI_OUTPUT_SAFETY_APPROVED` chỉ bật sau khi hoàn thành đánh giá tương ứng.
+`MYLOG_AI_OUTPUT_SAFETY_APPROVED` chỉ bật sau khi hoàn thành đánh giá tương ứng. Chế độ MVP
+dùng cờ riêng `MYLOG_AI_MVP_ENABLED` để chạy baseline safety khi chưa có classifier train;
+cờ này có thể cấu hình cho API và worker ở mọi profile và không ghi nhận phê duyệt giả.
 `MYLOG_WRITING_SUGGESTIONS_ENABLED=true` bật API gợi ý; thêm
 `MYLOG_WRITING_SUGGESTIONS_AI_ENABLED=true` để gọi Groq thay câu hỏi mẫu. Key chỉ ở backend:
 worker cần key cho phân tích, API instance cần key nếu bật gợi ý bản nháp. Không đặt key ở frontend.
 Gợi ý vẫn cần consent `AI_PROCESSING` và safety `ALLOW`; thiếu classifier/policy đã duyệt thì
 không gửi bản nháp hoặc nhật ký sang Groq. Chỉ cấu hình Groq chưa làm AI hoạt động trên dữ liệu thật.
+Trạng thái các điều kiện để bật cho người dùng thật nằm trong
+[AI MVP readiness](docs/AI_MVP_REAL_USER_READINESS.md).
+Để bật Groq cho backend và web, xem [AI MVP setup](docs/AI_MVP_SETUP.md).
 
 ## M1 Identity, profile và consent
 

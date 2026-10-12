@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 + "org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration,"
                 + "org.springframework.boot.data.redis.autoconfigure.DataRedisRepositoriesAutoConfiguration",
         "mylog.app-profile=worker",
+        "mylog.jobs.enabled=false",
         "mylog.open-api.enabled=true",
         "springdoc.api-docs.enabled=true"
 })
