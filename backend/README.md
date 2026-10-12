@@ -127,6 +127,10 @@ metadata queue, kết quả, token, chi phí và độ trễ.
 
 ## M1 Identity, profile và consent
 
+### Xem email tài khoản khi phát triển local
+
+Để thử đăng nhập mà không cần nhớ email, đặt `MYLOG_DEV_USERS_KEY` thành một chuỗi ngẫu nhiên ít nhất 16 ký tự trong `backend/.env`, rồi khởi động lại backend với profile `local`. `GET /internal/dev/users` chỉ tồn tại trong profile `local` (không có ở `staging`/`prod`) và cần header `X-Dev-Users-Key` khớp giá trị trên. API trả tối đa 100 tài khoản `ACTIVE` chưa xóa mỗi lần, gồm `id`, `status`, email đã giải mã; dùng `?before=<id-cuối>` để lấy trang kế tiếp. Response không được cache. Không đưa khóa hoặc kết quả email vào log hay commit. Trang web hỗ trợ tại `http://localhost:3000/dev/users` khi Next.js chạy chế độ development; nhập khóa để xem danh sách. Khóa chỉ ở bộ nhớ của trang cho đến khi tải lại. Tính năng này chỉ dành cho dữ liệu phát triển, không dùng với database người dùng thật.
+
 Các endpoint M1 được bật trong profile `local`, `staging`, `prod`; profile `test` chỉ bật khi integration test yêu cầu. Luồng local:
 
 1. `POST /api/v1/auth/register` với email, password (tối thiểu 12 ký tự), timezone IANA, locale, `termsVersion`, `privacyVersion`, `acceptTerms=true`, `acceptPrivacy=true`. Backend trả `202` với `registrationId` và lưu lượt đăng ký trong `pending_registrations`; chưa có dòng `users`, role hoặc profile. Đăng ký lại bằng cùng email trước khi xác minh sẽ thay password/thông tin và cấp mã/link mới; mã/link cũ hết hiệu lực. Email đã có tài khoản thật vẫn trả `409`.

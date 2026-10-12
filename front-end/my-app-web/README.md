@@ -10,6 +10,8 @@
 
 Nếu backend ở địa chỉ khác, cấu hình `MYLOG_BACKEND_URL` cho Next.js. Backend cần `MYLOG_VERIFICATION_URL` trỏ tới `https://<web-host>/auth/verify-email` ở staging/production; local có thể dùng `http://localhost:3000/auth/verify-email`.
 
+Khi thử nghiệm local, mở `/dev/users` để xem email của các tài khoản đang hoạt động. Nhập khóa `MYLOG_DEV_USERS_KEY` đã cấu hình trong `backend/.env`; trang và route `/api/dev/users` chỉ hoạt động khi Next.js chạy `npm run dev`. Khóa không được lưu trong trình duyệt. Backend phải chạy profile `local`; xem [hướng dẫn backend](../../backend/README.md).
+
 ## Đăng ký và xác minh email
 
 1. `/auth/register` gửi thông tin đăng ký tới `POST /api/v1/auth/register`. Backend lưu lượt đăng ký tạm và gửi email; tài khoản thật chỉ được tạo khi xác minh thành công. Người dùng có thể đăng ký lại bằng cùng email nếu chưa xác minh; lần mới thay mã/link và thông tin tạm. Web giữ tạm email đã nhập trong `sessionStorage` tối đa 30 phút rồi mở trang xác minh, nên form không yêu cầu nhập lại email và vẫn hoạt động khi tải lại trang. Trang đăng nhập cũng dùng cách này khi người dùng chọn xác minh bằng mã. Email được xóa khỏi `sessionStorage` sau khi xác minh thành công.
