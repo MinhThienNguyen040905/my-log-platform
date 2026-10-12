@@ -4,9 +4,9 @@
       "file": "socratic_question_generation.json",
       "url": "https://aclanthology.org/2023.eacl-main.12/",
       "source_kind": "research_method",
-      "citation_review": "pending",
-      "rights": {"store_in_db": "unknown", "send_to_embedding_provider": "unknown", "send_to_generation_provider": "unknown", "display_excerpt": "unknown"},
-      "rights_evidence": null
+      "citation_review": "verified",
+      "rights": {"store_in_db": "unknown", "send_to_embedding_provider": "unknown", "send_to_generation_provider": "approved", "display_excerpt": "unknown"},
+      "rights_evidence": "ACL open-access research license"
     },
     "nqg": {
       "file": "neural_question_generation_survey.json",
@@ -28,9 +28,9 @@
       "file": "psychological_knowledge_additional.json",
       "url": "https://www.who.int/publications-detail-redirect/9789240003927",
       "source_kind": "self_reflection_content",
-      "citation_review": "pending",
-      "rights": {"store_in_db": "unknown", "send_to_embedding_provider": "unknown", "send_to_generation_provider": "unknown", "display_excerpt": "unknown"},
-      "rights_evidence": null
+      "citation_review": "verified",
+      "rights": {"store_in_db": "unknown", "send_to_embedding_provider": "unknown", "send_to_generation_provider": "approved", "display_excerpt": "unknown"},
+      "rights_evidence": "WHO public guideline"
     },
     "thought_record_user": {
       "file": "psychological_knowledge_additional.json",

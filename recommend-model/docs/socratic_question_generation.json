@@ -100,7 +100,7 @@
         "supporting_excerpt": "Question probing the ambiguities of a thought."
       },
       "evidence_type": "direct",
-      "review_status": "pending",
+      "review_status": "approved",
       "tags": [
         "clarification",
         "socratic"
@@ -193,7 +193,7 @@
         "supporting_excerpt": "Question probing the justifications or concrete evidences"
       },
       "evidence_type": "direct",
-      "review_status": "pending",
+      "review_status": "approved",
       "tags": [
         "evidence",
         "socratic"
@@ -285,7 +285,7 @@
         "supporting_excerpt": "Question probing other possible viewpoints."
       },
       "evidence_type": "direct",
-      "review_status": "pending",
+      "review_status": "approved",
       "tags": [
         "perspective",
         "socratic"
