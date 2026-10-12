@@ -61,6 +61,7 @@ mylog:
     output-safety-approved: ${MYLOG_AI_OUTPUT_SAFETY_APPROVED:false}
   safety:
     classifier:
+      provider: ${MYLOG_SAFETY_CLASSIFIER_PROVIDER:rules}
       url: ${MYLOG_SAFETY_CLASSIFIER_URL:}
       token: ${MYLOG_SAFETY_CLASSIFIER_TOKEN:}
       timeout-ms: ${MYLOG_SAFETY_CLASSIFIER_TIMEOUT_MS:2000}

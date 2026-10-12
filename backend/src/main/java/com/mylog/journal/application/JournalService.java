@@ -14,9 +14,11 @@ import com.mylog.platform.web.ResourceNotFoundException;
 import com.mylog.safety.application.SafetyDecision;
 import com.mylog.safety.application.SafetyEventRecorder;
 import com.mylog.safety.application.SafetyScreeningUseCase;
+import com.mylog.user.application.UserProfileUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -36,21 +38,24 @@ public class JournalService implements JournalAnalysisAccess {
     private final JournalStore store;
     private final JournalContentCipher cipher;
     private final SafetyScreeningUseCase screening;
+    private final UserProfileUseCase users;
     private final SafetyEventRecorder safetyEvents;
     private final OutboxPublisher outbox;
     private final IdempotencyStore idempotency;
     private final IdGenerator ids;
     private final Clock clock;
     private final ObjectMapper mapper;
+    private final TransactionTemplate tx;
 
     public JournalService(JournalStore store, JournalContentCipher cipher, SafetyScreeningUseCase screening,
+                          UserProfileUseCase users,
                           SafetyEventRecorder safetyEvents, OutboxPublisher outbox, IdempotencyStore idempotency,
-                          IdGenerator ids, Clock clock, ObjectMapper mapper) {
-        this.store = store; this.cipher = cipher; this.screening = screening; this.safetyEvents = safetyEvents;
+                          IdGenerator ids, Clock clock, ObjectMapper mapper, TransactionTemplate tx) {
+        this.store = store; this.cipher = cipher; this.screening = screening; this.users = users; this.safetyEvents = safetyEvents;
         this.outbox = outbox; this.idempotency = idempotency; this.ids = ids; this.clock = clock; this.mapper = mapper;
+        this.tx = tx;
     }
 
-    @Transactional
     public JournalEntryView create(UUID userId, CreateJournalEntryCommand command, String key) {
         if (key == null || !key.matches("[A-Za-z0-9._:-]{8,160}")) throw new InvalidRequestException();
         Instant now = clock.instant();
@@ -59,24 +64,26 @@ public class JournalService implements JournalAnalysisAccess {
         validate(occurredAt, command.title(), command.location(), command.moodCode(), command.moodScore(),
                 command.stressScore(), command.energyScore(), command.sleepMinutes());
         String plainText = TipTapContent.plainText(command.contentJson());
-        var existing = idempotency.reserve(userId, "journal-create", key,
-                cipher.lookupHash("journal-create:" + mapper.writeValueAsString(command)), now);
-        if (existing.isPresent()) return get(userId, existing.get());
-        UUID id = ids.next();
         String title = command.title() == null ? "" : command.title().trim();
-        JournalPayload payload = new JournalPayload(1, title, command.contentJson(), plainText, command.location());
-        SafetyDecision decision = screening.screen(title + "\n" + plainText);
-        String status = decision.permitsOrdinaryAnalysis() ? "PENDING" : "BLOCKED_BY_SAFETY";
-        JournalEntrySnapshot entry = new JournalEntrySnapshot(id, userId,
-                cipher.encrypt(userId, id, mapper.writeValueAsString(payload)), occurredAt,
-                occurredAt.atZone(ZoneId.of(timezone)).toLocalDate(), timezone, command.moodCode(),
-                command.moodScore(), command.stressScore(), command.energyScore(), command.sleepMinutes(), false,
-                "SAVED", decision.riskLevel().name(), status, 1, 0, now, now, null);
-        store.create(entry);
-        safetyEvents.record(userId, id, decision, now);
-        publish(id, 1, decision, now);
-        idempotency.complete(userId, "journal-create", key, id, 201, now);
-        return view(entry);
+        SafetyDecision decision = screening.screen(title + "\n" + plainText, users.isConsentGranted(userId, "AI_PROCESSING"));
+        return tx.execute(t -> {
+            var existing = idempotency.reserve(userId, "journal-create", key,
+                    cipher.lookupHash("journal-create:" + mapper.writeValueAsString(command)), now);
+            if (existing.isPresent()) return get(userId, existing.get());
+            UUID id = ids.next();
+            JournalPayload payload = new JournalPayload(1, title, command.contentJson(), plainText, command.location());
+            String status = decision.permitsOrdinaryAnalysis() ? "PENDING" : "BLOCKED_BY_SAFETY";
+            JournalEntrySnapshot entry = new JournalEntrySnapshot(id, userId,
+                    cipher.encrypt(userId, id, mapper.writeValueAsString(payload)), occurredAt,
+                    occurredAt.atZone(ZoneId.of(timezone)).toLocalDate(), timezone, command.moodCode(),
+                    command.moodScore(), command.stressScore(), command.energyScore(), command.sleepMinutes(), false,
+                    "SAVED", decision.riskLevel().name(), status, 1, 0, now, now, null);
+            store.create(entry);
+            safetyEvents.record(userId, id, decision, now);
+            publish(id, 1, decision, now);
+            idempotency.complete(userId, "journal-create", key, id, 201, now);
+            return view(entry);
+        });
     }
 
     @Transactional(readOnly = true)
@@ -103,7 +110,6 @@ public class JournalService implements JournalAnalysisAccess {
         return new JournalPage(page.stream().map(this::summary).toList(), next);
     }
 
-    @Transactional
     public JournalEntryView update(UUID userId, UUID entryId, UpdateJournalEntryCommand command, long expectedVersion) {
         JournalEntrySnapshot old = require(userId, entryId);
         if (old.rowVersion() != expectedVersion) throw new ConflictException("Nhật ký đã được cập nhật ở nơi khác.");
@@ -120,19 +126,21 @@ public class JournalService implements JournalAnalysisAccess {
         BigDecimal energy = command.energyScore() == null ? old.energyScore() : command.energyScore();
         Integer sleep = command.sleepMinutes() == null ? old.sleepMinutes() : command.sleepMinutes();
         validate(occurredAt, title, location, moodCode, mood, stress, energy, sleep);
-        SafetyDecision decision = screening.screen(title + "\n" + plainText);
-        Instant now = clock.instant();
-        JournalEntrySnapshot next = new JournalEntrySnapshot(entryId, userId,
-                cipher.encrypt(userId, entryId, mapper.writeValueAsString(new JournalPayload(1, title, content, plainText, location))),
-                occurredAt, occurredAt.atZone(ZoneId.of(timezone)).toLocalDate(), timezone, moodCode,
-                mood, stress, energy, sleep, old.favorite(), old.entryStatus(), decision.riskLevel().name(),
-                decision.permitsOrdinaryAnalysis() ? "ANALYSIS_OUTDATED" : "BLOCKED_BY_SAFETY",
-                old.contentVersion() + 1, old.rowVersion() + 1, old.createdAt(), now, null);
-        if (!store.update(next, expectedVersion)) throw new ConflictException("Nhật ký đã được cập nhật ở nơi khác.");
-        safetyEvents.record(userId, entryId, decision, now);
-        outbox.publish("JOURNAL_ENTRY", entryId, "JournalEntryChanged", next.contentVersion(), now);
-        publish(entryId, next.contentVersion(), decision, now);
-        return view(next);
+        SafetyDecision decision = screening.screen(title + "\n" + plainText, users.isConsentGranted(userId, "AI_PROCESSING"));
+        return tx.execute(t -> {
+            Instant now = clock.instant();
+            JournalEntrySnapshot next = new JournalEntrySnapshot(entryId, userId,
+                    cipher.encrypt(userId, entryId, mapper.writeValueAsString(new JournalPayload(1, title, content, plainText, location))),
+                    occurredAt, occurredAt.atZone(ZoneId.of(timezone)).toLocalDate(), timezone, moodCode,
+                    mood, stress, energy, sleep, old.favorite(), old.entryStatus(), decision.riskLevel().name(),
+                    decision.permitsOrdinaryAnalysis() ? "ANALYSIS_OUTDATED" : "BLOCKED_BY_SAFETY",
+                    old.contentVersion() + 1, old.rowVersion() + 1, old.createdAt(), now, null);
+            if (!store.update(next, expectedVersion)) throw new ConflictException("Nhật ký đã được cập nhật ở nơi khác.");
+            safetyEvents.record(userId, entryId, decision, now);
+            outbox.publish("JOURNAL_ENTRY", entryId, "JournalEntryChanged", next.contentVersion(), now);
+            publish(entryId, next.contentVersion(), decision, now);
+            return view(next);
+        });
     }
 
     @Transactional
@@ -206,7 +214,8 @@ public class JournalService implements JournalAnalysisAccess {
         if (entry == null || entry.contentVersion() != contentVersion
                 || !"BLOCKED_BY_SAFETY".equals(entry.analysisStatus())) return true;
         JournalPayload data = payload(entry);
-        SafetyDecision decision = screening.screen(data.title() + "\n" + data.plainText());
+        SafetyDecision decision = screening.screen(data.title() + "\n" + data.plainText(),
+                users.isConsentGranted(userId, "AI_PROCESSING"));
         if ("FAIL_SAFE".equals(decision.decision())) return false;
         Instant now = clock.instant();
         if (!store.applyRescreen(userId, entryId, contentVersion, decision.riskLevel().name(),

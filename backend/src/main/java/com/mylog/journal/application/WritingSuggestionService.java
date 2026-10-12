@@ -32,7 +32,7 @@ public class WritingSuggestionService {
         if (!enabled) return unavailable();
         if (!users.isConsentGranted(userId, "AI_PROCESSING"))
             return new WritingSuggestionResult("CONSENT_REQUIRED", null, null);
-        SafetyDecision decision = screening.screen(text);
+        SafetyDecision decision = screening.screen(text, true);
         return switch (decision.decision()) {
             case "ALLOW" -> allowed(text);
             case "SAFETY_FLOW" -> new WritingSuggestionResult("SAFETY_FLOW", null, null);

@@ -6,5 +6,7 @@ import java.util.Optional;
 public interface RiskClassifier {
     Optional<Classification> classify(String plainText);
 
+    default boolean requiresExternalConsent() { return false; }
+
     record Classification(String provider, String version, RiskLevel level, BigDecimal confidence) {}
 }

@@ -4,6 +4,7 @@ import com.mylog.safety.application.RiskClassifier;
 import com.mylog.safety.application.RiskLevel;
 import com.mylog.safety.application.SafetyPolicyGate;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -26,6 +27,7 @@ class BaselineSafetyConfiguration {
 
     @Bean
     @Primary
+    @ConditionalOnProperty(prefix = "mylog.safety.classifier", name = "provider", havingValue = "rules", matchIfMissing = true)
     RiskClassifier mvpRiskClassifier() {
         return text -> Optional.of(new RiskClassifier.Classification(PROVIDER, VERSION,
                 CAUTION.matcher(text).find() ? RiskLevel.MODERATE : RiskLevel.LOW,
@@ -34,10 +36,16 @@ class BaselineSafetyConfiguration {
 
     @Bean
     @Primary
-    SafetyPolicyGate mvpSafetyPolicyGate() {
+    SafetyPolicyGate mvpSafetyPolicyGate(
+            @Value("${mylog.safety.classifier.provider:rules}") String classifierProvider,
+            @Value("${mylog.ai.model:}") String model) {
         return (rule, provider, version, confidence, at) ->
-                RULE_VERSION.equals(rule) && PROVIDER.equals(provider) && VERSION.equals(version)
+                RULE_VERSION.equals(rule)
+                        && ("groq".equals(classifierProvider)
+                            ? "GROQ".equals(provider) && model.equals(version)
+                            : "rules".equals(classifierProvider) && PROVIDER.equals(provider) && VERSION.equals(version))
                         && confidence != null && confidence.compareTo(new BigDecimal("0.5")) >= 0
-                        ? Optional.of(POLICY_VERSION) : Optional.empty();
+                        ? Optional.of("groq".equals(classifierProvider) ? "mvp-groq-safety-v1" : POLICY_VERSION)
+                        : Optional.empty();
     }
 }

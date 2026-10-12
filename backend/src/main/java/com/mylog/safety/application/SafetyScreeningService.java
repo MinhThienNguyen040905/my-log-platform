@@ -29,10 +29,13 @@ public final class SafetyScreeningService implements SafetyScreeningUseCase {
         this.clock = clock;
     }
 
-    @Override public SafetyDecision screen(String plainText) {
+    @Override public SafetyDecision screen(String plainText) { return screen(plainText, false); }
+
+    @Override public SafetyDecision screen(String plainText, boolean externalConsentGranted) {
         String normalized = plainText.toLowerCase(Locale.ROOT);
         if (CRITICAL.matcher(normalized).find()) return ruleDecision(RiskLevel.CRITICAL);
         if (HIGH.matcher(normalized).find()) return ruleDecision(RiskLevel.HIGH);
+        if (!externalConsentGranted && classifier.requiresExternalConsent()) return failSafe();
         try {
             Optional<RiskClassifier.Classification> classified = classifier.classify(plainText);
             if (classified.isEmpty()) return failSafe();

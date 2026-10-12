@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class BaselineSafetyConfigurationTest {
     private final BaselineSafetyConfiguration config = new BaselineSafetyConfiguration();
     private final SafetyScreeningService screening = new SafetyScreeningService(
-            config.mvpRiskClassifier(), config.mvpSafetyPolicyGate(), Clock.systemUTC());
+            config.mvpRiskClassifier(), config.mvpSafetyPolicyGate("rules", ""), Clock.systemUTC());
 
     @Test void ordinarySyntheticTextIsAllowed() {
         var decision = screening.screen("Hôm nay mình đi học và thấy vui.");

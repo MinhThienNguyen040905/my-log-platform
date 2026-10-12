@@ -21,13 +21,13 @@ flowchart TD
     F -->|Chưa kiểm tra được| M[Giữ bài viết, chờ kiểm tra lại]
 ```
 
-Có **hai loại phản hồi ở hai thời điểm**: lúc đang viết là câu hỏi gợi ý để viết tiếp; sau khi lưu là kết quả phân tích của bài đã lưu, gồm reflection và các nhãn cảm xúc/chủ đề. Backend có đường gọi Groq cho nhánh đang viết nhưng mặc định tắt và frontend chưa kết nối. Bài viết được lưu trước khi có kết quả phân tích AI. Sơ đồ chi tiết về outbox và worker nằm ở mục 3.
+Có **hai loại phản hồi ở hai thời điểm**: lúc đang viết là câu hỏi gợi ý để viết tiếp; sau khi lưu là kết quả phân tích của bài đã lưu, gồm reflection và các nhãn cảm xúc/chủ đề. Web đã nối nút gợi ý với backend. Trong MVP local, safety gọi Groq trước gợi ý/phân tích khi có consent; bài viết được lưu trước khi có kết quả phân tích AI. Sơ đồ chi tiết về outbox và worker nằm ở mục 3.
 
 ## 1. Bốn khái niệm dễ bị gọi chung là “AI”
 
 | Phần | Câu hỏi nó trả lời | Hiện trạng |
 |---|---|---|
-| **Safety screening** | Nội dung này có được đi vào phân tích/phản hồi thông thường không? | Có rule, classifier port, HTTP adapter cho model nội bộ và policy gate. Classifier mặc định unavailable; model/rule/nội dung hỗ trợ chưa được duyệt. |
+| **Safety screening** | Nội dung này có được đi vào phân tích/phản hồi thông thường không? | Có rule, classifier port, HTTP adapter cho model nội bộ và policy gate. Local MVP hiện dùng adapter Groq sau rule khi có consent; model/rule/nội dung hỗ trợ chưa được duyệt để phát hành rộng. |
 | **Journal analysis** | Bài viết có sentiment, emotion, topic gì; reflection nào có thể hiển thị? | Có outbox, job, lưu kết quả, API, fake analyzer và adapter Chat Completions có API key. Provider thật chưa được duyệt và adapter mặc định tắt. |
 | **Insight, dashboard, report** | Dữ liệu nhiều ngày cho thấy mẫu quan sát nào? | Backend tính từ check-in, chỉ số và analysis có cấu trúc; report narrative hiện là câu dựng theo dữ liệu, không gọi LLM trên request path. |
 | **Knowledge/recommendation, RAG** | Có nguồn kiến thức đã duyệt phù hợp topic/locale không? | Có workflow duyệt, chunk, retrieval và citation. API hiện trả excerpt nguyên văn; chưa có embedding provider, semantic ranking hay LLM generation. |
@@ -98,7 +98,7 @@ flowchart TD
 ### 3.1 Trong request lưu nhật ký
 
 1. `JournalService.create` kiểm tra request và idempotency key; lấy plain text từ TipTap JSON để screen, sau đó mã hóa payload nhật ký.
-2. `SafetyScreeningService` kiểm tra rule tiếng Việt/Anh, gọi `RiskClassifier`, rồi tìm policy `APPROVED` đúng rule/provider/version/confidence. `HIGH/CRITICAL` đi vào safety flow; classifier lỗi hoặc policy chưa sẵn sàng thành `FAIL_SAFE`.
+2. `SafetyScreeningService` kiểm tra rule tiếng Việt/Anh, gọi `RiskClassifier`, rồi kiểm tra policy phù hợp. MVP Groq dùng marker `mvp-groq-safety-v1`; đường classifier nội bộ cần policy database `APPROVED` đúng rule/provider/version/confidence. `HIGH/CRITICAL` đi vào safety flow; classifier lỗi hoặc policy chưa sẵn sàng thành `FAIL_SAFE`. Journal chưa có `AI_PROCESSING` consent không gửi text sang Groq và chặn ordinary analysis.
 3. Cùng một transaction ghi `journal_entries`, safety event tối thiểu và outbox event thích hợp. Chỉ `ALLOW` tạo `JournalEntrySubmitted`; `FAIL_SAFE` tạo `SafetyRescreenRequested`; `CONSTRAIN` và rủi ro cao không tạo job reflection thông thường. Outbox chỉ mang entry ID và `contentVersion`, không mang văn bản nhật ký.
 4. API trả kết quả lưu trước khi phân tích xong. `analysisStatus` ban đầu có thể là `PENDING` hoặc `BLOCKED_BY_SAFETY`; trạng thái lưu bài viết và trạng thái phân tích là hai thứ riêng.
 
@@ -178,7 +178,7 @@ với timeout tối đa 10 giây và mặc định 2 giây. Nếu service lỗi,
 `FAIL_SAFE`. Không có luồng tự động trích journal production làm dữ liệu train.
 
 Adapter `ChatCompletionsJournalAnalyzer` chỉ tồn tại ở worker khi `MYLOG_AI_PROVIDER=openai` hoặc `groq` và hai
-cờ phê duyệt dữ liệu provider/output safety được bật rõ. Nó không được gọi trong transaction
+cờ phê duyệt dữ liệu provider/output safety được bật rõ, hoặc chế độ MVP được bật cùng Groq. Nó không được gọi trong transaction
 PostgreSQL. Mô hình safety nội bộ, model tạo reflection qua API key và embedding cho RAG là
 ba trách nhiệm khác nhau; hiện embedding vẫn để mở. Xem [ADR-0009](adr/0009-hybrid-ai-inference.md).
 Kế hoạch chi tiết cho model team sẽ train nằm ở [SAFETY_CLASSIFIER_MODEL_PLAN.md](SAFETY_CLASSIFIER_MODEL_PLAN.md).
@@ -186,18 +186,19 @@ Kế hoạch chi tiết cho model team sẽ train nằm ở [SAFETY_CLASSIFIER_M
 | Cấu hình | Mặc định | Ý nghĩa |
 |---|---|---|
 | `MYLOG_JOBS_ENABLED` | `false` | Bật outbox/AI job worker khi môi trường và policy phù hợp. |
-| `MYLOG_AI_MVP_ENABLED` | `false` | Bật baseline safety theo luật cho MVP ở mọi profile cùng Groq; không đánh dấu phê duyệt provider/output thay cho đánh giá thực tế. Xem [AI_MVP_SETUP.md](AI_MVP_SETUP.md). |
+| `MYLOG_AI_MVP_ENABLED` | `false` | Bật đường MVP ở mọi profile; chọn classifier bằng `MYLOG_SAFETY_CLASSIFIER_PROVIDER`. Không đánh dấu phê duyệt provider/output thay cho đánh giá thực tế. Xem [AI_MVP_SETUP.md](AI_MVP_SETUP.md). |
+| `MYLOG_SAFETY_CLASSIFIER_PROVIDER` | `rules` | `groq` gọi Groq để phân loại safety khi có consent; `rules` giữ baseline cố định. Cấu hình local MVP dùng `groq`. |
 | `MYLOG_AI_FAKE_ENABLED` | `false` | `true` dùng analyzer cố định cho local/test; không gọi mạng. |
-| `MYLOG_AI_PROVIDER` | `none` | `openai` hoặc `groq` bật adapter Chat Completions trong worker; cần model, API key và provider approval. |
+| `MYLOG_AI_PROVIDER` | `none` | `openai` hoặc `groq` bật adapter Chat Completions trong worker; cần model, API key và approval hoặc chế độ MVP Groq. |
 | `MYLOG_WRITING_SUGGESTIONS_ENABLED`, `MYLOG_WRITING_SUGGESTIONS_AI_ENABLED` | `false` | Cờ thứ nhất bật endpoint gợi ý; cờ thứ hai chuyển từ câu hỏi mẫu sang Groq sau consent và safety. Cần key ở API instance; không đưa key xuống client. |
 | `MYLOG_AI_ENDPOINT` | rỗng | Chọn endpoint chính thức theo provider. Với Groq, chỉ chấp nhận endpoint chính thức hoặc HTTP loopback khi test local. |
 | `MYLOG_AI_MODEL`, `MYLOG_AI_API_KEY` | rỗng | Model hỗ trợ JSON Schema strict và API key của provider đã chọn; ví dụ Groq: `openai/gpt-oss-20b`. |
 | `MYLOG_AI_INPUT_USD_PER_MILLION`, `MYLOG_AI_OUTPUT_USD_PER_MILLION` | `0` | Khi bật provider phải cấu hình giá dương của model để tính chi phí ước lượng từ token usage. |
-| `MYLOG_AI_PROVIDER_DATA_APPROVED`, `MYLOG_AI_OUTPUT_SAFETY_APPROVED` | `false` | Cả hai phải được bật sau khi có hồ sơ duyệt; thiếu một trong hai thì cấu hình provider bị từ chối. |
+| `MYLOG_AI_PROVIDER_DATA_APPROVED`, `MYLOG_AI_OUTPUT_SAFETY_APPROVED` | `false` | Chỉ bật sau khi có hồ sơ duyệt; ngoài chế độ MVP, thiếu một trong hai thì cấu hình provider bị từ chối. |
 | `MYLOG_SAFETY_CLASSIFIER_URL` | rỗng | HTTPS endpoint nội bộ `/classify`; rỗng dùng classifier unavailable. |
 | `MYLOG_APP_PROFILE` | `all` | `api` không chạy scheduled workers; `worker` dành cho xử lý nền. |
 
-`JournalAnalyzer` mặc định là [`UnavailableJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/UnavailableJournalAnalyzer.java). [`FakeJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/FakeJournalAnalyzer.java) chỉ trả kết quả mẫu cố định. Adapter [`ChatCompletionsJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/ChatCompletionsJournalAnalyzer.java) gửi title/plain text tối thiểu qua HTTPS khi được bật rõ (HTTP chỉ cho loopback local/test), yêu cầu JSON schema, không gửi ID/email và không log raw request/response. Key cho phân tích cần ở worker; khi bật gợi ý Groq, API instance cũng cần key. `store=false` không thay thế việc thẩm định retention/no-training/region của provider. Backend còn có [`HttpRiskClassifier`](../src/main/java/com/mylog/safety/infrastructure/HttpRiskClassifier.java) cho model nội bộ; pipeline train/inference mẫu ở [`safety-model`](../../safety-model/README.md). Bật adapter **không đồng nghĩa với được phê duyệt production**. Chưa có model classifier được duyệt, policy/safety content hoàn chỉnh, output safety eval hoặc provider data-handling sign-off. Web đã có trạng thái/retry cho phân tích nhưng chưa nối gợi ý bản nháp.
+`JournalAnalyzer` mặc định là [`UnavailableJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/UnavailableJournalAnalyzer.java). [`FakeJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/FakeJournalAnalyzer.java) chỉ trả kết quả mẫu cố định. Adapter [`ChatCompletionsJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/ChatCompletionsJournalAnalyzer.java) gửi title/plain text tối thiểu qua HTTPS khi được bật rõ (HTTP chỉ cho loopback local/test), yêu cầu JSON schema, không gửi ID/email và không log raw request/response. Key cho phân tích cần ở worker; khi bật safety/gợi ý Groq, API instance cũng cần key. `store=false` không thay thế việc thẩm định retention/no-training/region của provider. Backend có [`GroqRiskClassifier`](../src/main/java/com/mylog/safety/infrastructure/GroqRiskClassifier.java) cho MVP và [`HttpRiskClassifier`](../src/main/java/com/mylog/safety/infrastructure/HttpRiskClassifier.java) cho model nội bộ; pipeline train/inference mẫu ở [`safety-model`](../../safety-model/README.md). Bật adapter **không đồng nghĩa với được phê duyệt production**. Chưa có model classifier được duyệt, policy/safety content hoàn chỉnh, output safety eval hoặc provider data-handling sign-off. Web đã nối gợi ý bản nháp và có trạng thái/retry cho phân tích.
 
 Các việc chính còn mở trước production:
 
