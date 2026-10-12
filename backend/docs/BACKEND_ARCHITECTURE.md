@@ -486,6 +486,10 @@ Base path `/api/v1`. JSON `camelCase`; enum `UPPER_SNAKE_CASE`; ID là UUID stri
 
 ### 9.1 User API
 
+`POST /auth/register` trả `202` và `registrationId`, lưu lượt đăng ký ở `pending_registrations`.
+Xác minh bằng link hoặc mã mới tạo user, role và profile trong một transaction. Đăng ký lại
+cùng email khi chưa xác minh sẽ thay challenge tạm; email đã có user thật trả `409`.
+
 ```text
 POST   /auth/register
 POST   /auth/email-verifications

@@ -20,7 +20,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.util.UUID;
 
 @RestController
@@ -37,7 +36,7 @@ public class IdentityController {
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request, HttpServletRequest http) {
         UUID id = identity.register(request.email(), request.password(), request.timezone(), request.locale(),
                 request.termsVersion(), request.privacyVersion(), http.getRemoteAddr());
-        return ResponseEntity.created(URI.create("/api/v1/me")).body(new RegisterResponse(id, true));
+        return ResponseEntity.accepted().body(new RegisterResponse(id, true));
     }
 
     @PostMapping("/email-verifications")

@@ -1,6 +1,7 @@
 package com.mylog.identity.application;
 
 import com.mylog.identity.application.IdentityStore.Account;
+import com.mylog.identity.application.IdentityStore.PendingRegistration;
 import com.mylog.identity.application.IdentityStore.Session;
 import com.mylog.identity.application.query.SessionSummary;
 import com.mylog.identity.application.result.AuthResult;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.IDN;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.text.Normalizer;
 import java.time.Clock;
@@ -70,16 +72,21 @@ public class IdentityService {
         String normalized = normalizeEmail(email);
         rate("register:" + remoteAddress, now, 20);
         rate("register-email:" + normalized, now, 5);
+        profiles.validateRegistrationPreferences(timezone, locale);
         byte[] emailHash = cipher.lookupHash(normalized);
+        PendingRegistration previous = store.pendingByEmailHashForUpdate(emailHash).orElse(null);
         if (store.accountByEmailHash(emailHash).isPresent()) throw new ConflictException("Email đã được đăng ký.");
-        UUID id = ids.next();
-        var encrypted = cipher.encrypt("users.email", id, id, normalized);
+        UUID id = previous == null ? ids.next() : previous.id();
+        String token = randomToken();
+        String code = verificationCode();
+        var encrypted = cipher.encrypt("pending_registrations.email", id, id, normalized);
         try {
-            store.createAccount(new Account(id, emailHash, encrypted, passwords.encode(password), "PENDING", 0, null, 0), now);
+            store.savePendingRegistration(new PendingRegistration(id, emailHash, encrypted, passwords.encode(password),
+                    timezone, locale, termsVersion, privacyVersion, cipher.tokenHash(token),
+                    cipher.tokenHash("VERIFY_EMAIL_CODE:" + id + ":" + code),
+                    now.plus(24, ChronoUnit.HOURS), now.plus(10, ChronoUnit.MINUTES), 0), now);
         } catch (DataIntegrityViolationException e) { throw new ConflictException("Email đã được đăng ký."); }
-        store.assignUserRole(id, now);
-        profiles.createDefault(id, timezone, locale, termsVersion, privacyVersion, now);
-        sendVerification(id, normalized, now);
+        delivery.send(normalized, token, code);
         return id;
     }
 
@@ -88,20 +95,21 @@ public class IdentityService {
         Instant now = clock.instant();
         rate("verify:" + remoteAddress, now, 10);
         String normalized = normalizeEmail(email);
-        store.accountByEmailHash(cipher.lookupHash(normalized)).filter(a -> a.status().equals("PENDING"))
-                .ifPresent(a -> sendVerification(a.id(), normalized, now));
+        store.pendingByEmailHashForUpdate(cipher.lookupHash(normalized))
+                .ifPresent(pending -> sendVerification(pending, normalized, now));
     }
 
     @Transactional
     public void confirmVerification(String token) {
+        Instant now = clock.instant();
         byte[] hash = cipher.tokenHash(token);
-        UUID user = store.consumeActionToken(hash, "VERIFY_EMAIL", clock.instant()).orElse(null);
-        if (user == null) {
+        PendingRegistration pending = store.pendingByTokenHashForUpdate(hash).orElse(null);
+        if (pending == null) {
             if (store.actionTokenAlreadyConsumed(hash, "VERIFY_EMAIL")) return;
             throw new InvalidCredentialsException();
         }
-        store.invalidateVerificationTokens(user);
-        store.activate(user, clock.instant());
+        if (!pending.expiresAt().isAfter(now)) throw new InvalidCredentialsException();
+        completeRegistration(pending, now);
     }
 
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
@@ -110,13 +118,16 @@ public class IdentityService {
         String normalized = normalizeEmail(email);
         rate("verify-code-ip:" + remoteAddress, now, 30);
         rate("verify-code-email:" + normalized, now, 10);
-        UUID user = store.accountByEmailHash(cipher.lookupHash(normalized))
-                .filter(account -> "PENDING".equals(account.status()))
-                .map(Account::id).orElseThrow(InvalidCredentialsException::new);
-        byte[] codeHash = cipher.tokenHash("VERIFY_EMAIL_CODE:" + user + ":" + code);
-        if (store.consumeActionCode(user, codeHash, now).isEmpty()) throw new InvalidCredentialsException();
-        store.invalidateVerificationTokens(user);
-        store.activate(user, now);
+        PendingRegistration pending = store.pendingByEmailHashForUpdate(cipher.lookupHash(normalized))
+                .orElseThrow(InvalidCredentialsException::new);
+        if (!pending.codeExpiresAt().isAfter(now) || pending.codeFailedAttempts() >= 5)
+            throw new InvalidCredentialsException();
+        byte[] codeHash = cipher.tokenHash("VERIFY_EMAIL_CODE:" + pending.id() + ":" + code);
+        if (!MessageDigest.isEqual(pending.codeHash(), codeHash)) {
+            store.recordPendingCodeFailure(pending.id());
+            throw new InvalidCredentialsException();
+        }
+        completeRegistration(pending, now);
     }
 
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
@@ -241,14 +252,33 @@ public class IdentityService {
         store.setStatus(userId, "ACTIVE", clock.instant());
     }
 
-    private void sendVerification(UUID id, String email, Instant now) {
-        store.invalidateVerificationTokens(id);
+    private void sendVerification(PendingRegistration pending, String email, Instant now) {
         String token = randomToken();
-        String code = String.format(Locale.ROOT, "%08d", random.nextInt(100_000_000));
-        byte[] codeHash = cipher.tokenHash("VERIFY_EMAIL_CODE:" + id + ":" + code);
-        store.createActionToken(ids.next(), id, cipher.tokenHash(token), codeHash, "VERIFY_EMAIL",
+        String code = verificationCode();
+        store.updatePendingChallenge(pending.id(), cipher.tokenHash(token),
+                cipher.tokenHash("VERIFY_EMAIL_CODE:" + pending.id() + ":" + code),
                 now.plus(24, ChronoUnit.HOURS), now.plus(10, ChronoUnit.MINUTES), now);
         delivery.send(email, token, code);
+    }
+
+    private void completeRegistration(PendingRegistration pending, Instant now) {
+        String email = cipher.decrypt("pending_registrations.email", pending.id(), pending.id(), pending.email());
+        var encrypted = cipher.encrypt("users.email", pending.id(), pending.id(), email);
+        try {
+            store.createAccount(new Account(pending.id(), pending.emailHash(), encrypted,
+                    pending.passwordHash(), "ACTIVE", 0, null, 0), now);
+        } catch (DataIntegrityViolationException e) { throw new ConflictException("Email đã được đăng ký."); }
+        store.assignUserRole(pending.id(), now);
+        profiles.createDefault(pending.id(), pending.timezone(), pending.locale(),
+                pending.termsVersion(), pending.privacyVersion(), now);
+        store.createActionToken(ids.next(), pending.id(), pending.tokenHash(), null, "VERIFY_EMAIL",
+                now.plus(24, ChronoUnit.HOURS), null, now);
+        store.consumeActionToken(pending.tokenHash(), "VERIFY_EMAIL", now);
+        store.deletePendingRegistration(pending.id());
+    }
+
+    private String verificationCode() {
+        return String.format(Locale.ROOT, "%08d", random.nextInt(100_000_000));
     }
 
     private void rate(String subject, Instant now, int maximum) {

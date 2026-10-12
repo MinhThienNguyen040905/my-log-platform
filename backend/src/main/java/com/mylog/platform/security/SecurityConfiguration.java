@@ -7,6 +7,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
@@ -32,10 +34,12 @@ class SecurityConfiguration {
             ProblemAuthenticationEntryPoint authenticationEntryPoint,
             ProblemAccessDeniedHandler accessDeniedHandler,
             ObjectProvider<IdentityJwt> identityJwt,
-            ObjectProvider<IdentityAuthenticationConverter> identityConverter
+            ObjectProvider<IdentityAuthenticationConverter> identityConverter,
+            Environment environment
     ) throws Exception {
         boolean identityEnabled = properties.identity().enabled();
         boolean workerOnly = "worker".equals(properties.appProfile());
+        boolean localDevUsers = identityEnabled && environment.acceptsProfiles(Profiles.of("local & !staging & !prod"));
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
@@ -47,6 +51,7 @@ class SecurityConfiguration {
                         return;
                     }
                     authorize.requestMatchers(HttpMethod.GET, "/api/v1/safety/resources").permitAll();
+                    if (localDevUsers) authorize.requestMatchers(HttpMethod.GET, "/internal/dev/users").permitAll();
                     if (properties.openApi().enabled()) {
                         authorize.requestMatchers(
                                 "/internal/openapi", "/internal/openapi/**",

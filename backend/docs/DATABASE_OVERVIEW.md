@@ -117,8 +117,8 @@ Chứa identity tối thiểu, không chứa profile wellness.
 | `email_key_version` | VARCHAR(32) | NOT NULL |
 | `password_hash` | VARCHAR(255) | NULL nếu external IdP |
 | `auth_provider` | VARCHAR(32) | `LOCAL`, `GOOGLE`, `OIDC` |
-| `status` | VARCHAR(24) | `PENDING`, `ACTIVE`, `SUSPENDED`, `DELETION_PENDING`, `DELETED` |
-| `email_verified_at` | TIMESTAMPTZ | NULL khi chưa verify |
+| `status` | VARCHAR(24) | `ACTIVE`, `SUSPENDED`, `DELETION_PENDING`, `DELETED` (V17) |
+| `email_verified_at` | TIMESTAMPTZ | Được đặt khi tạo user sau xác minh |
 | `last_login_at` | TIMESTAMPTZ | nullable |
 | `failed_login_count` | INTEGER | >= 0 |
 | `locked_until` | TIMESTAMPTZ | nullable |
@@ -128,6 +128,8 @@ Chứa identity tối thiểu, không chứa profile wellness.
 | `row_version` | BIGINT | optimistic locking |
 
 Email normalize bằng `trim + Unicode normalize + lowercase` theo policy cố định. Hash phải là keyed HMAC, không phải SHA-256 trần để tránh dò từ danh sách email.
+
+V17 chuyển lượt đăng ký chưa xác minh sang `pending_registrations`. Bảng này có `id UUID`, `email_lookup_hash` unique, email mã hóa, BCrypt password hash, timezone/locale/phiên bản điều khoản, hash của link và mã 8 chữ số, hạn 24 giờ/10 phút, số lần nhập sai và timestamps. Không có FK tới `users`. Đăng ký lại cùng email ghi đè lượt tạm và vô hiệu hóa challenge cũ; chỉ khi xác minh thành công mới tạo `users`, `user_roles`, `user_profiles` và consent. Job identity xóa lượt tạm hết hạn. Migration V17 xóa `users.status='PENDING'` cũ và thu hồi quyền trực tiếp của `anon`/`authenticated` với bảng mới.
 
 Indexes:
 
@@ -195,7 +197,7 @@ Unique theo `code`, composite PK cho join table. `assigned_by` FK users với `O
 
 Index `(user_id, revoked_at, expires_at)` và cleanup index `(expires_at)`.
 
-`auth_refresh_history` có `id UUID` làm khóa chính và `token_hash BYTEA NOT NULL UNIQUE` để tra cứu HMAC của token đã dùng, phát hiện replay và revoke toàn bộ `token_family_id`. V4 backfill UUID cho dòng cũ; dòng mới nhận UUIDv7 từ application. Token verify/reset dùng table chung `auth_action_tokens` với `token_hash`, `purpose`, `expires_at`, `consumed_at`; tuyệt đối không lưu token thô. V16 bổ sung `code_hash`, `code_expires_at`, `code_failed_attempts` cho mã xác minh email 8 chữ số. Link và mã dùng chung `consumed_at`; gửi lại hoặc dùng thành công một phương thức sẽ vô hiệu hóa các challenge cũ. `auth_rate_limits` lưu HMAC của IP/email pseudonym và cửa sổ giới hạn, được cleanup định kỳ.
+`auth_refresh_history` có `id UUID` làm khóa chính và `token_hash BYTEA NOT NULL UNIQUE` để tra cứu HMAC của token đã dùng, phát hiện replay và revoke toàn bộ `token_family_id`. V4 backfill UUID cho dòng cũ; dòng mới nhận UUIDv7 từ application. `auth_action_tokens` giữ hash của link đã xác minh để xác nhận lặp lại idempotent sau khi user được tạo; tuyệt đối không lưu token thô. Các cột `code_*` từ V16 còn trong schema nhưng challenge đăng ký mới ở `pending_registrations` sau V17. `auth_rate_limits` lưu HMAC của IP/email pseudonym và cửa sổ giới hạn, được cleanup định kỳ.
 
 Chọn khóa chính theo vai trò dữ liệu: bản ghi có vòng đời hoặc cần tham chiếu độc lập dùng `id UUID`; bảng nối thuần túy dùng khóa ghép của hai khóa ngoại nếu mỗi cặp chỉ được tồn tại một lần; quan hệ một–một như `user_profiles` có thể dùng `user_id` vừa là PK vừa là FK; bảng trạng thái chỉ có một dòng cho mỗi subject như `auth_rate_limits` có thể dùng subject hash làm PK. Nếu thêm `id` cho bảng vốn được định danh bằng giá trị khác, vẫn phải giữ `UNIQUE` trên giá trị đó. Tránh dùng `byte[]` làm `@Id` cho bản ghi có vòng đời trong JPA. Xác định PK, unique và mục đích truy vấn trước khi viết migration; không thêm `id` chỉ để mọi bảng giống nhau.
 
@@ -844,14 +846,15 @@ rewrite. `safety_events` already stores classifier/policy version and confidence
 `ai_analyses` already stores provider/model/prompt/policy provenance. Training datasets and
 artifacts are managed outside the application database with separate `MODEL_TRAINING` consent,
 access control and deletion handling. V16 extends `auth_action_tokens` for email verification
-codes; any subsequent application schema change needs V17 or later. The applied V1–V15
-migrations remain immutable.
+codes. V17 moves unverified registrations to a temporary table and creates users only
+after confirmation. The applied migrations remain immutable.
 
 | Dữ liệu | Xử lý đề xuất |
 |---|---|
 | Journal/check-in/analysis/goal | hard delete sau grace period |
 | Asset/export file | xóa object trước, sau đó xóa metadata |
 | Refresh/action token | xóa khi hết hạn theo scheduled cleanup |
+| Đăng ký chưa xác minh | `pending_registrations` hết hạn sau 24 giờ, cleanup hằng ngày |
 | Outbox/job thành công | giữ ngắn hạn rồi purge |
 | AI usage | giữ aggregate theo chính sách tài chính, giảm định danh |
 | Safety event | retention riêng, loại user link khi hết nhu cầu |

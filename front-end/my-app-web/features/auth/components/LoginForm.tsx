@@ -17,6 +17,7 @@ import { useAppLanguage } from '@/providers/AppLanguageProvider';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { motion } from 'motion/react';
+import { forgetVerificationEmail, rememberVerificationEmail } from '../verification-email';
 
 export function LoginForm() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export function LoginForm() {
   const { locale } = useAppLanguage();
   const { t } = useTranslation();
   const schema = useMemo(() => createAuthSchemas(locale).login, [locale]);
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<z.infer<typeof loginSchema>>({
+  const { register, handleSubmit, getValues, formState: { errors, isSubmitting } } = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(schema),
     mode: 'onBlur',
     defaultValues: { email: '', password: '', rememberMe: false },
@@ -240,7 +241,11 @@ export function LoginForm() {
                   <span>{isSubmitting ? t('auth.loggingIn') : t('auth.loginAction')}</span>
                 </button>
               </form>
-              <Link href='/auth/verify-email' className='mt-3 inline-block font-space text-xs font-bold underline'>{t('auth.notVerified')}</Link>
+              <Link href='/auth/verify-email' onClick={() => {
+                const email = getValues('email').trim();
+                if (createAuthSchemas(locale).resendVerification.safeParse({ email }).success) rememberVerificationEmail(email);
+                else forgetVerificationEmail();
+              }} className='mt-3 inline-block font-space text-xs font-bold underline'>{t('auth.notVerified')}</Link>
             </div>
 
             {/* Bottom Redirect to Register */}

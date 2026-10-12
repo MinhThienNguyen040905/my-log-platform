@@ -106,10 +106,13 @@ export function OnboardingWizard() {
                 const current = form.consents.find((item) => item.type === type);
                 const revoked = form.revocations.includes(type);
                 return <div key={type} className='border-2 border-on-background rounded-xl p-4'>
-                  <label className='flex items-start gap-3'>
-                    <input type='checkbox' checked={!!current?.granted && !revoked} disabled={!current?.granted} onChange={() => form.toggleRevocation(type)} className='h-5 w-5 mt-0.5' />
-                    <span><strong>{t(`onboardingExtra.${type}`)}</strong><span className='block text-sm text-on-surface-variant'>{current?.granted ? t('onboardingExtra.consentGranted', { version: current.documentVersion }) : t('onboardingExtra.consentUnavailable')}</span></span>
-                  </label>
+                  {current?.granted ? <label className='flex items-start gap-3'>
+                    <input type='checkbox' checked={!revoked} onChange={() => form.toggleRevocation(type)} className='h-5 w-5 mt-0.5' />
+                    <span><strong>{t(`onboardingExtra.${type}`)}</strong><span className='block text-sm text-on-surface-variant'>{t('onboardingExtra.consentGranted', { version: current.documentVersion })}</span></span>
+                  </label> : <div>
+                    <strong>{t(`onboardingExtra.${type}`)}</strong>
+                    <p className='text-sm text-on-surface-variant'>{t('onboardingExtra.consentUnavailable')}</p>
+                  </div>}
                 </div>;
               })}
             </div>

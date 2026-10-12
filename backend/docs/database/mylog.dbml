@@ -23,6 +23,27 @@ Table users {
   row_version bigint [not null, default: 0]
 }
 
+Table pending_registrations {
+  id uuid [pk]
+  email_lookup_hash bytea [not null, unique]
+  encrypted_email bytea [not null]
+  email_iv bytea [not null]
+  email_wrapped_key bytea [not null]
+  email_key_version varchar(32) [not null]
+  password_hash varchar(255) [not null]
+  timezone varchar(64) [not null]
+  locale varchar(10) [not null]
+  terms_version varchar(40) [not null]
+  privacy_version varchar(40) [not null]
+  token_hash bytea [not null, unique]
+  code_hash bytea [not null]
+  expires_at timestamptz [not null]
+  code_expires_at timestamptz [not null]
+  code_failed_attempts integer [not null, default: 0]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
 Table user_profiles {
   user_id uuid [pk, ref: > users.id]
   encrypted_profile bytea [not null]

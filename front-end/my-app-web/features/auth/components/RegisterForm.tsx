@@ -17,6 +17,7 @@ import { useAppLanguage } from '@/providers/AppLanguageProvider';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { motion } from 'motion/react';
+import { rememberVerificationEmail } from '../verification-email';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -52,6 +53,7 @@ export function RegisterForm() {
         acceptTerms: true, acceptPrivacy: true,
       });
       if (!response.ok) throw new Error(await authError(response, locale));
+      rememberVerificationEmail(email);
       showToast({ title: t('auth.registerSuccess'), message: t('auth.checkEmail'), type: 'success' });
       router.push('/auth/verify-email');
     } catch (error) {

@@ -6,6 +6,7 @@ import com.mylog.identity.infrastructure.persistence.entity.AuthRateLimit;
 import com.mylog.identity.infrastructure.persistence.entity.AuthRefreshHistory;
 import com.mylog.identity.infrastructure.persistence.entity.AuthSession;
 import com.mylog.identity.infrastructure.persistence.entity.Permission;
+import com.mylog.identity.infrastructure.persistence.entity.PendingRegistrationEntity;
 import com.mylog.identity.infrastructure.persistence.entity.Role;
 import com.mylog.identity.infrastructure.persistence.entity.RolePermission;
 import com.mylog.identity.infrastructure.persistence.entity.User;
@@ -51,10 +52,71 @@ class IdentityRepository implements IdentityStore {
         user.passwordHash = account.passwordHash();
         user.authProvider = "LOCAL";
         user.status = account.status();
+        user.emailVerifiedAt = now;
         user.createdAt = now;
         user.updatedAt = now;
         entityManager.persist(user);
         entityManager.flush();
+    }
+
+    @Override public void savePendingRegistration(IdentityStore.PendingRegistration registration, Instant now) {
+        PendingRegistrationEntity row = entityManager.find(PendingRegistrationEntity.class, registration.id());
+        boolean newRegistration = row == null;
+        if (newRegistration) {
+            row = new PendingRegistrationEntity();
+            row.id = registration.id();
+            row.createdAt = now;
+        }
+        row.emailLookupHash = registration.emailHash();
+        row.encryptedEmail = registration.email().ciphertext();
+        row.emailIv = registration.email().iv();
+        row.emailWrappedKey = registration.email().wrappedKey();
+        row.emailKeyVersion = registration.email().keyVersion();
+        row.passwordHash = registration.passwordHash();
+        row.timezone = registration.timezone();
+        row.locale = registration.locale();
+        row.termsVersion = registration.termsVersion();
+        row.privacyVersion = registration.privacyVersion();
+        row.tokenHash = registration.tokenHash();
+        row.codeHash = registration.codeHash();
+        row.expiresAt = registration.expiresAt();
+        row.codeExpiresAt = registration.codeExpiresAt();
+        row.codeFailedAttempts = 0;
+        row.updatedAt = now;
+        if (newRegistration) entityManager.persist(row);
+        entityManager.flush();
+    }
+
+    @Override public Optional<IdentityStore.PendingRegistration> pendingByEmailHashForUpdate(byte[] hash) {
+        return entityManager.createQuery("select p from PendingRegistrationEntity p where p.emailLookupHash=:hash",
+                PendingRegistrationEntity.class).setParameter("hash", hash).setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                .getResultStream().findFirst().map(this::pending);
+    }
+
+    @Override public Optional<IdentityStore.PendingRegistration> pendingByTokenHashForUpdate(byte[] hash) {
+        return entityManager.createQuery("select p from PendingRegistrationEntity p where p.tokenHash=:hash",
+                PendingRegistrationEntity.class).setParameter("hash", hash).setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                .getResultStream().findFirst().map(this::pending);
+    }
+
+    @Override public void updatePendingChallenge(UUID id, byte[] tokenHash, byte[] codeHash,
+                                                   Instant expiresAt, Instant codeExpiresAt, Instant now) {
+        PendingRegistrationEntity row = entityManager.find(PendingRegistrationEntity.class, id);
+        row.tokenHash = tokenHash;
+        row.codeHash = codeHash;
+        row.expiresAt = expiresAt;
+        row.codeExpiresAt = codeExpiresAt;
+        row.codeFailedAttempts = 0;
+        row.updatedAt = now;
+    }
+
+    @Override public void recordPendingCodeFailure(UUID id) {
+        PendingRegistrationEntity row = entityManager.find(PendingRegistrationEntity.class, id);
+        row.codeFailedAttempts++;
+    }
+
+    @Override public void deletePendingRegistration(UUID id) {
+        entityManager.remove(entityManager.find(PendingRegistrationEntity.class, id));
     }
 
     @Override public Optional<Account> accountByEmailHash(byte[] hash) {
@@ -90,16 +152,6 @@ class IdentityRepository implements IdentityStore {
         user.lastLoginAt = now;
         user.updatedAt = now;
         user.rowVersion++;
-    }
-
-    @Override public void activate(UUID id, Instant now) {
-        User user = entityManager.find(User.class, id);
-        if (user != null && "PENDING".equals(user.status)) {
-            user.status = "ACTIVE";
-            user.emailVerifiedAt = now;
-            user.updatedAt = now;
-            user.rowVersion++;
-        }
     }
 
     @Override public void setStatus(UUID id, String status, Instant now) {
@@ -259,32 +311,6 @@ class IdentityRepository implements IdentityStore {
                 .map(t -> { t.consumedAt = now; return t.userId; });
     }
 
-    @Override public Optional<UUID> consumeActionCode(UUID userId, byte[] codeHash, Instant now) {
-        return entityManager.createQuery("""
-                select t from AuthActionToken t where t.userId=:userId and t.purpose='VERIFY_EMAIL'
-                  and t.consumedAt is null order by t.createdAt desc
-                """, AuthActionToken.class).setParameter("userId", userId)
-                .setLockMode(LockModeType.PESSIMISTIC_WRITE).setMaxResults(1).getResultStream().findFirst()
-                .filter(t -> t.codeHash != null && t.codeExpiresAt != null
-                        && t.codeExpiresAt.isAfter(now) && t.codeFailedAttempts < 5)
-                .flatMap(t -> {
-                    if (!java.security.MessageDigest.isEqual(t.codeHash, codeHash)) {
-                        t.codeFailedAttempts++;
-                        return Optional.empty();
-                    }
-                    t.consumedAt = now;
-                    return Optional.of(t.userId);
-                });
-    }
-
-    @Override public void invalidateVerificationTokens(UUID userId) {
-        entityManager.flush();
-        entityManager.createQuery("""
-                delete from AuthActionToken t
-                where t.userId=:userId and t.purpose='VERIFY_EMAIL' and t.consumedAt is null
-                """).setParameter("userId", userId).executeUpdate();
-    }
-
     @Override public boolean actionTokenAlreadyConsumed(byte[] hash, String purpose) {
         return entityManager.createQuery("""
                 select count(t) from AuthActionToken t where t.tokenHash=:hash
@@ -320,6 +346,8 @@ class IdentityRepository implements IdentityStore {
     }
 
     @Override @Transactional public void purgeExpired(Instant now) {
+        entityManager.createQuery("delete from PendingRegistrationEntity p where p.expiresAt<:now")
+                .setParameter("now", now).executeUpdate();
         entityManager.createQuery("delete from AuthActionToken t where t.expiresAt<:cutoff or t.consumedAt<:consumed")
                 .setParameter("cutoff", now.minusSeconds(7 * 86400L))
                 .setParameter("consumed", now.minusSeconds(86400)).executeUpdate();
@@ -334,6 +362,14 @@ class IdentityRepository implements IdentityStore {
                 new SensitiveDataCipher.Encrypted(user.encryptedEmail, user.emailIv,
                         user.emailWrappedKey, user.emailKeyVersion), user.passwordHash,
                 user.status, user.failedLoginCount, user.lockedUntil, user.rowVersion);
+    }
+
+    private IdentityStore.PendingRegistration pending(PendingRegistrationEntity row) {
+        return new IdentityStore.PendingRegistration(row.id, row.emailLookupHash,
+                new SensitiveDataCipher.Encrypted(row.encryptedEmail, row.emailIv,
+                        row.emailWrappedKey, row.emailKeyVersion), row.passwordHash,
+                row.timezone, row.locale, row.termsVersion, row.privacyVersion,
+                row.tokenHash, row.codeHash, row.expiresAt, row.codeExpiresAt, row.codeFailedAttempts);
     }
 
     private Session session(AuthSession authSession) {

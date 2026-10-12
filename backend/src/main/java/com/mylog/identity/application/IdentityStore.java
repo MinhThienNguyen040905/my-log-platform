@@ -10,16 +10,27 @@ import java.util.UUID;
 public interface IdentityStore {
     record Account(UUID id, byte[] emailHash, SensitiveDataCipher.Encrypted email, String passwordHash,
                    String status, int failedLogins, Instant lockedUntil, long version) {}
+    record PendingRegistration(UUID id, byte[] emailHash, SensitiveDataCipher.Encrypted email,
+                               String passwordHash, String timezone, String locale,
+                               String termsVersion, String privacyVersion,
+                               byte[] tokenHash, byte[] codeHash, Instant expiresAt,
+                               Instant codeExpiresAt, int codeFailedAttempts) {}
     record Session(UUID id, UUID userId, UUID familyId, byte[] tokenHash, Instant expiresAt,
                    Instant revokedAt, Instant createdAt, Instant lastUsedAt, String deviceName) {}
 
     void createAccount(Account account, Instant now);
+    void savePendingRegistration(PendingRegistration registration, Instant now);
+    Optional<PendingRegistration> pendingByEmailHashForUpdate(byte[] hash);
+    Optional<PendingRegistration> pendingByTokenHashForUpdate(byte[] hash);
+    void updatePendingChallenge(UUID id, byte[] tokenHash, byte[] codeHash,
+                                Instant expiresAt, Instant codeExpiresAt, Instant now);
+    void recordPendingCodeFailure(UUID id);
+    void deletePendingRegistration(UUID id);
     Optional<Account> accountByEmailHash(byte[] hash);
     Optional<Account> accountByEmailHashForUpdate(byte[] hash);
     Optional<Account> accountById(UUID id);
     void setLoginFailure(UUID userId, int failures, Instant lockedUntil, Instant now);
     void setLoginSuccess(UUID userId, Instant now);
-    void activate(UUID userId, Instant now);
     void setStatus(UUID userId, String status, Instant now);
     void changePassword(UUID userId, String hash, Instant now);
     void assignUserRole(UUID userId, Instant now);
@@ -39,9 +50,7 @@ public interface IdentityStore {
     void createActionToken(UUID id, UUID userId, byte[] hash, byte[] codeHash, String purpose,
                            Instant expiresAt, Instant codeExpiresAt, Instant now);
     Optional<UUID> consumeActionToken(byte[] hash, String purpose, Instant now);
-    Optional<UUID> consumeActionCode(UUID userId, byte[] codeHash, Instant now);
     boolean actionTokenAlreadyConsumed(byte[] hash, String purpose);
-    void invalidateVerificationTokens(UUID userId);
     boolean recordRateLimit(byte[] subjectHash, Instant now, int maxAttempts, long windowSeconds);
     void audit(UUID actorId, String action, UUID targetId, Instant now);
     void purgeExpired(Instant now);
