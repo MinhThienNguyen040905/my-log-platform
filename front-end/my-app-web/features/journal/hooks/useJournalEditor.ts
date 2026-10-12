@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useJournal } from '../context/JournalContext';
-import { useToast } from '@/lib/toast-context';
+import { useAccount } from '@/features/user';
+import { useToast } from '@/providers/ToastProvider';
 import { MoodType, JournalEmotion } from '@/types';
 import { normalizeJournalEmotion } from '../utils/journal-emotions';
 import { JournalTipTapEditorRef } from '../components/JournalTipTapEditor';
@@ -14,7 +15,8 @@ export function useJournalEditor() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('id');
-  const { addEntry, updateEntry, loadEntry, streakCount, draftStorageKey, userProfile, registerJournalLeaveCheck } = useJournal();
+  const { addEntry, updateEntry, loadEntry, streakCount, draftStorageKey, registerJournalLeaveCheck } = useJournal();
+  const { userProfile } = useAccount();
   const { showToast } = useToast();
 
   const editorRef = useRef<JournalTipTapEditorRef>(null);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useAppLanguage } from '@/app/_components/AppLanguageProvider';
+import { useAppLanguage } from '@/providers/AppLanguageProvider';
 
 export function LanguageSwitcher() {
   const { locale, setLocale } = useAppLanguage();

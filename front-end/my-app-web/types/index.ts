@@ -101,30 +101,3 @@ export interface UserProfile {
   preferredTime?: string;
 }
 
-export interface WellnessGoal {
-  id: string;
-  title: string;
-  description?: string;
-  category?: 'sleep' | 'mindfulness' | 'exercise' | 'social';
-  targetDays: number;
-  completedDays: number;
-  unit?: string;
-  completed: boolean;
-  currentStreak?: number;
-  targetStreak?: number;
-  completedToday?: boolean;
-  icon?: string;
-}
-
-export interface DailyStat {
-  date: string;
-  dayName: string;
-  score?: number;
-  moodScore: number;
-  stressScore: number;
-  sleepHours?: number;
-  mood?: MoodType;
-  dominantEmotion?: string;
-}
-
-

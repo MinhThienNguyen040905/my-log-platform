@@ -1,16 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
-import { JournalEntry, DailyStat, UserProfile } from '@/types';
+import React, { createContext, useContext, useCallback, useMemo, useRef } from 'react';
+import { JournalEntry } from '@/types';
 import { journalBody, journalJson, journalRequest, toEntry, type JournalDetail, type JournalPage } from '../api/client';
-import { clearJournalDrafts } from '../utils/draft-storage';
-import { useAccountProfile, type Profile } from '@/features/user';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 
 interface JournalContextType {
   userId: string;
   entries: JournalEntry[];
-  stats: DailyStat[];
   addEntry: (entry: Record<string, unknown>, key: string) => Promise<JournalEntry>;
   updateEntry: (id: string, entry: Record<string, unknown>, version: number) => Promise<JournalEntry>;
   deleteEntry: (id: string, version: number) => Promise<void>;
@@ -18,14 +15,11 @@ interface JournalContextType {
   toggleFavorite: (id: string) => Promise<JournalEntry>;
   loadEntry: (id: string) => Promise<JournalEntry>;
   reloadEntries: () => Promise<void>;
+  loadMoreEntries: () => Promise<void>;
+  hasMoreEntries: boolean;
+  entriesLoadingMore: boolean;
   entriesLoading: boolean;
   entriesError: string | null;
-  userProfile: UserProfile;
-  accountProfile: Profile;
-  reloadProfile: () => Promise<Profile>;
-  updateProfile: (data: Partial<UserProfile>) => Promise<Profile>;
-  completeOnboarding: () => Promise<Profile>;
-  logout: () => void;
   streakCount: number;
   draftStorageKey: string;
   registerJournalLeaveCheck: (check: (() => boolean) | null) => void;
@@ -34,59 +28,38 @@ interface JournalContextType {
 
 const JournalContext = createContext<JournalContextType | undefined>(undefined);
 
-function journalStreak(entries: JournalEntry[], timezone: string) {
-  if (!entries.length) return 0;
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' })
-    .formatToParts(new Date());
-  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
-  const today = new Date(`${value('year')}-${value('month')}-${value('day')}T00:00:00Z`);
-  const dates = new Set(entries.map((entry) => entry.date));
-  if (!dates.has(today.toISOString().slice(0, 10))) today.setUTCDate(today.getUTCDate() - 1);
-  let count = 0;
-  while (dates.has(today.toISOString().slice(0, 10))) {
-    count++;
-    today.setUTCDate(today.getUTCDate() - 1);
-  }
-  return count;
-}
-
-export function JournalProvider({ children, userId, profile }: {
+export function JournalProvider({ children, userId, streakCount, loadEntries }: {
   children: React.ReactNode;
   userId: string;
-  profile: Profile;
+  streakCount: number;
+  loadEntries: boolean;
 }) {
   const queryClient = useQueryClient();
   const storageKey = useCallback((name: string) => `mylog_${userId}_${name}`, [userId]);
-  const { userProfile, accountProfile, reloadProfile, updateProfile, completeOnboarding } = useAccountProfile(profile);
   const entriesKey = useMemo(() => ['journal', userId, 'entries'] as const, [userId]);
-  const [stats] = useState<DailyStat[]>([]);
   const journalLeaveCheck = useRef<(() => boolean) | null>(null);
   const registerJournalLeaveCheck = useCallback((check: (() => boolean) | null) => {
     journalLeaveCheck.current = check;
   }, []);
   const hasUnsavedJournalChanges = useCallback(() => journalLeaveCheck.current?.() ?? false, []);
 
-  const entriesQuery = useQuery({
+  const entriesQuery = useInfiniteQuery({
     queryKey: entriesKey,
-    queryFn: async () => {
-      const all: JournalEntry[] = [];
-      let cursor: string | null = null;
-      do {
-        const page: JournalPage = await journalJson<JournalPage>(`journal-entries?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`);
-        all.push(...page.items.map(toEntry));
-        cursor = page.nextCursor;
-      } while (cursor);
-      return all;
-    },
+    enabled: loadEntries,
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => journalJson<JournalPage>(`journal-entries?limit=100${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`),
+    getNextPageParam: (page) => page.nextCursor,
   });
-  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data]);
+  const entries = useMemo(() => entriesQuery.data?.pages.flatMap((page) => page.items.map(toEntry)) ?? [], [entriesQuery.data]);
   const entriesLoading = entriesQuery.isPending;
   const entriesError = entriesQuery.error instanceof Error ? entriesQuery.error.message : null;
   const reloadEntries = async () => { await entriesQuery.refetch(); };
+  const loadMoreEntries = async () => { await entriesQuery.fetchNextPage(); };
   const refreshDerived = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ['dashboard', userId] }),
     queryClient.invalidateQueries({ queryKey: ['insights', userId] }),
     queryClient.invalidateQueries({ queryKey: ['reports', userId] }),
+    queryClient.invalidateQueries({ queryKey: ['journal', userId, 'recent'] }),
   ]);
 
   const addEntry = async (body: Record<string, unknown>, key: string) => {
@@ -94,7 +67,7 @@ export function JournalProvider({ children, userId, profile }: {
       method: 'POST', ...journalBody(body, { 'Idempotency-Key': key }),
     });
     const entry = toEntry(saved);
-    queryClient.setQueryData<JournalEntry[]>(entriesKey, (previous) => previous ? [entry, ...previous.filter((old) => old.id !== entry.id)] : previous);
+    await queryClient.invalidateQueries({ queryKey: entriesKey });
     void refreshDerived();
     return entry;
   };
@@ -104,7 +77,7 @@ export function JournalProvider({ children, userId, profile }: {
       method: 'PATCH', ...journalBody(body, { 'If-Match': `"${version}"` }),
     });
     const entry = toEntry(saved);
-    queryClient.setQueryData<JournalEntry[]>(entriesKey, (previous) => previous?.map((old) => old.id === id ? entry : old));
+    await queryClient.invalidateQueries({ queryKey: entriesKey });
     queryClient.removeQueries({ queryKey: ['analysis', userId, id] });
     void refreshDerived();
     return entry;
@@ -112,7 +85,7 @@ export function JournalProvider({ children, userId, profile }: {
 
   const deleteEntry = async (id: string, version: number) => {
     await journalRequest(`journal-entries/${id}`, { method: 'DELETE', headers: { 'If-Match': `"${version}"` } });
-    queryClient.setQueryData<JournalEntry[]>(entriesKey, (previous) => previous?.filter((entry) => entry.id !== id));
+    await queryClient.invalidateQueries({ queryKey: entriesKey });
     queryClient.removeQueries({ queryKey: ['analysis', userId, id] });
     void refreshDerived();
   };
@@ -120,9 +93,8 @@ export function JournalProvider({ children, userId, profile }: {
   const loadEntry = useCallback(async (id: string) => {
     const detail = await journalJson<JournalDetail>(`journal-entries/${id}`);
     const entry = toEntry(detail);
-    queryClient.setQueryData<JournalEntry[]>(entriesKey, (previous) => previous?.map((old) => old.id === id ? entry : old));
     return entry;
-  }, [queryClient, entriesKey]);
+  }, []);
 
   const getEntryById = useCallback((id: string): JournalEntry | undefined => {
     return entries.find(e => e.id === id);
@@ -135,12 +107,8 @@ export function JournalProvider({ children, userId, profile }: {
       method: current.isFavorite ? 'DELETE' : 'PUT',
     });
     const entry = toEntry(saved);
-    queryClient.setQueryData<JournalEntry[]>(entriesKey, (previous) => previous?.map((old) => old.id === id ? { ...entry, tags: old.tags } : old));
+    await queryClient.invalidateQueries({ queryKey: entriesKey });
     return entry;
-  };
-
-  const logout = () => {
-    clearJournalDrafts();
   };
 
   return (
@@ -148,7 +116,6 @@ export function JournalProvider({ children, userId, profile }: {
       value={{
         userId,
         entries,
-        stats,
         addEntry,
         updateEntry,
         deleteEntry,
@@ -156,15 +123,12 @@ export function JournalProvider({ children, userId, profile }: {
         toggleFavorite,
         loadEntry,
         reloadEntries,
+        loadMoreEntries,
+        hasMoreEntries: !!entriesQuery.hasNextPage,
+        entriesLoadingMore: entriesQuery.isFetchingNextPage,
         entriesLoading,
         entriesError,
-        userProfile,
-        accountProfile,
-        reloadProfile,
-        updateProfile,
-        completeOnboarding,
-        logout,
-        streakCount: journalStreak(entries, userProfile.timezone),
+        streakCount,
         draftStorageKey: storageKey('draft_journal'),
         registerJournalLeaveCheck,
         hasUnsavedJournalChanges,

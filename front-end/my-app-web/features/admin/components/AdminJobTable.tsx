@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { AdminJobItem } from '../api/types';
 import { retryAdminJob } from '../api/admin-api';
-import { useToast } from '@/lib/toast-context';
+import { useToast } from '@/providers/ToastProvider';
 
 interface AdminJobTableProps {
   jobs: AdminJobItem[];

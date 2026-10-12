@@ -1,36 +1,45 @@
-# MyLog Web
+# MyLog web
 
-Ứng dụng web Next.js của MyLog. Các trang đăng ký, xác minh email và đăng nhập gọi backend qua các route `/api/auth/*` của Next.js. Nhật ký đã gọi backend để lưu và tải bài viết; bản nháp đang viết có thể lưu tạm trong browser `localStorage`.
+Giao diện Next.js App Router của MyLog. Ứng dụng web gọi backend qua các route `/api` của Next.js; nhật ký và dữ liệu tài khoản được lưu ở backend. Xem `AGENTS.md` để biết quy tắc kiến trúc chi tiết.
 
-## Chạy local
+## Cấu trúc
 
-1. Chạy backend tại `http://localhost:8080` theo [hướng dẫn backend](../../backend/README.md).
-2. Trong thư mục này, chạy `npm install` và `npm run dev`.
-3. Mở `http://localhost:3000`.
+| Thư mục | Trách nhiệm |
+| --- | --- |
+| `app/` | Route, layout, metadata và ghép các feature. Route handler `/api` là ranh giới HTTP phía web. |
+| `features/<name>/` | API client, hook, schema, component và logic của từng nghiệp vụ. `index.ts` là API công khai cho feature khác. |
+| `providers/` | Provider dùng toàn ứng dụng: ngôn ngữ, TanStack Query và thông báo. |
+| `components/` | UI dùng chung, không import nghiệp vụ của feature. |
+| `lib/` | Hạ tầng và utility dùng chung; `lib/i18n.ts` chứa dữ liệu bản dịch an toàn cho Server Component. |
+| `types/` | Kiểu dữ liệu thực sự dùng xuyên feature. |
 
-Nếu backend ở địa chỉ khác, cấu hình `MYLOG_BACKEND_URL` cho Next.js. Backend cần `MYLOG_VERIFICATION_URL` trỏ tới `https://<web-host>/auth/verify-email` ở staging/production; local có thể dùng `http://localhost:3000/auth/verify-email`.
+Import theo chiều `app → features → components/providers/lib`. Bên trong một feature dùng relative import; feature khác dùng API công khai qua `index.ts`. ESLint kiểm tra import ngược từ `app`, shared layer import feature và import qua barrel của chính feature.
 
-Khi thử nghiệm local, mở `/dev/users` để xem email của các tài khoản đang hoạt động; danh sách tự tải, không cần nhập khóa. Cấu hình cùng giá trị `MYLOG_DEV_USERS_KEY` trong `backend/.env` và `front-end/my-app-web/.env.local`. Trang và route `/api/dev/users` chỉ hoạt động khi Next.js chạy `npm run dev` trên `127.0.0.1`; khóa chỉ được server web dùng để gọi backend. Backend phải chạy profile `local`; xem [hướng dẫn backend](../../backend/README.md).
+`AccountProvider` sở hữu hồ sơ; `JournalProvider` sở hữu thao tác nhật ký. Chúng được ghép trong `app/_components/AuthGate.tsx`. Danh sách lịch sử dùng cursor và chỉ tải thêm khi người dùng yêu cầu. Dashboard, Insight và Settings dùng API tổng hợp; `journalEntryCount` của Dashboard là số bài trong khoảng thời gian đã yêu cầu, không phải tổng mọi thời điểm.
 
 ## Đăng ký và xác minh email
 
-Onboarding đọc trạng thái đồng ý từ backend. `TERMS` và `PRIVACY` đã được ghi nhận khi đăng ký. Các quyền tùy chọn `AI_PROCESSING`, `ANALYTICS`, `MODEL_TRAINING` mặc định chưa được cấp; trang chỉ hiển thị trạng thái vì chưa có tài liệu đồng ý công bố để người dùng bật quyền. Nếu một quyền đã được cấp từ trước, người dùng có thể bỏ chọn để thu hồi. Không hiển thị checkbox bị khóa cho quyền chưa được cấp.
+`/auth/register` gửi thông tin tới backend để tạo lượt đăng ký tạm. Email có liên kết xác minh hạn 24 giờ và mã 8 chữ số hạn 10 phút. Chỉ sau khi người dùng xác minh bằng một trong hai cách thì tài khoản thật mới được tạo. Web giữ email tạm trong `sessionStorage` tối đa 30 phút để nhập mã hoặc gửi lại thư; đăng ký lại bằng cùng email sẽ thay lượt tạm và vô hiệu hóa mã/link cũ. Trang `/auth/verify-email` không tự xác minh khi mở link bằng GET: người dùng phải bấm xác nhận để web gọi `POST /api/v1/auth/email-verifications:confirm`. Token được xóa khỏi thanh địa chỉ và không lưu trong browser storage. Sau khi xác minh, người dùng đăng nhập riêng.
 
-1. `/auth/register` gửi thông tin đăng ký tới `POST /api/v1/auth/register`. Backend lưu lượt đăng ký tạm và gửi email; tài khoản thật chỉ được tạo khi xác minh thành công. Người dùng có thể đăng ký lại bằng cùng email nếu chưa xác minh; lần mới thay mã/link và thông tin tạm. Web giữ tạm email đã nhập trong `sessionStorage` tối đa 30 phút rồi mở trang xác minh, nên form không yêu cầu nhập lại email và vẫn hoạt động khi tải lại trang. Trang đăng nhập cũng dùng cách này khi người dùng chọn xác minh bằng mã. Email được xóa khỏi `sessionStorage` sau khi xác minh thành công.
-2. Người dùng nhập mã **8 chữ số** từ email vào 8 ô. Web gửi `{ email, code }` tới `POST /api/v1/auth/email-verifications:confirm-code`. Mã có hiệu lực 10 phút.
-3. Người dùng cũng có thể mở liên kết trong email, sau đó bấm nút xác nhận trên `/auth/verify-email`. Web gửi token của liên kết tới `POST /api/v1/auth/email-verifications:confirm`. Liên kết có hiệu lực 24 giờ; mở trang bằng GET không tự xác minh.
-4. Nút gửi lại gọi `POST /api/v1/auth/email-verifications` với email đã biết. Liên kết và mã cũ hết hiệu lực khi gửi lại. Nếu mở trang xác minh trực tiếp mà không có email trong phiên, người dùng cần mở liên kết trong thư hoặc nhập email ở trang đăng nhập trước khi chọn xác minh bằng mã.
-5. Xác minh thành công chỉ kích hoạt tài khoản. Người dùng đăng nhập riêng tại `/auth/login`.
+Onboarding đọc trạng thái đồng ý từ backend. `TERMS` và `PRIVACY` đã ghi nhận khi đăng ký. Các quyền tùy chọn `AI_PROCESSING`, `ANALYTICS`, `MODEL_TRAINING` mặc định chưa được cấp; trang hiển thị trạng thái vì chưa có tài liệu đồng ý công bố để bật quyền. Quyền đã được cấp từ trước có thể bỏ chọn để thu hồi.
 
-Token của liên kết được xóa khỏi thanh địa chỉ sau khi trang tải và không được lưu trong browser storage. Đường dẫn xác minh dùng `Referrer-Policy: no-referrer` và `Cache-Control: no-store`. Cần tránh ghi URL chứa token vào access log và analytics khi triển khai.
+## Công cụ tài khoản local
 
-## Kiểm tra
+Khi thử nghiệm local, mở `http://localhost:3000/dev/users` để xem email của các tài khoản đang hoạt động. Cấu hình cùng giá trị `MYLOG_DEV_USERS_KEY` trong `backend/.env` và `front-end/my-app-web/.env.local`. Trang tự tải danh sách, chỉ hoạt động khi Next.js chạy `npm run dev` trên `127.0.0.1`; khóa chỉ được server web dùng để gọi backend. Backend phải chạy profile `local`. Xem [hướng dẫn backend](../../backend/README.md).
 
-```bash
+## Chạy và kiểm tra
+
+```powershell
+cd front-end/my-app-web
+npm ci
+npm run dev
+npx tsc --noEmit
 npm run lint
 npm run build
 ```
 
-## Trạng thái nhật ký và AI
+Kiểm tra trên trình duyệt: đăng nhập/đăng ký với dữ liệu hợp lệ và không hợp lệ, tải lịch sử và trang tiếp theo, sửa/xóa/yêu thích bài, cập nhật hồ sơ, chuyển ngôn ngữ và tải lại trang. Luồng cần tài khoản phải dùng tài khoản thử nghiệm, không dùng nhật ký thật.
 
-Trang nhật ký lưu bài viết trên backend; `localStorage` chỉ được dùng cho bản nháp chưa lưu và dữ liệu cũ để nhập lại. Cần đánh giá cách lưu bản nháp nhạy cảm này trước khi dùng production. Backend sở hữu kiểm tra an toàn bản nháp và gợi ý viết tại `POST /api/v1/journal-writing-suggestions`; web chưa gọi endpoint gợi ý viết đó. Xem [AI Analysis Guide](../../backend/docs/AI_ANALYSIS_GUIDE.md).
+Build dùng `next/font/google` cho Playfair Display, Plus Jakarta Sans và Space Grotesk. Môi trường không truy cập được `fonts.googleapis.com` sẽ dừng build khi tải font; trường hợp đó chưa được tính là build đạt.
+
+Trang nhật ký lưu bài viết trên backend; `localStorage` chỉ dùng cho bản nháp chưa lưu và dữ liệu cũ để nhập lại. Backend sở hữu kiểm tra an toàn bản nháp và gợi ý viết tại `POST /api/v1/journal-writing-suggestions`; web chưa gọi endpoint gợi ý viết đó. Xem [AI Analysis Guide](../../backend/docs/AI_ANALYSIS_GUIDE.md).

@@ -9,15 +9,15 @@ Repository gồm backend Spring Boot, giao diện web Next.js, ứng dụng mobi
 | Thư mục | Nội dung | Trạng thái hiện tại |
 | --- | --- | --- |
 | [`backend/`](backend/) | API, nghiệp vụ, PostgreSQL, background jobs và tích hợp AI/safety | Đã có các API và integration test; một số provider, chính sách safety và bước phát hành vẫn chưa hoàn tất. |
-| [`front-end/my-app-web/`](front-end/my-app-web/) | Giao diện Next.js | Đăng ký, xác minh email và đăng nhập đã nối backend; một số màn hình khác vẫn dùng dữ liệu demo. |
+| [`front-end/my-app-web/`](front-end/my-app-web/) | Giao diện Next.js | Đã kết nối đăng ký, xác minh email, đăng nhập, nhật ký, hồ sơ và một số báo cáo với backend; vẫn cần kiểm chứng đầy đủ trên môi trường triển khai. |
 | [`front-end/my-app-mobile/`](front-end/my-app-mobile/) | Ứng dụng Expo | Hiện chủ yếu là ứng dụng khởi tạo của Expo. |
 | [`safety-model/`](safety-model/) | Pipeline train và dịch vụ inference classifier | Baseline có thể train, chưa phải model được phê duyệt để xử lý dữ liệu người dùng. |
 
 ## Trạng thái kết nối API
 
-Backend có API cho xác thực, hồ sơ, nhật ký, check-in và các tính năng khác. Đăng ký chỉ tạo lượt tạm; xác minh email mới tạo tài khoản thật, và có thể đăng ký lại bằng cùng email khi chưa xác minh. Web đã nối luồng đăng ký, xác minh email bằng liên kết hoặc mã 8 chữ số, đăng nhập và lưu/tải nhật ký với backend. Bản nháp chưa lưu vẫn có thể nằm trong `localStorage`; xem [trạng thái web](front-end/my-app-web/README.md). Web cũng gọi `GET /api/v1/safety/resources` để lấy các nguồn hỗ trợ đã được duyệt khi mở hộp hỗ trợ an toàn; backend có thể trả danh sách rỗng nếu chưa có nguồn được xác minh. Mobile chưa gọi backend API.
+Backend có API cho xác thực, hồ sơ, nhật ký, check-in và các tính năng khác. Đăng ký tạo lượt tạm; xác minh email bằng liên kết hoặc mã 8 chữ số mới tạo tài khoản thật. Có thể đăng ký lại cùng email khi chưa xác minh. Web đã gọi backend qua các route API của Next.js cho xác thực, nhật ký và những luồng chính khác. `localStorage` dùng cho dữ liệu giao diện như bản nháp, không phải nơi lưu nhật ký chính. Web gọi `GET /api/v1/safety/resources` để lấy nguồn hỗ trợ đã được duyệt; backend có thể trả danh sách rỗng nếu chưa có nguồn được xác minh. Mobile chưa gọi backend API.
 
-Không coi bản nháp trong `localStorage` là bản lưu trên máy chủ hoặc đánh giá rằng toàn bộ luồng safety/AI đã hoạt động từ đầu đến cuối. Xem [hướng dẫn backend](backend/README.md) và [trạng thái web](front-end/my-app-web/README.md) trước khi nối thêm API.
+Không coi việc giao diện đã gọi API là bằng chứng luồng safety/AI đã hoạt động từ đầu đến cuối. Xem [hướng dẫn backend](backend/README.md) và [trạng thái web](front-end/my-app-web/README.md) trước khi nối thêm API.
 
 ## Chạy local
 
@@ -44,7 +44,7 @@ npm install
 npm run dev
 ```
 
-Mở `http://localhost:3000`. Backend phải chạy để đăng ký, xác minh email và đăng nhập hoạt động. Các route xác thực của Next.js dùng `MYLOG_BACKEND_URL`, mặc định là `http://localhost:8080`. Yêu cầu lấy nguồn hỗ trợ an toàn dùng `NEXT_PUBLIC_BACKEND_URL`, cũng mặc định là `http://localhost:8080`; backend phải cho phép origin của web để yêu cầu đó thành công.
+Mở `http://localhost:3000`. Backend cần chạy để các luồng xác thực và dữ liệu hoạt động. Các route API của Next.js dùng `MYLOG_BACKEND_URL`, mặc định là `http://localhost:8080`. Yêu cầu lấy nguồn hỗ trợ an toàn dùng `NEXT_PUBLIC_BACKEND_URL`, cũng mặc định là `http://localhost:8080`; backend phải cho phép origin của web để yêu cầu đó thành công.
 
 ### Mobile
 

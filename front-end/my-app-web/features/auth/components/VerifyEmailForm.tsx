@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { authError, authPost } from '../api/client';
 import { createAuthSchemas } from '../schemas/auth-forms';
 import { forgetVerificationEmail, readVerificationEmail } from '../verification-email';
-import { useAppLanguage } from '@/app/_components/AppLanguageProvider';
+import { useAppLanguage } from '@/providers/AppLanguageProvider';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 

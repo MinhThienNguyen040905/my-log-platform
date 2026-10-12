@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useJournal } from '@/features/journal';
+import { getDashboard } from '@/features/dashboard';
 import { useSelfCareGoals } from '@/features/selfcare';
 import { listInsights } from '../api/insights';
 import { listReports } from '@/features/reporting';
@@ -24,12 +25,13 @@ import {
 
 export function InsightView() {
   const { t } = useTranslation();
-  const { entries, userId } = useJournal();
+  const { userId } = useJournal();
   const { goals, loading: goalsLoading, error: goalsError, toggleGoal, refetch: refetchGoals } = useSelfCareGoals();
 
   const [activeTab, setActiveTab] = useState<'weekly-report' | 'evidence-matrix'>('weekly-report');
   const insightsQuery = useQuery({ queryKey: ['insights', userId, 20], queryFn: () => listInsights({ limit: 20 }) });
   const reportsQuery = useQuery({ queryKey: ['reports', userId, 'WEEKLY', 20], queryFn: () => listReports({ type: 'WEEKLY', limit: 20 }) });
+  const historyQuery = useQuery({ queryKey: ['dashboard', userId, '90d'], queryFn: () => getDashboard('90d') });
   const insights = insightsQuery.data?.items ?? [];
   const reports = reportsQuery.data?.items ?? [];
   const insightsLoading = insightsQuery.isPending;
@@ -46,14 +48,13 @@ export function InsightView() {
   }, [t]);
 
   // [FR-INSIGHT-01] & [BR-08]: Minimum 3 distinct days required for insight engine
-  const distinctDays = useMemo(() => {
-    return new Set(entries.map((e) => e.date)).size;
-  }, [entries]);
+  const distinctDays = historyQuery.data?.timeline.filter((day) => day.journalCount > 0).length ?? 0;
 
   const effectiveDistinctDays = distinctDays;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8 selection:bg-primary-container selection:text-black">
+      {historyQuery.isError && <p role="alert" className="text-sm text-red-700">{t('insight.insightError')} <button type="button" className="underline" onClick={() => void historyQuery.refetch()}>{t('common.retry')}</button></p>}
       {/* Top Header & Tab Switcher */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b-2 border-on-background">
         <div>
@@ -103,7 +104,7 @@ export function InsightView() {
       </div>
 
       {/* [BR-08] & [FR-INSIGHT-01]: Insufficient Data Empty State */}
-      {effectiveDistinctDays < 3 && reports.length === 0 && insights.length === 0 && !reportsLoading && !insightsLoading && !reportsError && !insightsError ? (
+      {effectiveDistinctDays < 3 && reports.length === 0 && insights.length === 0 && !historyQuery.isPending && !historyQuery.isError && !reportsLoading && !insightsLoading && !reportsError && !insightsError ? (
         <div className="bg-surface-card border-neo rounded-3xl p-8 sm:p-12 shadow-neo relative flex flex-col items-center text-center gap-6 max-w-3xl mx-auto my-6">
           <WashiTape color="lime" rotate={-2} className="absolute -top-3 left-12 w-36" />
           <div className="w-20 h-20 rounded-3xl bg-paper-warm border-2 border-black flex items-center justify-center shadow-neo">

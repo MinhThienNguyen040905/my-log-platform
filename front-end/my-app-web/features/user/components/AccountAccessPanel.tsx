@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountRequest } from '../api/client';
-import { useJournal } from '@/features/journal';
+import { useAccount } from '../context/AccountContext';
 
 type Consent = { type: string; documentVersion: string; granted: boolean; decidedAt: string };
 type Session = { id: string; deviceName: string | null; createdAt: string; lastUsedAt: string | null; expiresAt: string };
 
 export function AccountAccessPanel() {
-  const { userId } = useJournal();
+  const { userId } = useAccount();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const access = useQuery({ queryKey: ['account', userId, 'access'], queryFn: async () => {

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Cat, Coffee, Palette, Sprout } from 'lucide-react';
 import { NeoButton } from '@/components/ui/NeoButton';
-import { useToast } from '@/lib/toast-context';
+import { useToast } from '@/providers/ToastProvider';
 import { GOALS, OPTIONAL_CONSENTS, useOnboarding } from '../hooks/useOnboarding';
 import { useTranslation } from 'react-i18next';
 

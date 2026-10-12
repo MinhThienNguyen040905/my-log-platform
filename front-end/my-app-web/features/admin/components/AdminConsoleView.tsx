@@ -13,14 +13,10 @@ import {
   Lock,
 } from 'lucide-react';
 import { ApiError } from '@/lib/api/client';
-import {
-  AdminDashboardMetrics,
-  AdminUserTable,
-  AdminJobTable,
-  fetchAdminDashboard,
-  fetchAdminUsers,
-  fetchAdminJobs,
-} from '@/features/admin';
+import { AdminDashboardMetrics } from './AdminDashboardMetrics';
+import { AdminUserTable } from './AdminUserTable';
+import { AdminJobTable } from './AdminJobTable';
+import { fetchAdminDashboard, fetchAdminUsers, fetchAdminJobs } from '../api/admin-api';
 
 export function AdminConsoleView() {
   const { userId } = useJournal();

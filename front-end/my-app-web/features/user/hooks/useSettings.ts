@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useJournal } from '@/features/journal';
-import { useToast } from '@/lib/toast-context';
+import { useAccount } from '../context/AccountContext';
+import { useToast } from '@/providers/ToastProvider';
 import { createProfileSchema } from '../schemas/profile-form';
 import { useTranslation } from 'react-i18next';
-import { useAppLanguage } from '@/app/_components/AppLanguageProvider';
+import { useAppLanguage } from '@/providers/AppLanguageProvider';
 
 export interface AvatarOption {
   id: string;
@@ -23,8 +23,8 @@ export const AVATAR_OPTIONS: AvatarOption[] = [
   { id: 'book', label: 'Sách Cũ', iconText: '📖', url: '/avatar.png', color: 'bg-rose-200 text-black' },
 ];
 
-export function useSettings() {
-  const { userProfile, updateProfile, entries, draftStorageKey } = useJournal();
+export function useSettings({ entryCount, draftStorageKey }: { entryCount: number | null; draftStorageKey: string }) {
+  const { userProfile, updateProfile } = useAccount();
   const { showToast } = useToast();
   const { t } = useTranslation();
   const { locale } = useAppLanguage();
@@ -62,7 +62,7 @@ export function useSettings() {
 
   return {
     userProfile,
-    entries,
+    entryCount,
     name,
     setName,
     penName,

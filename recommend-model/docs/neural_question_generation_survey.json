@@ -1,0 +1,388 @@
+{
+  "document_metadata": {
+    "title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+    "authors": [
+      "Shasha Guo",
+      "Lizi Liao",
+      "Cuiping Li",
+      "Tat-Seng Chua"
+    ],
+    "publication_year": 2024,
+    "document_type": "survey article",
+    "language": "English",
+    "total_pages": 10,
+    "extraction_date": "2026-10-11"
+  },
+  "knowledge_cards": [
+    {
+      "id": "nqg_001",
+      "framework": "Neural Question Generation",
+      "concept": "Neural Question Generation",
+      "concept_vi": "Sinh câu hỏi bằng mạng nơ-ron",
+      "definition": "Bài toán tự động tạo câu hỏi từ nguồn đầu vào như cơ sở tri thức, văn bản và hình ảnh.",
+      "psychological_mechanism": "Mô hình học ánh xạ từ đầu vào và tùy chọn đáp án mục tiêu sang câu hỏi văn bản.",
+      "observable_signals": [
+        {
+          "signal": "Có nội dung đầu vào làm căn cứ để tạo câu hỏi.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Generate grounded questions",
+      "question_templates": [
+        {
+          "question": "Từ nội dung bạn vừa viết, câu hỏi nào giúp bạn hiểu rõ hơn suy nghĩ của mình?",
+          "purpose": "Generate grounded questions"
+        },
+        {
+          "question": "Phần nào trong câu chuyện này bạn muốn khám phá sâu hơn?",
+          "purpose": "Generate grounded questions"
+        }
+      ],
+      "application_contexts": [
+        "question generation",
+        "NLP"
+      ],
+      "limitations": [
+        "Định nghĩa chung về NQG, không phải phương pháp tâm lý trị liệu."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 2,
+        "page_end": 2,
+        "section": "2.1 Problem Formulation",
+        "supporting_excerpt": "NQG task aims to automatically generate textual ques- tions"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "nqg",
+        "formulation"
+      ]
+    },
+    {
+      "id": "nqg_002",
+      "framework": "Neural Question Generation",
+      "concept": "Structured NQG",
+      "concept_vi": "Sinh câu hỏi từ dữ liệu có cấu trúc",
+      "definition": "Nhóm phương pháp sinh câu hỏi từ nguồn dữ liệu có tổ chức, điển hình là knowledge base.",
+      "psychological_mechanism": "Biểu diễn sự kiện trong đồ thị tri thức hoặc các cấu trúc tương tự để sinh câu hỏi.",
+      "observable_signals": [
+        {
+          "signal": "Dữ liệu đầu vào có các trường và quan hệ xác định.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Use structured knowledge",
+      "question_templates": [
+        {
+          "question": "Khái niệm nào trong tài liệu giúp bạn soi chiếu trải nghiệm này?",
+          "purpose": "Use structured knowledge"
+        },
+        {
+          "question": "Thông tin nào còn thiếu để đặt một câu hỏi phù hợp?",
+          "purpose": "Use structured knowledge"
+        }
+      ],
+      "application_contexts": [
+        "knowledge cards",
+        "RAG design"
+      ],
+      "limitations": [
+        "Bài báo không trực tiếp thử nghiệm Psychological Knowledge Cards dạng JSON."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 4,
+        "page_end": 4,
+        "section": "3 Structured Neural Question Generation",
+        "supporting_excerpt": "Structured NQG is designed to create pertinent questions"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "structured",
+        "knowledge-base"
+      ]
+    },
+    {
+      "id": "nqg_003",
+      "framework": "Neural Question Generation",
+      "concept": "Unstructured NQG",
+      "concept_vi": "Sinh câu hỏi từ dữ liệu phi cấu trúc",
+      "definition": "Nhóm phương pháp sinh câu hỏi từ dữ liệu ít cấu trúc hơn, gồm văn bản và hình ảnh.",
+      "psychological_mechanism": "Mô hình xử lý ngữ cảnh tự nhiên thay vì chỉ các bộ ba tri thức có cấu trúc.",
+      "observable_signals": [
+        {
+          "signal": "Đầu vào là một đoạn nhật ký tự do.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Generate from free text",
+      "question_templates": [
+        {
+          "question": "Chi tiết nào trong đoạn nhật ký khiến bạn muốn tìm hiểu thêm?",
+          "purpose": "Generate from free text"
+        },
+        {
+          "question": "Bạn muốn đặt câu hỏi về sự kiện, cảm xúc hay lựa chọn của mình?",
+          "purpose": "Generate from free text"
+        }
+      ],
+      "application_contexts": [
+        "journal text",
+        "NLP"
+      ],
+      "limitations": [
+        "Ứng dụng nhật ký là ví dụ triển khai do AI đề xuất."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 2,
+        "page_end": 2,
+        "section": "Figure 1; 1 Introduction",
+        "supporting_excerpt": "Unstructured NQG (§4)"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "unstructured",
+        "text"
+      ]
+    },
+    {
+      "id": "nqg_004",
+      "framework": "Neural Question Generation",
+      "concept": "Hybrid NQG",
+      "concept_vi": "Sinh câu hỏi từ nguồn kết hợp",
+      "definition": "Nhóm phương pháp kết hợp các loại nguồn đầu vào khác nhau để tạo câu hỏi.",
+      "psychological_mechanism": "Tổng hợp thông tin từ nhiều dạng biểu diễn hoặc phương thức dữ liệu.",
+      "observable_signals": [
+        {
+          "signal": "Bối cảnh gồm nhật ký và dữ liệu có cấu trúc liên quan.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Combine contexts",
+      "question_templates": [
+        {
+          "question": "Có thông tin nào trong trải nghiệm trước đây giúp bạn nhìn tình huống này rõ hơn?",
+          "purpose": "Combine contexts"
+        },
+        {
+          "question": "Giữa mục tiêu của bạn và điều đang xảy ra, bạn thấy điểm nào đáng suy ngẫm?",
+          "purpose": "Combine contexts"
+        }
+      ],
+      "application_contexts": [
+        "hybrid input",
+        "system design"
+      ],
+      "limitations": [
+        "Việc kết hợp nhật ký và knowledge cards là suy rộng thiết kế, không phải kết quả thực nghiệm của bài báo."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 2,
+        "page_end": 2,
+        "section": "Figure 1; 1 Introduction",
+        "supporting_excerpt": "Hybrid NQG (§5)"
+      },
+      "evidence_type": "inferred",
+      "review_status": "pending",
+      "tags": [
+        "hybrid",
+        "nqg"
+      ]
+    },
+    {
+      "id": "nqg_005",
+      "framework": "Neural Question Generation",
+      "concept": "Pre-trained sequence-to-sequence models",
+      "concept_vi": "Mô hình Seq2Seq tiền huấn luyện",
+      "definition": "Các mô hình tiền huấn luyện như T5 và BART được tổng quan như một hướng quan trọng trong sinh câu hỏi.",
+      "psychological_mechanism": "Tiền huấn luyện cung cấp biểu diễn ngữ nghĩa trước khi thích nghi cho tác vụ tạo câu hỏi.",
+      "observable_signals": [
+        {
+          "signal": "Bài toán cần chuyển đầu vào ngôn ngữ thành câu hỏi.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Choose model architecture",
+      "question_templates": [
+        {
+          "question": "Câu hỏi nào phản ánh sát nhất ý bạn vừa viết?",
+          "purpose": "Choose model architecture"
+        },
+        {
+          "question": "Bạn muốn câu hỏi ngắn gọn hay đi sâu vào một chi tiết cụ thể?",
+          "purpose": "Choose model architecture"
+        }
+      ],
+      "application_contexts": [
+        "model selection"
+      ],
+      "limitations": [
+        "Không suy ra rằng cần fine-tune cho MVP; bài báo là tổng quan phương pháp."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 1,
+        "page_end": 1,
+        "section": "1 Introduction",
+        "supporting_excerpt": "such as T5 [Raffel et al., 2020] and BART"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "t5",
+        "bart",
+        "seq2seq"
+      ]
+    },
+    {
+      "id": "nqg_006",
+      "framework": "Neural Question Generation",
+      "concept": "In-Context Learning for QG",
+      "concept_vi": "Học theo ngữ cảnh để sinh câu hỏi",
+      "definition": "Sử dụng prompt và ngữ cảnh để hướng mô hình ngôn ngữ lớn tạo câu hỏi mong muốn.",
+      "psychological_mechanism": "Cung cấp hướng dẫn hoặc ví dụ ngay trong ngữ cảnh suy luận thay vì nhất thiết cập nhật trọng số.",
+      "observable_signals": [
+        {
+          "signal": "Cần kiểm soát loại câu hỏi dựa trên prompt.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Prompt question generation",
+      "question_templates": [
+        {
+          "question": "Bạn muốn hiểu rõ điều gì nhất từ trải nghiệm vừa kể?",
+          "purpose": "Prompt question generation"
+        },
+        {
+          "question": "Có điều gì bạn muốn tự hỏi mà chưa biết bắt đầu từ đâu?",
+          "purpose": "Prompt question generation"
+        }
+      ],
+      "application_contexts": [
+        "prompt engineering",
+        "MVP"
+      ],
+      "limitations": [
+        "Bài báo khảo sát ICL; không đo hiệu quả riêng cho self-reflection."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 2,
+        "page_end": 2,
+        "section": "1 Introduction",
+        "supporting_excerpt": "In-Context Learning (ICL)"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "icl",
+        "llm",
+        "prompt"
+      ]
+    },
+    {
+      "id": "nqg_007",
+      "framework": "Neural Question Generation",
+      "concept": "N-gram evaluation metrics",
+      "concept_vi": "Đánh giá dựa trên n-gram",
+      "definition": "BLEU, ROUGE và METEOR đo sự tương đồng ở mức từ/cụm từ giữa câu hỏi sinh ra và câu hỏi tham chiếu.",
+      "psychological_mechanism": "So sánh chuỗi n-gram hoặc độ chính xác/độ bao phủ theo các công thức tương ứng.",
+      "observable_signals": [
+        {
+          "signal": "Có câu hỏi tham chiếu để so sánh đầu ra.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Evaluate lexical quality",
+      "question_templates": [
+        {
+          "question": "Câu hỏi này có diễn đạt rõ ràng điều bạn đang nghĩ không?",
+          "purpose": "Evaluate lexical quality"
+        },
+        {
+          "question": "Cách đặt câu hỏi này có gần với ngôn ngữ bạn sử dụng không?",
+          "purpose": "Evaluate lexical quality"
+        }
+      ],
+      "application_contexts": [
+        "evaluation"
+      ],
+      "limitations": [
+        "Điểm trùng từ không đủ để kết luận câu hỏi phản tư hữu ích."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "2.3 Evaluation",
+        "supporting_excerpt": "N-gram-based Metrics."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "bleu",
+        "rouge",
+        "meteor"
+      ]
+    },
+    {
+      "id": "nqg_008",
+      "framework": "Neural Question Generation",
+      "concept": "Semantic similarity and diversity evaluation",
+      "concept_vi": "Đánh giá tương đồng ngữ nghĩa và đa dạng",
+      "definition": "BERTScore đo tương đồng ngữ nghĩa; Distinct-n phản ánh mức đa dạng n-gram trong câu hỏi được tạo.",
+      "psychological_mechanism": "Sử dụng embedding ngữ cảnh hoặc tỷ lệ n-gram độc nhất để đánh giá các khía cạnh khác nhau.",
+      "observable_signals": [
+        {
+          "signal": "Có nhiều câu hỏi được sinh ra cần so sánh.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Evaluate relevance and diversity",
+      "question_templates": [
+        {
+          "question": "Ba câu hỏi này có đang hỏi cùng một điều theo những cách khác nhau không?",
+          "purpose": "Evaluate relevance and diversity"
+        },
+        {
+          "question": "Câu hỏi nào giúp bạn mở ra góc nhìn mới nhất?",
+          "purpose": "Evaluate relevance and diversity"
+        }
+      ],
+      "application_contexts": [
+        "evaluation",
+        "question ranking"
+      ],
+      "limitations": [
+        "Các chỉ số tự động không thay thế đánh giá của người dùng về an toàn và tính hữu ích."
+      ],
+      "source_reference": {
+        "document_title": "A Survey on Neural Question Generation: Methods, Applications, and Prospects",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "2.3 Evaluation",
+        "supporting_excerpt": "Distinct-n"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "bertscore",
+        "distinct-n",
+        "evaluation"
+      ]
+    }
+  ]
+}

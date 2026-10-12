@@ -2,7 +2,7 @@
 
 import React, { Suspense } from 'react';
 import Link from 'next/link';
-import { useToast } from '@/lib/toast-context';
+import { useToast } from '@/providers/ToastProvider';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { SafetyModal } from './SafetyModal';

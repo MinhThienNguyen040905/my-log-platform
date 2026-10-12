@@ -15,7 +15,7 @@ import { AdminUserItem } from '../api/types';
 import { AdminUserActionModal } from './AdminUserActionModal';
 import { AdminUserMetadataDrawer } from './AdminUserMetadataDrawer';
 import { suspendAdminUser, restoreAdminUser } from '../api/admin-api';
-import { useToast } from '@/lib/toast-context';
+import { useToast } from '@/providers/ToastProvider';
 
 interface AdminUserTableProps {
   users: AdminUserItem[];

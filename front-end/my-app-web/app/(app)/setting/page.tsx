@@ -1,4 +1,4 @@
-import { SettingsView } from '@/features/user';
+import { SettingsScreen } from './_components/SettingsScreen';
 
 export const metadata = {
   title: 'Hồ sơ & Thiết lập - MyLog',
@@ -6,6 +6,6 @@ export const metadata = {
 };
 
 export default function SettingPage() {
-  return <SettingsView />;
+  return <SettingsScreen />;
 }
 

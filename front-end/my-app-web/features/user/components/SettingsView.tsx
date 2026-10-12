@@ -22,15 +22,15 @@ import { NeoButton } from '@/components/ui/NeoButton';
 import { useSettings, AVATAR_OPTIONS } from '../hooks/useSettings';
 import { AccountAccessPanel } from './AccountAccessPanel';
 import { AccountDataExport } from '@/features/export';
-import { useJournal } from '@/features/journal';
+import { useAccount } from '../context/AccountContext';
 import { useTranslation } from 'react-i18next';
 
-export function SettingsView() {
+export function SettingsView({ entryCount, draftStorageKey }: { entryCount: number | null; draftStorageKey: string }) {
   const { t } = useTranslation();
-  const { userId } = useJournal();
+  const { userId } = useAccount();
   const {
     userProfile,
-    entries,
+    entryCount: savedEntryCount,
     name,
     setName,
     penName,
@@ -48,7 +48,7 @@ export function SettingsView() {
     fieldErrors,
     hasDraft,
     handleSaveProfile,
-  } = useSettings();
+  } = useSettings({ entryCount, draftStorageKey });
 
   return (
     <div className="w-full min-h-screen bg-bg-canvas pb-20 selection:bg-brand-lime selection:text-black">
@@ -343,7 +343,7 @@ export function SettingsView() {
                 <div className="p-3 bg-white rounded-xl border border-black flex flex-col gap-1 shadow-neo-xs">
                   <span className="text-gray-500 font-bold">{t('settingsExtra.entries')}</span>
                   <span className="font-extrabold text-black text-sm">
-                    {t('settingsExtra.entryCount', { count: entries.length })}
+                    {savedEntryCount === null ? '—' : t('settingsExtra.entryCount', { count: savedEntryCount })}
                   </span>
                 </div>
               </div>

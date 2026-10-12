@@ -1,0 +1,388 @@
+{
+  "document_metadata": {
+    "title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+    "authors": [
+      "Beng Heng Ang",
+      "Sujatha Das Gollapalli",
+      "See-Kiong Ng"
+    ],
+    "publication_year": 2023,
+    "document_type": "research article",
+    "language": "English",
+    "total_pages": 19,
+    "extraction_date": "2026-10-11"
+  },
+  "knowledge_cards": [
+    {
+      "id": "soq_001",
+      "framework": "Socratic Question Generation",
+      "concept": "Socratic Questioning",
+      "concept_vi": "Đặt câu hỏi Socrates",
+      "definition": "Kỹ thuật sử dụng câu hỏi thăm dò nhằm khơi gợi suy xét về niềm tin và góc nhìn của một người.",
+      "psychological_mechanism": "Câu hỏi nhắm tới quan điểm cá nhân và khuyến khích xem xét lại lập luận thay vì tìm một đáp án có sẵn.",
+      "observable_signals": [
+        {
+          "signal": "Người viết trình bày một quan điểm cá nhân về một vấn đề.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Explore personal beliefs",
+      "question_templates": [
+        {
+          "question": "Bạn đang dựa trên điều gì để hình thành quan điểm này?",
+          "purpose": "Explore personal beliefs"
+        },
+        {
+          "question": "Có góc nhìn nào khác mà bạn muốn cân nhắc không?",
+          "purpose": "Explore personal beliefs"
+        }
+      ],
+      "application_contexts": [
+        "personal reflection",
+        "education",
+        "coaching"
+      ],
+      "limitations": [
+        "Bài báo nghiên cứu sinh câu hỏi; không xác nhận hiệu quả điều trị của các câu hỏi được tạo."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 1,
+        "page_end": 1,
+        "section": "Abstract; 1 Introduction",
+        "supporting_excerpt": "Socratic questioning is a form of reflective in- quiry"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "socratic",
+        "reflection"
+      ]
+    },
+    {
+      "id": "soq_002",
+      "framework": "Socratic Question Generation",
+      "concept": "Clarification",
+      "concept_vi": "Làm rõ ý nghĩa",
+      "definition": "Loại câu hỏi tìm hiểu điểm mơ hồ trong một suy nghĩ hoặc phát biểu.",
+      "psychological_mechanism": "Yêu cầu người nói làm rõ thuật ngữ hoặc ý định trước khi tiếp tục lập luận.",
+      "observable_signals": [
+        {
+          "signal": "Phát biểu có khái niệm chưa được định nghĩa rõ.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Clarify meaning",
+      "question_templates": [
+        {
+          "question": "Khi nói điều đó, bạn đang muốn diễn đạt cụ thể điều gì?",
+          "purpose": "Clarify meaning"
+        },
+        {
+          "question": "Bạn có thể đưa ra một ví dụ để làm rõ ý này không?",
+          "purpose": "Clarify meaning"
+        }
+      ],
+      "application_contexts": [
+        "journal",
+        "conversation"
+      ],
+      "limitations": [
+        "Không xem sự mơ hồ là bằng chứng về sai lệch nhận thức."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "Table 1",
+        "supporting_excerpt": "Question probing the ambiguities of a thought."
+      },
+      "evidence_type": "direct",
+      "review_status": "approved",
+      "tags": [
+        "clarification",
+        "socratic"
+      ]
+    },
+    {
+      "id": "soq_003",
+      "framework": "Socratic Question Generation",
+      "concept": "Probing assumptions",
+      "concept_vi": "Thăm dò giả định",
+      "definition": "Loại câu hỏi khám phá các giả định nằm phía sau một suy nghĩ.",
+      "psychological_mechanism": "Làm lộ những tiền đề có thể chưa được kiểm tra.",
+      "observable_signals": [
+        {
+          "signal": "Người viết đưa ra kết luận mà không nêu rõ tiền đề.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Examine assumptions",
+      "question_templates": [
+        {
+          "question": "Bạn đang ngầm giả định điều gì khi đi đến kết luận đó?",
+          "purpose": "Examine assumptions"
+        },
+        {
+          "question": "Nếu giả định ấy không đúng, cách nhìn của bạn sẽ thay đổi thế nào?",
+          "purpose": "Examine assumptions"
+        }
+      ],
+      "application_contexts": [
+        "decision making",
+        "self-reflection"
+      ],
+      "limitations": [
+        "Không mặc định giả định là sai."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "Table 1",
+        "supporting_excerpt": "Question probing the assumptions behind a thought."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "assumptions",
+        "socratic"
+      ]
+    },
+    {
+      "id": "soq_004",
+      "framework": "Socratic Question Generation",
+      "concept": "Probing reasons and evidences",
+      "concept_vi": "Thăm dò lý do và bằng chứng",
+      "definition": "Loại câu hỏi yêu cầu lý do hoặc bằng chứng cụ thể hỗ trợ một nhận định.",
+      "psychological_mechanism": "Hướng sự chú ý đến cơ sở biện minh cho một suy nghĩ.",
+      "observable_signals": [
+        {
+          "signal": "Người viết đưa ra khẳng định nhưng chưa nói căn cứ.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Examine evidence",
+      "question_templates": [
+        {
+          "question": "Những trải nghiệm hoặc bằng chứng nào khiến bạn tin điều đó?",
+          "purpose": "Examine evidence"
+        },
+        {
+          "question": "Có thông tin nào chưa phù hợp với nhận định này không?",
+          "purpose": "Examine evidence"
+        }
+      ],
+      "application_contexts": [
+        "learning",
+        "work",
+        "reflection"
+      ],
+      "limitations": [
+        "Thiếu bằng chứng trong nhật ký không đồng nghĩa khẳng định là sai."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "Table 1",
+        "supporting_excerpt": "Question probing the justifications or concrete evidences"
+      },
+      "evidence_type": "direct",
+      "review_status": "approved",
+      "tags": [
+        "evidence",
+        "socratic"
+      ]
+    },
+    {
+      "id": "soq_005",
+      "framework": "Socratic Question Generation",
+      "concept": "Probing implications and consequences",
+      "concept_vi": "Thăm dò hệ quả",
+      "definition": "Loại câu hỏi tìm hiểu tác động hoặc hệ quả có thể phát sinh từ một suy nghĩ.",
+      "psychological_mechanism": "Mở rộng suy xét từ quan điểm hiện tại sang các kết quả có thể xảy ra.",
+      "observable_signals": [
+        {
+          "signal": "Người viết dự định hành động hoặc đưa ra kết luận có hệ quả.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Explore consequences",
+      "question_templates": [
+        {
+          "question": "Nếu bạn hành động theo suy nghĩ đó, điều gì có thể xảy ra tiếp theo?",
+          "purpose": "Explore consequences"
+        },
+        {
+          "question": "Kết quả đó có thể ảnh hưởng đến điều gì bạn coi trọng?",
+          "purpose": "Explore consequences"
+        }
+      ],
+      "application_contexts": [
+        "choices",
+        "planning"
+      ],
+      "limitations": [
+        "Các hệ quả được thảo luận chỉ là khả năng, không phải dự báo chắc chắn."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "Table 1",
+        "supporting_excerpt": "Question probing the impacts or implications of a thought."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "consequences",
+        "socratic"
+      ]
+    },
+    {
+      "id": "soq_006",
+      "framework": "Socratic Question Generation",
+      "concept": "Probing alternative viewpoints and perspectives",
+      "concept_vi": "Khám phá góc nhìn thay thế",
+      "definition": "Loại câu hỏi gợi mở những góc nhìn khả dĩ khác về cùng vấn đề.",
+      "psychological_mechanism": "Khuyến khích xem xét nhiều cách diễn giải thay vì chỉ một quan điểm.",
+      "observable_signals": [
+        {
+          "signal": "Người viết thể hiện một cách nhìn duy nhất.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Consider alternatives",
+      "question_templates": [
+        {
+          "question": "Một người khác có thể nhìn tình huống này theo cách nào?",
+          "purpose": "Consider alternatives"
+        },
+        {
+          "question": "Có cách giải thích nào khác mà bạn chưa cân nhắc không?",
+          "purpose": "Consider alternatives"
+        }
+      ],
+      "application_contexts": [
+        "conflict",
+        "self-reflection"
+      ],
+      "limitations": [
+        "Không áp đặt rằng mọi góc nhìn đều có giá trị bằng nhau."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 3,
+        "page_end": 3,
+        "section": "Table 1",
+        "supporting_excerpt": "Question probing other possible viewpoints."
+      },
+      "evidence_type": "direct",
+      "review_status": "approved",
+      "tags": [
+        "perspective",
+        "socratic"
+      ]
+    },
+    {
+      "id": "soq_007",
+      "framework": "Socratic Question Generation",
+      "concept": "SocratiQ dataset",
+      "concept_vi": "Bộ dữ liệu SocratiQ",
+      "definition": "Bộ dữ liệu gồm 110.050 cặp ngữ cảnh–câu hỏi tiếng Anh được thu thập từ Reddit r/changemyview.",
+      "psychological_mechanism": "Ghép câu hỏi trong bình luận với ngữ cảnh có độ tương đồng bằng Sentence-BERT, sau đó lọc theo ngưỡng.",
+      "observable_signals": [
+        {
+          "signal": "Ngữ cảnh diễn đạt quan điểm và được liên kết với câu hỏi thăm dò.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Design question dataset",
+      "question_templates": [
+        {
+          "question": "Câu hỏi nào phù hợp nhất để tìm hiểu thêm về quan điểm vừa nêu?",
+          "purpose": "Design question dataset"
+        },
+        {
+          "question": "Cần thêm ngữ cảnh gì để câu hỏi không bị lệch ý?",
+          "purpose": "Design question dataset"
+        }
+      ],
+      "application_contexts": [
+        "dataset design",
+        "question generation"
+      ],
+      "limitations": [
+        "Dữ liệu Reddit không tương đương dữ liệu lâm sàng; không tự suy ra khả năng khái quát sang nhật ký cá nhân."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 2,
+        "page_end": 2,
+        "section": "2 Dataset Collection",
+        "supporting_excerpt": "110, 050 English"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "dataset",
+        "sentence-bert",
+        "retrieval"
+      ]
+    },
+    {
+      "id": "soq_008",
+      "framework": "Socratic Question Generation",
+      "concept": "Type-sensitive question generation",
+      "concept_vi": "Sinh câu hỏi theo loại",
+      "definition": "Cách tạo câu hỏi có điều kiện dựa trên loại câu hỏi Socrates và ngữ cảnh.",
+      "psychological_mechanism": "Bổ sung nhãn loại câu hỏi vào đầu vào của mô hình sinh câu hỏi để kiểm soát hướng thăm dò.",
+      "observable_signals": [
+        {
+          "signal": "Ngữ cảnh có thể được đặt nhiều câu hỏi với mục tiêu khác nhau.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ ứng dụng do AI đề xuất; không phải câu nói thực nghiệm trong tài liệu."
+        }
+      ],
+      "reflection_goal": "Control question intent",
+      "question_templates": [
+        {
+          "question": "Bạn muốn làm rõ điều gì nhất trong suy nghĩ này?",
+          "purpose": "Control question intent"
+        },
+        {
+          "question": "Bạn muốn xem xét bằng chứng hay một góc nhìn khác trước?",
+          "purpose": "Control question intent"
+        }
+      ],
+      "application_contexts": [
+        "question generation",
+        "MVP design"
+      ],
+      "limitations": [
+        "Các mô hình được đánh giá trên dữ liệu SocratiQ, không trực tiếp trên ứng dụng tự phản tư cá nhân."
+      ],
+      "source_reference": {
+        "document_title": "Socratic Question Generation: A Novel Dataset, Models, and Evaluation",
+        "page_start": 4,
+        "page_end": 4,
+        "section": "3 Socratic Question Generation",
+        "supporting_excerpt": "we use the Socratic question-types as prompts"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "prompting",
+        "question-type"
+      ]
+    }
+  ]
+}

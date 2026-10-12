@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAppLanguage } from '@/app/_components/AppLanguageProvider';
+import { useAppLanguage } from '@/providers/AppLanguageProvider';
 import type { UserProfile } from '@/types';
 import { getProfile, updateProfile as saveProfile, completeOnboarding as finishOnboarding, type Profile } from '../api/client';
 

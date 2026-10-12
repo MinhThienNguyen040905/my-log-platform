@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useJournal } from '@/features/journal';
-import { AccountApiError, getConsents, setConsent, type Consent } from '@/features/user';
+import { AccountApiError, getConsents, setConsent, useAccount, type Consent } from '@/features/user';
 import { createOnboardingProfileSchema } from '../schemas/onboarding-profile';
-import { useAppLanguage } from '@/app/_components/AppLanguageProvider';
+import { useAppLanguage } from '@/providers/AppLanguageProvider';
 
 export const GOALS = [
   { id: 'MINDFULNESS', label: 'Quan sát cảm xúc' },
@@ -22,7 +21,7 @@ export const OPTIONAL_CONSENTS = [
 
 export function useOnboarding() {
   const { locale } = useAppLanguage();
-  const { accountProfile, reloadProfile, updateProfile, completeOnboarding } = useJournal();
+  const { accountProfile, reloadProfile, updateProfile, completeOnboarding } = useAccount();
   const [displayName, setDisplayName] = useState(accountProfile.displayName ?? '');
   const [penName, setPenName] = useState(accountProfile.penName ?? '');
   const [fieldErrors, setFieldErrors] = useState<{ displayName?: string; penName?: string }>({});

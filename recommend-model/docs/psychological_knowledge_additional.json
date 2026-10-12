@@ -1,0 +1,902 @@
+{
+  "document_metadata": {
+    "title": "Combined WHO guide and user-provided thought record",
+    "authors": [],
+    "publication_year": null,
+    "document_type": "multi-source knowledge collection",
+    "language": "English / Vietnamese",
+    "total_pages": null,
+    "extraction_date": "2026-10-11"
+  },
+  "knowledge_cards": [
+    {
+      "id": "who_2020_001",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Stress responses",
+      "concept_vi": "Phản ứng khi căng thẳng",
+      "definition": "Tài liệu mô tả nhiều phản ứng khi căng thẳng, như khó tập trung, tức giận, lo lắng, khó ngủ hoặc mệt mỏi.",
+      "psychological_mechanism": "Các phản ứng khác nhau có thể xuất hiện khi con người gặp căng thẳng; tài liệu không khẳng định một biểu hiện đơn lẻ là dấu hiệu chẩn đoán.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng tự kể mình khó tập trung hoặc lo lắng khi có việc căng thẳng.",
+          "origin": "source_supported",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Part 1: Grounding của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Nhận diện trải nghiệm hiện tại",
+      "question_templates": [
+        {
+          "question": "Khi tình huống đó xảy ra, bạn nhận thấy điều gì thay đổi trong cảm xúc hoặc cơ thể?",
+          "purpose": "Nhận diện trải nghiệm hiện tại"
+        },
+        {
+          "question": "Trong những lúc áp lực, điều gì thường khiến bạn khó tập trung nhất?",
+          "purpose": "Nhận diện trải nghiệm hiện tại"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 16,
+        "page_end": 16,
+        "section": "Part 1: Grounding",
+        "supporting_excerpt": "When they are stressed, many people"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "stress",
+        "emotions"
+      ]
+    },
+    {
+      "id": "who_2020_002",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Getting hooked by thoughts and feelings",
+      "concept_vi": "Bị cuốn vào suy nghĩ và cảm xúc",
+      "definition": "Tài liệu gọi tình trạng bị các suy nghĩ hoặc cảm xúc khó khăn cuốn đi là getting hooked.",
+      "psychological_mechanism": "Việc bị cuốn theo có thể khiến người ta rời sự chú ý khỏi điều đang làm hoặc giá trị quan trọng.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng kể rằng cứ nghĩ về một điều khó chịu và mất tập trung.",
+          "origin": "source_supported",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Part 1: Grounding của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Nhận biết ảnh hưởng của suy nghĩ",
+      "question_templates": [
+        {
+          "question": "Khi suy nghĩ ấy xuất hiện, sự chú ý của bạn thường chuyển sang đâu?",
+          "purpose": "Nhận biết ảnh hưởng của suy nghĩ"
+        },
+        {
+          "question": "Nó ảnh hưởng thế nào đến điều bạn muốn làm lúc đó?",
+          "purpose": "Nhận biết ảnh hưởng của suy nghĩ"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 17,
+        "page_end": 17,
+        "section": "Part 1: Grounding",
+        "supporting_excerpt": "These powerful thoughts and feelings are a natural part of stress."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "hooked",
+        "attention"
+      ]
+    },
+    {
+      "id": "who_2020_003",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Harsh self-judgement",
+      "concept_vi": "Tự phán xét khắt khe",
+      "definition": "Tài liệu đưa ra ví dụ các suy nghĩ tự phán xét gay gắt khi chịu áp lực.",
+      "psychological_mechanism": "Suy nghĩ khắt khe về bản thân được mô tả như một dạng suy nghĩ khó khăn có thể khiến người ta bị cuốn theo.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng viết “Mình thật yếu kém”.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Part 1: Grounding của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Quan sát cách tự nói với bản thân",
+      "question_templates": [
+        {
+          "question": "Bạn đang nói với chính mình bằng những lời như thế nào?",
+          "purpose": "Quan sát cách tự nói với bản thân"
+        },
+        {
+          "question": "Nếu chỉ mô tả điều đã xảy ra mà không phán xét bản thân, bạn sẽ nói ra sao?",
+          "purpose": "Quan sát cách tự nói với bản thân"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 25,
+        "page_end": 25,
+        "section": "Part 1: Grounding",
+        "supporting_excerpt": "Harsh judgements about ourselves"
+      },
+      "evidence_type": "direct",
+      "review_status": "approved",
+      "tags": [
+        "self-judgement",
+        "thoughts"
+      ]
+    },
+    {
+      "id": "who_2020_004",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Grounding through sensory refocusing",
+      "concept_vi": "Đưa sự chú ý về hiện tại qua giác quan",
+      "definition": "Grounding bao gồm kết nối với cơ thể và chuyển sự chú ý đến những gì nhìn, nghe, chạm và cảm nhận được xung quanh.",
+      "psychological_mechanism": "Tài liệu hướng dẫn tái tập trung vào môi trường và hoạt động hiện tại trong lúc cảm xúc mạnh.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng kể mình bị choáng ngợp và khó chú ý tới hiện tại.",
+          "origin": "source_supported",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Part 1: Grounding của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Khám phá điều giúp kết nối hiện tại",
+      "question_templates": [
+        {
+          "question": "Lúc này, có điều gì quanh bạn mà bạn có thể nhìn thấy hoặc nghe thấy rõ ràng?",
+          "purpose": "Khám phá điều giúp kết nối hiện tại"
+        },
+        {
+          "question": "Hoạt động nhỏ nào giúp bạn trở lại với khoảnh khắc hiện tại?",
+          "purpose": "Khám phá điều giúp kết nối hiện tại"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 41,
+        "page_end": 41,
+        "section": "Part 1: Grounding",
+        "supporting_excerpt": "The next step in grounding is to REFOCUS"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "grounding",
+        "senses"
+      ]
+    },
+    {
+      "id": "who_2020_005",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Notice difficult thoughts and feelings",
+      "concept_vi": "Nhận biết suy nghĩ và cảm xúc khó khăn",
+      "definition": "Bước đầu của Unhooking là nhận thấy khi một suy nghĩ hoặc cảm xúc khó khăn đang chi phối sự chú ý.",
+      "psychological_mechanism": "Nhận biết giúp người thực hành nhận ra lúc mình đang bị cuốn vào trải nghiệm nội tâm.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng nhận ra mình đang lo về một cuộc họp sắp tới.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Part 2: Unhooking của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Gọi tên điều đang diễn ra",
+      "question_templates": [
+        {
+          "question": "Bạn nhận thấy suy nghĩ hoặc cảm xúc nào đang xuất hiện?",
+          "purpose": "Gọi tên điều đang diễn ra"
+        },
+        {
+          "question": "Điều gì giúp bạn nhận ra mình đang bị suy nghĩ đó cuốn đi?",
+          "purpose": "Gọi tên điều đang diễn ra"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 63,
+        "page_end": 63,
+        "section": "Part 2: Unhooking",
+        "supporting_excerpt": "First you NOTICE that a thought or feeling has hooked you."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "notice",
+        "unhooking"
+      ]
+    },
+    {
+      "id": "who_2020_006",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Name difficult thoughts and feelings",
+      "concept_vi": "Gọi tên suy nghĩ và cảm xúc",
+      "definition": "Tài liệu khuyến nghị thầm gọi tên suy nghĩ hoặc cảm xúc, chẳng hạn nhận ra đó là một nỗi lo hoặc ký ức đau buồn.",
+      "psychological_mechanism": "Gọi tên tạo điều kiện để người thực hành nhận biết trải nghiệm như một suy nghĩ/cảm xúc đang xuất hiện.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng mô tả “Mình nhận thấy đang có sự lo lắng”.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Part 2: Unhooking của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Phân biệt trải nghiệm và kết luận",
+      "question_templates": [
+        {
+          "question": "Bạn sẽ gọi tên cảm xúc hoặc suy nghĩ vừa xuất hiện như thế nào?",
+          "purpose": "Phân biệt trải nghiệm và kết luận"
+        },
+        {
+          "question": "Điều gì khác đi khi bạn nói “mình nhận thấy có một suy nghĩ” thay vì xem nó là sự thật chắc chắn?",
+          "purpose": "Phân biệt trải nghiệm và kết luận"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 63,
+        "page_end": 63,
+        "section": "Part 2: Unhooking",
+        "supporting_excerpt": "Then you NAME it."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "name",
+        "unhooking"
+      ]
+    },
+    {
+      "id": "who_2020_007",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Refocus on current activity",
+      "concept_vi": "Tái tập trung vào hoạt động hiện tại",
+      "definition": "Bước thứ ba của Unhooking là quay lại chú ý đầy đủ tới người hoặc việc đang ở trước mắt.",
+      "psychological_mechanism": "Tái tập trung hỗ trợ tiếp tục tham gia hoạt động thay vì chỉ bị cuốn theo suy nghĩ.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng kể muốn quay lại học bài sau khi bị lo lắng làm xao nhãng.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Part 2: Unhooking của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Chọn điểm tập trung tiếp theo",
+      "question_templates": [
+        {
+          "question": "Việc nào trước mắt bạn muốn dành sự chú ý trở lại?",
+          "purpose": "Chọn điểm tập trung tiếp theo"
+        },
+        {
+          "question": "Bước nhỏ nhất giúp bạn tiếp tục việc đó là gì?",
+          "purpose": "Chọn điểm tập trung tiếp theo"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 72,
+        "page_end": 72,
+        "section": "Part 2: Unhooking",
+        "supporting_excerpt": "3. REFOCUS ON WHAT YOU ARE DOING."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "refocus",
+        "engagement"
+      ]
+    },
+    {
+      "id": "who_2020_008",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Personal values",
+      "concept_vi": "Giá trị cá nhân",
+      "definition": "Tài liệu định nghĩa giá trị là những mong muốn sâu sắc về kiểu người mà ta muốn trở thành và cách ta đối xử với người khác.",
+      "psychological_mechanism": "Giá trị định hướng hành động, kể cả khi mục tiêu cụ thể khó đạt được.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng nói muốn là người quan tâm, có trách nhiệm với gia đình.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Part 1: Grounding của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Làm rõ điều quan trọng",
+      "question_templates": [
+        {
+          "question": "Trong tình huống này, bạn muốn trở thành người như thế nào?",
+          "purpose": "Làm rõ điều quan trọng"
+        },
+        {
+          "question": "Điều gì trong cách bạn đối xử với bản thân hoặc người khác là quan trọng nhất?",
+          "purpose": "Làm rõ điều quan trọng"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 21,
+        "page_end": 21,
+        "section": "Part 1: Grounding",
+        "supporting_excerpt": "Values are your deepest desires"
+      },
+      "evidence_type": "direct",
+      "review_status": "approved",
+      "tags": [
+        "values",
+        "meaning"
+      ]
+    },
+    {
+      "id": "who_2020_009",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Small values-based actions",
+      "concept_vi": "Hành động nhỏ theo giá trị",
+      "definition": "Tài liệu hướng dẫn chọn một hành động nhỏ có thể thực hiện trong tuần tới phù hợp với giá trị quan trọng.",
+      "psychological_mechanism": "Hành động cụ thể giúp đưa giá trị vào đời sống dù hoàn cảnh còn khó khăn.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng muốn chăm sóc mối quan hệ nhưng chưa biết bắt đầu từ đâu.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Tool 3: Acting on Your Values của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Chuyển giá trị thành hành động",
+      "question_templates": [
+        {
+          "question": "Một việc nhỏ nào trong tuần tới có thể thể hiện giá trị bạn vừa nêu?",
+          "purpose": "Chuyển giá trị thành hành động"
+        },
+        {
+          "question": "Bạn muốn bắt đầu bằng hành động hoặc lời nói cụ thể nào?",
+          "purpose": "Chuyển giá trị thành hành động"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 126,
+        "page_end": 126,
+        "section": "Tool 3: Acting on Your Values",
+        "supporting_excerpt": "Then pick one small way that you can act according to these values in the next week."
+      },
+      "evidence_type": "direct",
+      "review_status": "approved",
+      "tags": [
+        "values",
+        "action"
+      ]
+    },
+    {
+      "id": "who_2020_010",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Being kind to self and others",
+      "concept_vi": "Đối xử tử tế với bản thân và người khác",
+      "definition": "Tài liệu khuyến khích nhận thấy nỗi đau ở bản thân và người khác rồi đáp lại bằng sự tử tế.",
+      "psychological_mechanism": "Gọi tên suy nghĩ thiếu tử tế và thử nói với mình bằng giọng tử tế hơn là các bước được tài liệu khuyến nghị.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng kể mình tự trách gay gắt sau một sai sót.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Tool 4: Being Kind của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Khám phá cách đối xử tử tế",
+      "question_templates": [
+        {
+          "question": "Nếu nói với bản thân bằng sự tử tế, bạn muốn nói điều gì?",
+          "purpose": "Khám phá cách đối xử tử tế"
+        },
+        {
+          "question": "Lúc này bạn có thể làm gì nhỏ bé để chăm sóc mình mà không phủ nhận điều đã xảy ra?",
+          "purpose": "Khám phá cách đối xử tử tế"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 127,
+        "page_end": 127,
+        "section": "Tool 4: Being Kind",
+        "supporting_excerpt": "BE KIND. Notice pain in yourself and others and respond with kindness."
+      },
+      "evidence_type": "direct",
+      "review_status": "approved",
+      "tags": [
+        "self-kindness",
+        "compassion"
+      ]
+    },
+    {
+      "id": "who_2020_011",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Making room for difficult feelings",
+      "concept_vi": "Tạo không gian cho cảm xúc khó khăn",
+      "definition": "Tài liệu khuyến nghị quan sát, gọi tên và cho phép suy nghĩ/cảm xúc khó khăn hiện diện thay vì cố đẩy chúng đi.",
+      "psychological_mechanism": "Tưởng tượng cảm xúc đến và đi như thời tiết, kết hợp chú ý hơi thở, giúp thay đổi cách phản ứng với trải nghiệm.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng kể mình cố gắng xua đi một cảm xúc khó chịu.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Tool 5: Making Room của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Khám phá cách chấp nhận trải nghiệm",
+      "question_templates": [
+        {
+          "question": "Nếu không cần xua cảm xúc này đi ngay, bạn có thể quan sát điều gì về nó?",
+          "purpose": "Khám phá cách chấp nhận trải nghiệm"
+        },
+        {
+          "question": "Bạn cần điều gì để tiếp tục việc quan trọng ngay cả khi cảm xúc khó chịu vẫn còn?",
+          "purpose": "Khám phá cách chấp nhận trải nghiệm"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 128,
+        "page_end": 128,
+        "section": "Tool 5: Making Room",
+        "supporting_excerpt": "MAKE ROOM for them:"
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "acceptance",
+        "making-room"
+      ]
+    },
+    {
+      "id": "who_2020_012",
+      "framework": "WHO Stress Management Guide",
+      "concept": "Away moves",
+      "concept_vi": "Hành vi đi xa khỏi giá trị",
+      "definition": "Tài liệu mô tả những hành vi như tranh cãi hoặc thu mình có thể xuất hiện khi bị cuốn theo cảm xúc và kéo ta xa giá trị của mình.",
+      "psychological_mechanism": "Khi bị cuốn theo suy nghĩ và cảm xúc khó khăn, hành vi có thể đổi theo hướng không phù hợp với giá trị.",
+      "observable_signals": [
+        {
+          "signal": "Người dùng kể rằng mình né tránh cuộc trò chuyện quan trọng.",
+          "origin": "generated_example",
+          "evidence": "Ví dụ hoặc mô tả nằm trong phần Part 1: Grounding của tài liệu; không đủ để suy luận trạng thái tâm lý chắc chắn."
+        }
+      ],
+      "reflection_goal": "Nhận biết lựa chọn hành vi",
+      "question_templates": [
+        {
+          "question": "Hành động lúc đó đưa bạn gần hơn hay xa hơn điều bạn coi trọng?",
+          "purpose": "Nhận biết lựa chọn hành vi"
+        },
+        {
+          "question": "Có lựa chọn nào khác mà bạn muốn thử trong tình huống tương tự?",
+          "purpose": "Nhận biết lựa chọn hành vi"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "công việc",
+        "học tập",
+        "mối quan hệ"
+      ],
+      "limitations": [
+        "Không dùng một dấu hiệu riêng lẻ để chẩn đoán.",
+        "Câu hỏi tiếng Việt do AI đề xuất, không phải trích dẫn nguyên văn."
+      ],
+      "source_reference": {
+        "document_title": "Doing What Matters in Times of Stress: An Illustrated Guide",
+        "page_start": 26,
+        "page_end": 27,
+        "section": "Part 1: Grounding",
+        "supporting_excerpt": "When we get hooked, our behaviour changes."
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "away-moves",
+        "behavior"
+      ]
+    },
+    {
+      "id": "thought_record_user_001",
+      "framework": "Seven-step Thought Record (user-provided template)",
+      "concept": "The situation",
+      "concept_vi": "Tình huống",
+      "definition": "Mô tả sự việc đã xảy ra",
+      "psychological_mechanism": null,
+      "observable_signals": [],
+      "reflection_goal": "Làm rõ bối cảnh cụ thể trước khi diễn giải",
+      "question_templates": [
+        {
+          "question": "Chuyện gì đã xảy ra, theo trình tự bạn nhớ?",
+          "purpose": "Làm rõ bối cảnh cụ thể trước khi diễn giải"
+        },
+        {
+          "question": "Ai hoặc điều gì có liên quan trực tiếp tới sự việc?",
+          "purpose": "Làm rõ bối cảnh cụ thể trước khi diễn giải"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "học tập",
+        "công việc"
+      ],
+      "limitations": [
+        "Quy trình này do người dùng cung cấp, không được quy thuộc cho tài liệu WHO đính kèm.",
+        "Câu hỏi tiếng Việt do AI tạo; chưa được kiểm định thực nghiệm."
+      ],
+      "source_reference": {
+        "document_title": "My thought record (7-step template supplied in conversation)",
+        "page_start": null,
+        "page_end": null,
+        "section": "Step 1: The situation",
+        "supporting_excerpt": null
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "thought-record",
+        "step-1",
+        "user-provided"
+      ]
+    },
+    {
+      "id": "thought_record_user_002",
+      "framework": "Seven-step Thought Record (user-provided template)",
+      "concept": "My feelings",
+      "concept_vi": "Cảm xúc ban đầu",
+      "definition": "Ghi lại cảm xúc đầu tiên khi sự việc xảy ra",
+      "psychological_mechanism": null,
+      "observable_signals": [],
+      "reflection_goal": "Phân biệt cảm xúc với sự kiện và suy nghĩ",
+      "question_templates": [
+        {
+          "question": "Ngay lúc đó bạn cảm thấy thế nào?",
+          "purpose": "Phân biệt cảm xúc với sự kiện và suy nghĩ"
+        },
+        {
+          "question": "Cảm xúc nào nổi bật nhất với bạn?",
+          "purpose": "Phân biệt cảm xúc với sự kiện và suy nghĩ"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "học tập",
+        "công việc"
+      ],
+      "limitations": [
+        "Quy trình này do người dùng cung cấp, không được quy thuộc cho tài liệu WHO đính kèm.",
+        "Câu hỏi tiếng Việt do AI tạo; chưa được kiểm định thực nghiệm."
+      ],
+      "source_reference": {
+        "document_title": "My thought record (7-step template supplied in conversation)",
+        "page_start": null,
+        "page_end": null,
+        "section": "Step 2: My feelings",
+        "supporting_excerpt": null
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "thought-record",
+        "step-2",
+        "user-provided"
+      ]
+    },
+    {
+      "id": "thought_record_user_003",
+      "framework": "Seven-step Thought Record (user-provided template)",
+      "concept": "Unhelpful thoughts",
+      "concept_vi": "Suy nghĩ không hữu ích",
+      "definition": "Ghi lại các suy nghĩ không giúp ích xuất hiện trong tình huống",
+      "psychological_mechanism": null,
+      "observable_signals": [],
+      "reflection_goal": "Nhận diện lời tự diễn giải thay vì xem chúng là sự kiện",
+      "question_templates": [
+        {
+          "question": "Khi ấy, bạn đã tự nói gì với bản thân?",
+          "purpose": "Nhận diện lời tự diễn giải thay vì xem chúng là sự kiện"
+        },
+        {
+          "question": "Suy nghĩ nào khiến tình huống trở nên nặng nề hơn đối với bạn?",
+          "purpose": "Nhận diện lời tự diễn giải thay vì xem chúng là sự kiện"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "học tập",
+        "công việc"
+      ],
+      "limitations": [
+        "Quy trình này do người dùng cung cấp, không được quy thuộc cho tài liệu WHO đính kèm.",
+        "Câu hỏi tiếng Việt do AI tạo; chưa được kiểm định thực nghiệm."
+      ],
+      "source_reference": {
+        "document_title": "My thought record (7-step template supplied in conversation)",
+        "page_start": null,
+        "page_end": null,
+        "section": "Step 3: Unhelpful thoughts",
+        "supporting_excerpt": null
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "thought-record",
+        "step-3",
+        "user-provided"
+      ]
+    },
+    {
+      "id": "thought_record_user_004",
+      "framework": "Seven-step Thought Record (user-provided template)",
+      "concept": "Evidence supporting the thought",
+      "concept_vi": "Bằng chứng ủng hộ suy nghĩ",
+      "definition": "Ghi lại bằng chứng mà người viết cho rằng ủng hộ suy nghĩ",
+      "psychological_mechanism": null,
+      "observable_signals": [],
+      "reflection_goal": "Xem xét căn cứ của nhận định",
+      "question_templates": [
+        {
+          "question": "Bạn đang dựa vào sự kiện cụ thể nào để tin điều đó?",
+          "purpose": "Xem xét căn cứ của nhận định"
+        },
+        {
+          "question": "Có ví dụ nào bạn trực tiếp quan sát được không?",
+          "purpose": "Xem xét căn cứ của nhận định"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "học tập",
+        "công việc"
+      ],
+      "limitations": [
+        "Quy trình này do người dùng cung cấp, không được quy thuộc cho tài liệu WHO đính kèm.",
+        "Câu hỏi tiếng Việt do AI tạo; chưa được kiểm định thực nghiệm."
+      ],
+      "source_reference": {
+        "document_title": "My thought record (7-step template supplied in conversation)",
+        "page_start": null,
+        "page_end": null,
+        "section": "Step 4: Evidence supporting the thought",
+        "supporting_excerpt": null
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "thought-record",
+        "step-4",
+        "user-provided"
+      ]
+    },
+    {
+      "id": "thought_record_user_005",
+      "framework": "Seven-step Thought Record (user-provided template)",
+      "concept": "Evidence against the thought",
+      "concept_vi": "Bằng chứng phản bác suy nghĩ",
+      "definition": "Ghi lại các dữ kiện không phù hợp với suy nghĩ ban đầu",
+      "psychological_mechanism": null,
+      "observable_signals": [],
+      "reflection_goal": "Xem xét thông tin dễ bị bỏ qua",
+      "question_templates": [
+        {
+          "question": "Có sự kiện nào không hoàn toàn phù hợp với suy nghĩ đó?",
+          "purpose": "Xem xét thông tin dễ bị bỏ qua"
+        },
+        {
+          "question": "Nếu nhìn toàn bộ tình huống, bạn còn thấy bằng chứng nào khác?",
+          "purpose": "Xem xét thông tin dễ bị bỏ qua"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "học tập",
+        "công việc"
+      ],
+      "limitations": [
+        "Quy trình này do người dùng cung cấp, không được quy thuộc cho tài liệu WHO đính kèm.",
+        "Câu hỏi tiếng Việt do AI tạo; chưa được kiểm định thực nghiệm."
+      ],
+      "source_reference": {
+        "document_title": "My thought record (7-step template supplied in conversation)",
+        "page_start": null,
+        "page_end": null,
+        "section": "Step 5: Evidence against the thought",
+        "supporting_excerpt": null
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "thought-record",
+        "step-5",
+        "user-provided"
+      ]
+    },
+    {
+      "id": "thought_record_user_006",
+      "framework": "Seven-step Thought Record (user-provided template)",
+      "concept": "Alternative balanced thoughts",
+      "concept_vi": "Suy nghĩ thay thế cân bằng",
+      "definition": "Thử xây dựng cách nhìn thực tế hoặc trung tính hơn",
+      "psychological_mechanism": null,
+      "observable_signals": [],
+      "reflection_goal": "Mở rộng góc nhìn từ hai phía bằng chứng",
+      "question_templates": [
+        {
+          "question": "Một cách diễn giải khác vừa thực tế vừa công bằng có thể là gì?",
+          "purpose": "Mở rộng góc nhìn từ hai phía bằng chứng"
+        },
+        {
+          "question": "Bạn có thể diễn đạt lại nhận định ban đầu thế nào để phản ánh đầy đủ dữ kiện?",
+          "purpose": "Mở rộng góc nhìn từ hai phía bằng chứng"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "học tập",
+        "công việc"
+      ],
+      "limitations": [
+        "Quy trình này do người dùng cung cấp, không được quy thuộc cho tài liệu WHO đính kèm.",
+        "Câu hỏi tiếng Việt do AI tạo; chưa được kiểm định thực nghiệm."
+      ],
+      "source_reference": {
+        "document_title": "My thought record (7-step template supplied in conversation)",
+        "page_start": null,
+        "page_end": null,
+        "section": "Step 6: Alternative balanced thoughts",
+        "supporting_excerpt": null
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "thought-record",
+        "step-6",
+        "user-provided"
+      ]
+    },
+    {
+      "id": "thought_record_user_007",
+      "framework": "Seven-step Thought Record (user-provided template)",
+      "concept": "Feelings after the thought record",
+      "concept_vi": "Cảm xúc sau khi hoàn thành",
+      "definition": "Ghi nhận cảm xúc sau khi hoàn thành bản ghi suy nghĩ",
+      "psychological_mechanism": null,
+      "observable_signals": [],
+      "reflection_goal": "Quan sát thay đổi mà không yêu cầu cảm xúc phải tích cực hơn",
+      "question_templates": [
+        {
+          "question": "Bây giờ bạn đang cảm thấy thế nào?",
+          "purpose": "Quan sát thay đổi mà không yêu cầu cảm xúc phải tích cực hơn"
+        },
+        {
+          "question": "So với ban đầu, cảm xúc của bạn có thay đổi hay vẫn như cũ?",
+          "purpose": "Quan sát thay đổi mà không yêu cầu cảm xúc phải tích cực hơn"
+        }
+      ],
+      "application_contexts": [
+        "nhật ký cá nhân",
+        "học tập",
+        "công việc"
+      ],
+      "limitations": [
+        "Quy trình này do người dùng cung cấp, không được quy thuộc cho tài liệu WHO đính kèm.",
+        "Câu hỏi tiếng Việt do AI tạo; chưa được kiểm định thực nghiệm."
+      ],
+      "source_reference": {
+        "document_title": "My thought record (7-step template supplied in conversation)",
+        "page_start": null,
+        "page_end": null,
+        "section": "Step 7: Feelings after the thought record",
+        "supporting_excerpt": null
+      },
+      "evidence_type": "direct",
+      "review_status": "pending",
+      "tags": [
+        "thought-record",
+        "step-7",
+        "user-provided"
+      ]
+    }
+  ]
+}
