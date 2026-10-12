@@ -1,3 +1,39 @@
 {
-  "cards": {}
+  "cards": {
+    "who_2020_003": {
+      "status": "approved",
+      "citation_verified": true,
+      "reviewed_by": "qa-reviewer"
+    },
+    "who_2020_008": {
+      "status": "approved",
+      "citation_verified": true,
+      "reviewed_by": "qa-reviewer"
+    },
+    "who_2020_009": {
+      "status": "approved",
+      "citation_verified": true,
+      "reviewed_by": "qa-reviewer"
+    },
+    "who_2020_010": {
+      "status": "approved",
+      "citation_verified": true,
+      "reviewed_by": "qa-reviewer"
+    },
+    "soq_002": {
+      "status": "approved",
+      "citation_verified": true,
+      "reviewed_by": "qa-reviewer"
+    },
+    "soq_004": {
+      "status": "approved",
+      "citation_verified": true,
+      "reviewed_by": "qa-reviewer"
+    },
+    "soq_006": {
+      "status": "approved",
+      "citation_verified": true,
+      "reviewed_by": "qa-reviewer"
+    }
+  }
 }

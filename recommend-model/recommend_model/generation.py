@@ -140,6 +140,16 @@ def generate(scenario: Scenario, cards: tuple[Card, ...]) -> dict[str, object]:
     endpoint = os.getenv("RECOMMEND_LLM_ENDPOINT", "")
     key = os.getenv("RECOMMEND_LLM_API_KEY", "")
     model = os.getenv("RECOMMEND_LLM_MODEL", "")
+    if not (endpoint and key and model):
+        config_path = Path(__file__).resolve().parents[1] / "config.local.ps1"
+        if config_path.is_file():
+            config_text = config_path.read_text(encoding="utf-8")
+            def _get(var: str) -> str:
+                m = re.search(r'(?m)^\s*\$env:' + re.escape(var) + r'\s*=\s*"([^"]*)"', config_text)
+                return m.group(1) if m else ""
+            endpoint = endpoint or _get("RECOMMEND_LLM_ENDPOINT")
+            key = key or _get("RECOMMEND_LLM_API_KEY")
+            model = model or _get("RECOMMEND_LLM_MODEL")
     parts = urlsplit(endpoint)
     local_http = parts.scheme == "http" and parts.hostname in ("localhost", "127.0.0.1", "::1")
     if (not (parts.scheme == "https" or local_http) or not parts.hostname
