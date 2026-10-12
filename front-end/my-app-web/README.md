@@ -10,7 +10,7 @@
 
 Nếu backend ở địa chỉ khác, cấu hình `MYLOG_BACKEND_URL` cho Next.js. Backend cần `MYLOG_VERIFICATION_URL` trỏ tới `https://<web-host>/auth/verify-email` ở staging/production; local có thể dùng `http://localhost:3000/auth/verify-email`.
 
-Khi thử nghiệm local, mở `/dev/users` để xem email của các tài khoản đang hoạt động. Nhập khóa `MYLOG_DEV_USERS_KEY` đã cấu hình trong `backend/.env`; trang và route `/api/dev/users` chỉ hoạt động khi Next.js chạy `npm run dev`. Khóa không được lưu trong trình duyệt. Backend phải chạy profile `local`; xem [hướng dẫn backend](../../backend/README.md).
+Khi thử nghiệm local, mở `/dev/users` để xem email của các tài khoản đang hoạt động; danh sách tự tải, không cần nhập khóa. Cấu hình cùng giá trị `MYLOG_DEV_USERS_KEY` trong `backend/.env` và `front-end/my-app-web/.env.local`. Trang và route `/api/dev/users` chỉ hoạt động khi Next.js chạy `npm run dev` trên `127.0.0.1`; khóa chỉ được server web dùng để gọi backend. Backend phải chạy profile `local`; xem [hướng dẫn backend](../../backend/README.md).
 
 ## Đăng ký và xác minh email
 

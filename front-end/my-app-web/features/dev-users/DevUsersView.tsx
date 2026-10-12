@@ -1,37 +1,30 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import type { DevAccount } from './types';
 
-type Account = { id: string; status: string; email: string };
 const pageSize = 50;
 
-export function DevUsersView() {
-  const [key, setKey] = useState('');
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [hasMore, setHasMore] = useState(false);
+export function DevUsersView({ initialAccounts, initialStatus }: { initialAccounts: DevAccount[]; initialStatus: number }) {
+  const [accounts, setAccounts] = useState(initialAccounts);
+  const [hasMore, setHasMore] = useState(initialAccounts.length === pageSize);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(initialStatus === 200 ? '' : 'Không tải được danh sách tài khoản. Kiểm tra backend local và cấu hình khóa.');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   async function load(before?: string) {
     setBusy(true);
     setError('');
     try {
-      const response = await fetch('/api/dev/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, before }),
-        cache: 'no-store',
-      });
+      const path = before ? `/api/dev/users?before=${encodeURIComponent(before)}` : '/api/dev/users';
+      const response = await fetch(path, { cache: 'no-store' });
       if (!response.ok) throw new Error(response.status === 404
-        ? 'Không tìm thấy API. Kiểm tra profile local và khóa phát triển ở backend.'
+        ? 'Không tìm thấy API. Kiểm tra profile local ở backend.'
         : 'Không tải được danh sách tài khoản.');
-      const next = await response.json() as Account[];
+      const next = await response.json() as DevAccount[];
       setAccounts(current => before ? [...current, ...next] : next);
       setHasMore(next.length === pageSize);
-      setLoaded(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Không tải được danh sách tài khoản.');
     } finally {
@@ -39,29 +32,15 @@ export function DevUsersView() {
     }
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void load();
-  }
-
   return <main className="min-h-screen bg-bg-canvas px-4 py-10 text-on-surface">
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <p className="font-mono text-xs uppercase tracking-widest">Local development</p>
         <h1 className="font-space text-3xl font-extrabold">Tài khoản thử nghiệm</h1>
-        <p className="mt-2 text-sm">Chỉ tài khoản đang hoạt động. Khóa chỉ giữ trong bộ nhớ trang và mất khi tải lại.</p>
+        <p className="mt-2 text-sm">Chỉ tài khoản đang hoạt động trong môi trường phát triển local.</p>
       </div>
-      <form onSubmit={submit} className="flex flex-col gap-3 rounded-xl border border-black bg-white p-4 sm:flex-row">
-        <label htmlFor="dev-users-key" className="sr-only">Khóa phát triển</label>
-        <input id="dev-users-key" type="password" value={key} onChange={event => setKey(event.target.value)}
-          placeholder="MYLOG_DEV_USERS_KEY" autoComplete="off" required minLength={16}
-          className="min-w-0 flex-1 rounded-lg border border-black px-3 py-2" />
-        <button type="submit" disabled={busy} className="rounded-lg border border-black bg-primary-container px-4 py-2 font-bold disabled:opacity-60">
-          {busy ? 'Đang tải...' : 'Xem tài khoản'}
-        </button>
-      </form>
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-      {loaded && <section className="overflow-hidden rounded-xl border border-black bg-white">
+      {initialStatus === 200 && <section className="overflow-hidden rounded-xl border border-black bg-white">
         <div className="border-b border-black p-4 text-sm font-bold">{accounts.length} tài khoản đã tải</div>
         {accounts.length === 0 ? <p className="p-4 text-sm">Chưa có tài khoản đang hoạt động.</p> :
           <ul className="divide-y divide-gray-200">{accounts.map(account => <li key={account.id} className="flex flex-wrap items-center justify-between gap-2 p-4">
