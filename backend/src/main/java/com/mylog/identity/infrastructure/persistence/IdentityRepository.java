@@ -61,11 +61,11 @@ class IdentityRepository implements IdentityStore {
 
     @Override public void savePendingRegistration(IdentityStore.PendingRegistration registration, Instant now) {
         PendingRegistrationEntity row = entityManager.find(PendingRegistrationEntity.class, registration.id());
-        if (row == null) {
+        boolean newRegistration = row == null;
+        if (newRegistration) {
             row = new PendingRegistrationEntity();
             row.id = registration.id();
             row.createdAt = now;
-            entityManager.persist(row);
         }
         row.emailLookupHash = registration.emailHash();
         row.encryptedEmail = registration.email().ciphertext();
@@ -83,6 +83,7 @@ class IdentityRepository implements IdentityStore {
         row.codeExpiresAt = registration.codeExpiresAt();
         row.codeFailedAttempts = 0;
         row.updatedAt = now;
+        if (newRegistration) entityManager.persist(row);
         entityManager.flush();
     }
 
