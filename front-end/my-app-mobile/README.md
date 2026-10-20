@@ -1,56 +1,30 @@
-# Welcome to your Expo app 👋
+# MyLog mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Ứng dụng Expo SDK 57 / React Native cho MyLog. Auth, onboarding, hồ sơ, nhật ký và một số luồng mở rộng đã được nối với backend. Xem [PROJECT_STATUS.md](PROJECT_STATUS.md) để biết phần đã kiểm tra và phần còn mở.
 
-## Get started
+Read [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for delivery phases, [STRUCTURE.md](STRUCTURE.md) for code ownership, [API_CONTRACT.md](API_CONTRACT.md) for the verified backend endpoints, and [mobile design skill](skills/mylog-mobile-design/SKILL.md) for UI direction.
 
-1. Install dependencies
+## Run locally
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```powershell
+cd front-end/my-app-mobile
+npm ci
+Copy-Item .env.example .env
+npm run start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Set `EXPO_PUBLIC_API_BASE_URL` in `.env` to a backend address reachable from your emulator or phone, without `/api/v1`. `127.0.0.1` works only when the app runtime can reach the backend on the same host; a physical phone normally needs the computer's LAN address or a development HTTPS endpoint. Do not place tokens or secret keys in it. Native refresh tokens and user-scoped journal drafts use Expo SecureStore; Expo web sessions and drafts live only in memory. HTTP is for isolated local testing with synthetic data; real user data requires HTTPS.
 
-### Other setup steps
+## Checks
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```powershell
+./node_modules/.bin/tsc.cmd --noEmit
+$env:EXPO_NO_TELEMETRY='1'
+./node_modules/.bin/expo.cmd lint
+$env:EXPO_NO_TELEMETRY='1'
+$env:EXPO_OFFLINE='1'
+./node_modules/.bin/expo.cmd export --platform web --output-dir .mobile-check-web
+./node_modules/.bin/expo.cmd export --platform android --output-dir .mobile-check-android
+```
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+With a local backend and Mailpit, run `node scripts/e2e-api-smoke.mjs`. With Expo web on port 3000 and a backend on `http://127.0.0.1:18080`, run `node scripts/e2e-expo-web.mjs`. Both use synthetic accounts and local HTTP only. Web/Android exports and Playwright web tests do not replace native device checks.
