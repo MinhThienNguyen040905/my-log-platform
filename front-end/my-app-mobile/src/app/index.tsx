@@ -1,98 +1,38 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useFocusEffect } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
+import { useCallback } from 'react';
+import { AppButton, AppText, Screen } from '@/components/ui';
+import { Palette, Spacing } from '@/constants/theme';
+import { useSession } from '@/providers/SessionProvider';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
-
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
+export default function WelcomeScreen() {
+  const session = useSession();
+  useFocusEffect(useCallback(() => {
+    if (session.status === 'authenticated' && session.profile) {
+      router.replace(session.profile.onboardingCompletedAt ? '/home' : '/onboarding');
+    }
+  }, [session.status, session.profile]));
+  if (session.status === 'loading') return <Screen><AppText>Đang kiểm tra phiên...</AppText></Screen>;
+  if (session.status === 'error') return <Screen><AppText>{session.error}</AppText>
+    <AppButton title="Thử lại" onPress={() => void session.reload()} /></Screen>;
+  return <Screen>
+    <View style={styles.brand}><AppText variant="eyebrow">MYLOG · NHẬT KÝ CỦA BẠN</AppText></View>
+    <View style={styles.hero}>
+      <View style={styles.paper}><AppText variant="display">Viết điều bạn muốn nhớ.</AppText></View>
+      <AppText variant="body" style={styles.intro}>Một khoảng riêng để ghi lại ngày hôm nay, theo nhịp của bạn.</AppText>
+    </View>
+    <View style={styles.actions}>
+      <AppButton title="Đăng nhập" onPress={() => router.push('/login')} />
+      <AppButton title="Xem giao diện mẫu" variant="secondary" onPress={() => router.push('/journal-preview')} />
+      <AppText variant="caption">Giao diện nhật ký mẫu dùng nội dung minh họa; dữ liệu tài khoản được lấy từ backend sau khi đăng nhập.</AppText>
+    </View>
+  </Screen>;
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  brand: { paddingTop: Spacing.four },
+  hero: { flex: 1, justifyContent: 'center', gap: Spacing.four },
+  paper: { backgroundColor: Palette.paper, borderWidth: 2, borderColor: Palette.ink, borderRadius: 8, padding: Spacing.four, transform: [{ rotate: '-2deg' }] },
+  intro: { maxWidth: 300 },
+  actions: { gap: Spacing.three, paddingBottom: Spacing.four },
 });
