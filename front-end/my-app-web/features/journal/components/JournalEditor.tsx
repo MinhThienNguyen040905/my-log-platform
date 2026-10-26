@@ -1,12 +1,11 @@
 'use client';
 
 import React, { Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useToast } from '@/providers/ToastProvider';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
-import { NeoButton } from '@/components/ui/NeoButton';
 import { SafetyModal } from './SafetyModal';
-import { AiReflectionDrawer } from './AiReflectionDrawer';
 import { AddTopicModal } from './AddTopicModal';
 import { JournalTipTapEditor } from './JournalTipTapEditor';
 import { useJournalEditor } from '../hooks/useJournalEditor';
@@ -19,13 +18,16 @@ import {
   Check,
   Calendar,
   Lightbulb,
-  ChevronDown,
   Zap,
   BatteryCharging,
   Moon,
   Plus,
   Edit3,
   Flame,
+  Wrench,
+  ImagePlus,
+  X,
+  MessageCircleQuestionMark,
 } from 'lucide-react';
 
 export function JournalEditor() {
@@ -43,6 +45,16 @@ export function JournalEditor() {
 }
 
 const MOOD_ICONS = JOURNAL_EMOTION_ORDER.map((id) => ({ id, ...JOURNAL_EMOTIONS[id] }));
+const SELF_REFLECTION_QUESTIONS = [
+  'Điều gì đang chiếm nhiều suy nghĩ của mình nhất lúc này?',
+  'Mình đang cần điều gì, và có thể dịu dàng đáp ứng nhu cầu đó ra sao?',
+  'Có điều gì nhỏ hôm nay mình muốn ghi nhận hoặc biết ơn?',
+];
+const TOPIC_TITLE_SUGGESTIONS = [
+  'Một điều nhỏ khiến mình vui hôm nay',
+  'Điều mình đang học cách chấp nhận',
+  'Khoảnh khắc hôm nay mình muốn nhớ',
+];
 const MOOD_COLORS: Record<JournalEmotion, { activeBg: string; hoverBg: string }> = {
   neutral: { activeBg: 'bg-slate-200', hoverBg: 'hover:bg-slate-100' },
   happy: { activeBg: 'bg-primary-container', hoverBg: 'hover:bg-lime-50' },
@@ -53,12 +65,17 @@ const MOOD_COLORS: Record<JournalEmotion, { activeBg: string; hoverBg: string }>
 
 function JournalEditorContent() {
   const { showToast } = useToast();
+  const metricsButtonRef = React.useRef<HTMLButtonElement>(null);
+  const questionsButtonRef = React.useRef<HTMLButtonElement>(null);
+  const topicSuggestionButtonRef = React.useRef<HTMLButtonElement>(null);
+  const [metricsPopoverPosition, setMetricsPopoverPosition] = React.useState<React.CSSProperties | null>(null);
+  const [questionsPopoverPosition, setQuestionsPopoverPosition] = React.useState<React.CSSProperties | null>(null);
+  const [topicSuggestionPosition, setTopicSuggestionPosition] = React.useState<React.CSSProperties | null>(null);
   const {
     editorRef,
     isEditMode,
     editId,
     rowVersion,
-    contentVersion,
     loadedEntryId,
     isSaving,
     existingDate,
@@ -85,17 +102,13 @@ function JournalEditorContent() {
     setTopics,
     showAddTopicModal,
     setShowAddTopicModal,
-    showPromptModal,
-    setShowPromptModal,
-    isAiDrawerOpen,
-    setIsAiDrawerOpen,
+    isToolsOpen,
+    setIsToolsOpen,
     isSafetyModalOpen,
     safetySaved,
     setIsSafetyModalOpen,
     detectedCrisisKeywords,
-    writingPrompts,
     handleResetToNewEntry,
-    handleOpenAiDrawer,
     executeSave,
     wordCount,
     router,
@@ -105,8 +118,75 @@ function JournalEditorContent() {
     Math.abs(candidate.score - moodScore) < Math.abs(closest - moodScore) ? candidate.score : closest,
     MOOD_ICONS[0].score);
 
+  const toggleMetricsPopover = () => {
+    setTopicSuggestionPosition(null);
+    if (showDetailedMetrics) {
+      setShowDetailedMetrics(false);
+      setMetricsPopoverPosition(null);
+      return;
+    }
+    setQuestionsPopoverPosition(null);
+    const button = metricsButtonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    if (window.matchMedia('(min-width: 1360px)').matches) {
+      setMetricsPopoverPosition({ position: 'fixed', top: rect.top, left: rect.left - 300 });
+    } else {
+      const width = Math.min(290, window.innerWidth - 32);
+      setMetricsPopoverPosition({
+        position: 'fixed',
+        bottom: window.innerHeight - rect.top + 8,
+        left: Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16)),
+      });
+    }
+    setShowDetailedMetrics(true);
+  };
+
+  const toggleQuestionsPopover = () => {
+    setTopicSuggestionPosition(null);
+    setShowDetailedMetrics(false);
+    setMetricsPopoverPosition(null);
+    if (questionsPopoverPosition) {
+      setQuestionsPopoverPosition(null);
+      return;
+    }
+    const button = questionsButtonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    if (window.matchMedia('(min-width: 1360px)').matches) {
+      setQuestionsPopoverPosition({ position: 'fixed', top: rect.top, left: rect.left - 300 });
+    } else {
+      const width = Math.min(290, window.innerWidth - 32);
+      setQuestionsPopoverPosition({
+        position: 'fixed',
+        bottom: window.innerHeight - rect.top + 8,
+        left: Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16)),
+      });
+    }
+  };
+
+  const toggleTopicSuggestions = () => {
+    setMetricsPopoverPosition(null);
+    setShowDetailedMetrics(false);
+    setQuestionsPopoverPosition(null);
+    if (topicSuggestionPosition) {
+      setTopicSuggestionPosition(null);
+      return;
+    }
+    const button = topicSuggestionButtonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    const width = Math.min(290, window.innerWidth - 32);
+    const estimatedPopoverHeight = 220;
+    setTopicSuggestionPosition({
+      position: 'fixed',
+      top: Math.max(16, Math.min(rect.top - estimatedPopoverHeight - 8, window.innerHeight - estimatedPopoverHeight - 16)),
+      left: Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16)),
+    });
+  };
+
   return (
-    <div className="w-full flex flex-col bg-bg-canvas min-h-[calc(100vh-80px)] pb-16 selection:bg-primary-container selection:text-black overflow-x-hidden relative">
+    <div className="w-full flex flex-col bg-bg-canvas min-h-[calc(100vh-80px)] pb-16 selection:bg-primary-container selection:text-black overflow-x-clip relative">
       {/* Top Quiet Meta Bar */}
       <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-4 pb-2 flex flex-wrap items-center gap-3 text-xs font-space font-bold text-gray-600">
         <div className="flex items-center gap-2">
@@ -147,11 +227,8 @@ function JournalEditorContent() {
       </section>
 
       {/* Main Screen Layout Container */}
-      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-start justify-center transition-all duration-300">
-        {/* PHYSICAL NOTEBOOK DESK CANVAS (Max-w 850px centered) */}
-        <div
-          className="w-full max-w-[850px] transition-all duration-300"
-        >
+      <main className="relative mx-auto grid w-full max-w-[1440px] grid-cols-1 px-4 sm:px-6 py-2 transition-all duration-300 min-[1360px]:grid-cols-[minmax(0,1fr)_minmax(0,920px)_minmax(0,1fr)]">
+        <div className="mx-auto w-full max-w-[920px] min-w-0 transition-all duration-300 min-[1360px]:col-start-2 min-[1360px]:row-start-1">
           <article className="relative bg-paper-warm border-[2.5px] border-black rounded-3xl p-6 sm:p-10 shadow-neo-lg transition-all overflow-visible flex flex-col gap-6">
             {/* Washi Tape and Page Number Stamp */}
             <WashiTape color={isEditMode ? 'peach' : 'lime'} rotate={2} className="absolute -top-3.5 right-12 w-32 z-10" />
@@ -233,89 +310,39 @@ function JournalEditorContent() {
               />
 
               {/* Tags / Topics */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                {topics.map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-white rounded-lg border border-black text-xs font-space font-bold shadow-neo-sm"
+              <div className="flex flex-col gap-2 pt-1">
+                <div className="flex items-center justify-end">
+                  <button
+                    ref={topicSuggestionButtonRef}
+                    type="button"
+                    onClick={toggleTopicSuggestions}
+                    aria-label="Gợi ý chủ đề viết"
+                    aria-expanded={!!topicSuggestionPosition}
+                    title="Gợi ý chủ đề viết"
+                    className={`rounded-full border border-black p-2 transition-all hover:-translate-y-0.5 hover:bg-amber-100 hover:shadow-neo-sm active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${topicSuggestionPosition ? 'bg-primary-container shadow-neo-sm' : 'bg-white'}`}
                   >
+                    <Lightbulb className="h-4 w-4 text-amber-600" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                {topics.map((tag, idx) => (
+                  <span key={`${tag}-${idx}`} className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-white rounded-lg border border-black text-xs font-space font-bold shadow-neo-sm">
                     #{tag}
-                    <button
-                      type="button"
-                      onClick={() => setTopics(topics.filter((_, i) => i !== idx))}
-                      className="text-gray-400 hover:text-black ml-1 text-xs"
-                    >
-                      ×
-                    </button>
+                    <button type="button" onClick={() => setTopics(topics.filter((_, i) => i !== idx))} aria-label={`Xóa tag ${tag}`} className="text-gray-400 hover:text-black ml-1 text-xs">×</button>
                   </span>
                 ))}
                 <button
                   type="button"
                   onClick={() => setShowAddTopicModal(true)}
                   className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary-container/40 hover:bg-primary-container rounded-lg border border-black text-xs font-space font-bold transition-all cursor-pointer shadow-neo-xs hover:-translate-y-0.5 active:translate-y-0.5"
-                  title="Thêm chủ đề / hashtag"
+                  title="Thêm tag"
                 >
                   <Plus className="w-3 h-3" />
-                  <span>Chủ đề</span>
+                  <span>Tag</span>
                 </button>
+                </div>
               </div>
             </header>
-
-            {/* Prompt Helper Bar */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowPromptModal(!showPromptModal)}
-                className="inline-flex items-center gap-2 text-xs font-space font-bold text-gray-700 bg-white px-3 py-1.5 rounded-xl border border-black shadow-neo-sm hover:bg-lime-100 transition-all cursor-pointer"
-              >
-                <Lightbulb className="w-4 h-4 text-amber-500 fill-amber-300" />
-                <span> Gợi ý chủ đề</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showPromptModal ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showPromptModal && (
-                <div className="absolute top-10 left-0 z-30 w-full sm:w-[420px] bg-white border-2 border-black rounded-2xl p-3 shadow-neo-lg animate-in fade-in">
-                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-black/10">
-                    <span className="font-space text-xs font-bold text-gray-800">
-                      Chọn câu hỏi để bắt đầu dòng chảy:
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowPromptModal(false)}
-                      className="text-xs font-bold text-gray-500 hover:text-black"
-                    >
-                      Đóng
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto">
-                    {writingPrompts.map((item, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          if (editorRef.current) {
-                            editorRef.current.insertContent(`<blockquote>💡 <strong>[${item.category}]</strong> ${item.prompt}</blockquote><p></p>`);
-                            editorRef.current.focus();
-                          } else {
-                            setContent((prev) => `${prev}<blockquote>💡 <strong>[${item.category}]</strong> ${item.prompt}</blockquote><p></p>`);
-                          }
-                          setShowPromptModal(false);
-                          showToast({ title: 'Đã thêm gợi ý vào trang viết!', type: 'info' });
-                        }}
-                        className="text-left p-2 rounded-xl hover:bg-paper-warm border border-transparent hover:border-black transition-all cursor-pointer flex flex-col gap-0.5"
-                      >
-                        <span className="font-space text-[10px] font-extrabold uppercase text-purple-700">
-                          {item.category}
-                        </span>
-                        <span className="font-serif text-xs text-gray-800">
-                          {item.prompt}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Writing Area: Tactile Lined Paper with TipTap */}
             <div className="relative">
@@ -329,118 +356,85 @@ function JournalEditorContent() {
               />}
             </div>
 
-            {/* Bottom Toolbar: Quiet & Friendly */}
-            <div className="pt-4 border-t-2 border-black/15 flex flex-col gap-4">
-              <div className="flex flex-wrap items-center justify-end gap-3">
-                {/* Optional Detailed Metrics */}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowDetailedMetrics(!showDetailedMetrics)}
-                    className="text-xs font-space font-bold text-gray-700 hover:text-black underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <Sliders className="w-3.5 h-3.5" />
-                    <span>{showDetailedMetrics ? 'Ẩn chỉ số' : '+ Thêm chỉ số'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Expandable Health Metrics (Quiet Sliders) */}
-              {showDetailedMetrics && (
-                <div className="p-4 bg-white rounded-2xl border border-black shadow-neo-sm grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in fade-in">
-                  <div>
-                    <div className="flex justify-between text-xs font-space font-bold mb-1">
-                      <span className="flex items-center gap-1 text-gray-700">
-                        <Zap className="w-3.5 h-3.5 text-amber-500" /> Áp lực (Stress):
-                      </span>
-                      <span>{stressScore}/10</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      step="0.5"
-                      value={stressScore}
-                      onChange={(e) => setStressScore(parseFloat(e.target.value))}
-                      className="w-full accent-amber-500 cursor-pointer"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-xs font-space font-bold mb-1">
-                      <span className="flex items-center gap-1 text-gray-700">
-                        <BatteryCharging className="w-3.5 h-3.5 text-green-600" /> Năng lượng:
-                      </span>
-                      <span>{energyScore}/10</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      step="0.5"
-                      value={energyScore}
-                      onChange={(e) => setEnergyScore(parseFloat(e.target.value))}
-                      className="w-full accent-green-600 cursor-pointer"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-xs font-space font-bold mb-1">
-                      <span className="flex items-center gap-1 text-gray-700">
-                        <Moon className="w-3.5 h-3.5 text-blue-500" /> Giấc ngủ:
-                      </span>
-                      <span>{sleepHours}h</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="3"
-                      max="12"
-                      step="0.5"
-                      value={sleepHours}
-                      onChange={(e) => setSleepHours(parseFloat(e.target.value))}
-                      className="w-full accent-blue-500 cursor-pointer"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons: 2 Clear Actions */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                <span className="text-xs font-space font-bold text-gray-500">{wordCount} từ</span>
-                <div className="flex items-center gap-3">
-                  <NeoButton
-                    variant="paper"
-                    size="md"
-                    onClick={handleOpenAiDrawer}
-                    className="font-space font-bold text-xs sm:text-sm border-2 border-black shadow-neo hover:bg-lime-100"
-                  >
-                    <span>{isAiDrawerOpen ? 'Đang mở gợi ý' : 'Gợi ý nhìn lại'}</span>
-                  </NeoButton>
-
-                  <NeoButton
-                    variant="primary"
-                    size="md"
-                    onClick={executeSave}
-                    disabled={isSaving || (!!editId && loadedEntryId !== editId)}
-                    className="font-space font-extrabold text-xs sm:text-sm shadow-neo"
-                    icon={isEditMode ? <Check className="w-4 h-4 stroke-[2.5]" /> : <Save className="w-4 h-4 stroke-[2.5]" />}
-                  >
-                    <span>{isSaving ? 'Đang lưu...' : isEditMode ? 'Cập nhật bài viết' : 'Lưu'}</span>
-                  </NeoButton>
-                </div>
-              </div>
-            </div>
+            <div className="pt-4 border-t-2 border-black/15 text-xs font-space font-bold text-gray-500">{wordCount} từ</div>
           </article>
         </div>
+
+        <aside className={`${isToolsOpen ? 'fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+10rem)] z-[100]' : 'hidden'} min-[1360px]:sticky min-[1360px]:top-[120px] min-[1360px]:z-[100] min-[1360px]:col-start-3 min-[1360px]:row-start-1 min-[1360px]:ml-[10px] min-[1360px]:mt-10 min-[1360px]:block min-[1360px]:w-32 min-[1360px]:self-start`}>
+          <div className="max-h-[65dvh] overflow-y-auto flex flex-col gap-[10px] rounded-2xl border-2 border-black bg-paper-warm p-[10px] shadow-neo-lg" style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}>
+            <div className="flex items-center justify-between min-[1360px]:hidden">
+              <span className="font-space text-sm font-extrabold">Công cụ</span>
+              <button type="button" onClick={() => setIsToolsOpen(false)} aria-label="Đóng công cụ" className="rounded-lg p-2 hover:bg-white"><X className="h-4 w-4" /></button>
+            </div>
+            <button type="button" onClick={executeSave} disabled={isSaving || (!!editId && loadedEntryId !== editId)} aria-label={isSaving ? 'Đang lưu' : isEditMode ? 'Cập nhật bài' : 'Lưu'} title={isSaving ? 'Đang lưu' : isEditMode ? 'Cập nhật bài' : 'Lưu'} className="inline-flex h-14 w-full items-center justify-center rounded-xl border border-black bg-primary-container p-2 shadow-neo-sm transition-all hover:-translate-y-0.5 hover:bg-lime-200 hover:shadow-neo active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:opacity-50">
+              {isEditMode ? <Check className="h-5 w-5" /> : <Save className="h-5 w-5" />}
+            </button>
+            <button type="button" onClick={() => showToast({ title: 'Chèn nội dung', message: 'Gõ “/” trong trang viết để mở menu chèn.', type: 'info' })} aria-label="Chèn nội dung" title="Chèn nội dung (gõ / trong trang viết)" className="inline-flex h-14 w-full items-center justify-center rounded-xl border border-black bg-white p-2 transition-all hover:-translate-y-0.5 hover:bg-lime-100 hover:shadow-neo-sm active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"><ImagePlus className="h-5 w-5" /></button>
+            <div className="relative">
+              <button ref={metricsButtonRef} type="button" onClick={toggleMetricsPopover} aria-label={showDetailedMetrics ? 'Ẩn chỉ số' : 'Hiện chỉ số'} title={showDetailedMetrics ? 'Ẩn chỉ số' : 'Hiện chỉ số'} aria-pressed={showDetailedMetrics} className={`inline-flex h-14 w-full items-center justify-center rounded-xl border border-black p-2 transition-all hover:-translate-y-0.5 hover:shadow-neo-sm active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${showDetailedMetrics ? 'bg-primary-container shadow-neo-sm' : 'bg-white hover:bg-lime-100'}`}><Sliders className="h-5 w-5" /></button>
+            </div>
+            <button ref={questionsButtonRef} type="button" onClick={toggleQuestionsPopover} aria-label="Câu hỏi tự vấn" title="Câu hỏi tự vấn" aria-pressed={!!questionsPopoverPosition} className={`inline-flex h-14 w-full items-center justify-center rounded-xl border border-black p-2 transition-all hover:-translate-y-0.5 hover:shadow-neo-sm active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${questionsPopoverPosition ? 'bg-primary-container shadow-neo-sm' : 'bg-white hover:bg-lime-100'}`}><MessageCircleQuestionMark className="h-5 w-5" /></button>
+          </div>
+        </aside>
       </main>
 
-      {/* AI REFLECTION DRAWER */}
-      <AiReflectionDrawer
-        isOpen={isAiDrawerOpen}
-        onClose={() => setIsAiDrawerOpen(false)}
-        entryId={editId}
-        contentVersion={contentVersion}
-      />
+      {showDetailedMetrics && metricsPopoverPosition && createPortal(
+        <div style={metricsPopoverPosition} className="z-[1000] w-[min(290px,calc(100vw-2rem))] rounded-2xl border-2 border-black bg-paper-warm p-4 shadow-neo-lg animate-in fade-in" role="dialog" aria-label="Chỉ số nhật ký">
+          <div className="mb-3 flex items-center justify-between font-space text-sm font-extrabold">
+            <span>Chỉ số hôm nay</span>
+            <button type="button" onClick={toggleMetricsPopover} aria-label="Đóng chỉ số" className="rounded-lg p-1 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-black"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="flex flex-col gap-4">
+            <label className="text-xs font-space font-bold"><span className="mb-1 flex justify-between"><span><Zap className="mr-1 inline h-3.5 w-3.5 text-amber-500" />Áp lực</span><span>{stressScore}/10</span></span><input aria-label="Áp lực" type="range" min="1" max="10" step="0.5" value={stressScore} onChange={(e) => setStressScore(parseFloat(e.target.value))} className="w-full cursor-pointer accent-amber-500" /></label>
+            <label className="text-xs font-space font-bold"><span className="mb-1 flex justify-between"><span><BatteryCharging className="mr-1 inline h-3.5 w-3.5 text-green-600" />Năng lượng</span><span>{energyScore}/10</span></span><input aria-label="Năng lượng" type="range" min="1" max="10" step="0.5" value={energyScore} onChange={(e) => setEnergyScore(parseFloat(e.target.value))} className="w-full cursor-pointer accent-green-600" /></label>
+            <label className="text-xs font-space font-bold"><span className="mb-1 flex justify-between"><span><Moon className="mr-1 inline h-3.5 w-3.5 text-blue-500" />Giấc ngủ</span><span>{sleepHours}h</span></span><input aria-label="Giấc ngủ" type="range" min="3" max="12" step="0.5" value={sleepHours} onChange={(e) => setSleepHours(parseFloat(e.target.value))} className="w-full cursor-pointer accent-blue-500" /></label>
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      {questionsPopoverPosition && createPortal(
+        <div style={questionsPopoverPosition} className="z-[1000] w-[min(290px,calc(100vw-2rem))] rounded-2xl border-2 border-black bg-paper-warm p-4 shadow-neo-lg animate-in fade-in" role="dialog" aria-label="Câu hỏi tự vấn">
+          <div className="mb-3 flex items-center justify-between font-space text-sm font-extrabold">
+            <span>Câu hỏi tự vấn</span>
+            <button type="button" onClick={() => setQuestionsPopoverPosition(null)} aria-label="Đóng câu hỏi tự vấn" className="rounded-lg p-1 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-black"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="flex flex-col gap-2">
+            {SELF_REFLECTION_QUESTIONS.map((question) => (
+              <button key={question} type="button" onClick={() => {
+                editorRef.current?.insertContent(`<blockquote><p>${question}</p></blockquote><p></p>`);
+                editorRef.current?.focus();
+                setQuestionsPopoverPosition(null);
+              }} className="rounded-xl border border-black bg-white p-3 text-left text-sm leading-relaxed transition-all hover:-translate-y-0.5 hover:bg-lime-100 hover:shadow-neo-sm active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
+                {question}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      {topicSuggestionPosition && createPortal(
+        <div style={topicSuggestionPosition} className="z-[1000] w-[min(290px,calc(100vw-2rem))] rounded-2xl border-2 border-black bg-paper-warm p-4 shadow-neo-lg animate-in fade-in" role="dialog" aria-label="Gợi ý chủ đề viết">
+          <div className="mb-3 flex items-center justify-between font-space text-sm font-extrabold">
+            <span>Gợi ý chủ đề</span>
+            <button type="button" onClick={() => setTopicSuggestionPosition(null)} aria-label="Đóng gợi ý chủ đề" className="rounded-lg p-1 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-black"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="flex flex-col gap-2">
+            {TOPIC_TITLE_SUGGESTIONS.map((suggestion) => (
+              <button key={suggestion} type="button" onClick={() => {
+                setTitle(suggestion);
+                setTopicSuggestionPosition(null);
+              }} className="rounded-xl border border-black bg-white p-3 text-left text-sm leading-relaxed transition-all hover:-translate-y-0.5 hover:bg-lime-100 hover:shadow-neo-sm active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body,
+      )}
+
+      <button type="button" onClick={() => setIsToolsOpen(!isToolsOpen)} aria-label={isToolsOpen ? 'Đóng công cụ' : 'Mở công cụ'} aria-expanded={isToolsOpen} className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full border-2 border-black bg-primary-container text-black shadow-neo-lg min-[1360px]:hidden"><Wrench className="h-6 w-6" /></button>
 
       {/* ADD TOPIC MODAL */}
       <AddTopicModal
@@ -449,7 +443,7 @@ function JournalEditorContent() {
         onAddTopic={(newTopic) => {
           setTopics((prev) => [...prev, newTopic]);
           showToast({
-            title: 'Đã thêm chủ đề mới!',
+            title: 'Đã thêm tag mới!',
             message: `#${newTopic} đã được gắn vào trang viết.`,
             type: 'success',
           });

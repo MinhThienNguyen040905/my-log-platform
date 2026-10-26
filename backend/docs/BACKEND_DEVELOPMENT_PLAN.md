@@ -551,8 +551,8 @@ Chưa có API cập nhật habit, chỉ goal update dùng `If-Match` và version
 ### KB-002 — Chunk/embedding/retrieval (P1, L)
 
 - [x] Chunk strategy có version (`paragraph-800-v1`).
-- [ ] Embedding model/dimension provenance: schema đã có, chưa có provider adapter đã duyệt để tạo vector.
-- [ ] Partial vector index sau khi chốt model.
+- [x] Embedding model/dimension provenance và Gemini adapter: cùng model cho document/query, mặc định tắt và chưa được duyệt để xử lý dữ liệu thật.
+- [x] Partial HNSW cosine index cho 768/1536 dimensions; worker tạo/backfill vector còn mở.
 - [x] Filter APPROVED + locale + effective date trước retrieval.
 - [x] Citation tới knowledge version/chunk.
 - [ ] Eval retrieval bằng curated queries.
@@ -589,7 +589,7 @@ metadata admin, suspend/restore, sanitized job list/retry và aggregate dashboar
 V11–V13 đã áp dụng lên Supabase ngày 2026-10-01; Hibernate schema validation khởi động thành công.
 Test PostgreSQL xác nhận nội dung draft/review/archive không được retrieve, citation đúng version/chunk,
 DB chặn sửa version đã approve và permission matrix có cả deny/allow.
-Chưa có embedding provider/model được duyệt, vector index, curated retrieval eval hoặc generation/output safety validation;
+Đã có Gemini embedding adapter và vector index nhưng chưa có provider/model được duyệt, worker tạo/backfill vector, semantic retrieval, curated retrieval eval hoặc generation/output safety validation;
 recommendation hiện chỉ trả nguyên văn approved excerpts, chưa phải RAG sinh nội dung.
 
 ## 13. M7 — Data rights, export và support

@@ -57,6 +57,19 @@ mylog:
     output-usd-per-million: ${MYLOG_AI_OUTPUT_USD_PER_MILLION:0}
     provider-data-approved: ${MYLOG_AI_PROVIDER_DATA_APPROVED:false}
     output-safety-approved: ${MYLOG_AI_OUTPUT_SAFETY_APPROVED:false}
+  rag:
+    embedding:
+      enabled: ${MYLOG_RAG_EMBEDDING_ENABLED:false}
+      provider: ${MYLOG_RAG_EMBEDDING_PROVIDER:gemini}
+      endpoint: ${MYLOG_RAG_EMBEDDING_ENDPOINT:https://generativelanguage.googleapis.com/v1beta}
+      api-key: ${MYLOG_RAG_EMBEDDING_API_KEY:}
+      model: ${MYLOG_RAG_EMBEDDING_MODEL:gemini-embedding-001}
+      model-version: ${MYLOG_RAG_EMBEDDING_MODEL_VERSION:gemini-embedding-001}
+      dimensions: ${MYLOG_RAG_EMBEDDING_DIMENSIONS:768}
+      batch-size: ${MYLOG_RAG_EMBEDDING_BATCH_SIZE:32}
+      timeout-ms: ${MYLOG_RAG_EMBEDDING_TIMEOUT_MS:30000}
+      poll-delay-ms: ${MYLOG_RAG_EMBEDDING_POLL_DELAY_MS:10000}
+      provider-data-approved: ${MYLOG_RAG_EMBEDDING_PROVIDER_DATA_APPROVED:false}
   safety:
     classifier:
       url: ${MYLOG_SAFETY_CLASSIFIER_URL:}

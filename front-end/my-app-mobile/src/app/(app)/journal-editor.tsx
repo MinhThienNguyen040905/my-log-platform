@@ -49,6 +49,7 @@ export default function JournalEditorScreen() {
   const change = (values: Partial<JournalDraft>) => setDraft((current) => ({ ...current, ...values }));
   const save = async () => {
     if (!userId || !ready || busy) return;
+    if (draft.title.trim().length > 160) { setError('Tiêu đề tối đa 160 ký tự.'); return; }
     if (!draft.body.trim()) { setError('Hãy viết nội dung trước khi lưu.'); return; }
     if (draft.body.length > 20000) { setError('Nội dung tối đa 20.000 ký tự.'); return; }
     setBusy(true); setError(null);
@@ -86,7 +87,7 @@ export default function JournalEditorScreen() {
       <AppText variant="display">Viết điều bạn muốn nhớ.</AppText>
       <AppText variant="caption">Bản nháp được lưu riêng trên thiết bị này cho tài khoản của bạn.</AppText></View>
     <PaperCard style={styles.paper}>
-      <TextField label="Tiêu đề" value={draft.title} onChangeText={(value) => change({ title: value })} maxLength={200} />
+      <TextField label="Tiêu đề" value={draft.title} onChangeText={(value) => change({ title: value })} maxLength={160} />
       <TextField label="Nội dung" value={draft.body} onChangeText={(value) => change({ body: value })}
         multiline textAlignVertical="top" style={styles.body} />
       <AppText variant="heading">Tâm trạng</AppText>

@@ -13,11 +13,26 @@ export type JournalDetail = JournalSummary & {
   entryStatus: string; contentVersion: number; updatedAt: string;
 };
 export type JournalPage = { items: JournalSummary[]; nextCursor: string | null };
+export const JOURNAL_PAGE_SIZE = 5;
 
 export async function getRecentEntries(limit = 2): Promise<JournalEntry[]> {
   const page = await journalJson<JournalPage>(`journal-entries?limit=${limit}`);
   return page.items.map(toEntry);
 }
+
+export type DetailedJournalPage = { items: JournalEntry[]; nextCursor: string | null };
+
+export async function getDetailedJournalPage({ date, cursor }: { date?: string; cursor?: string | null } = {}): Promise<DetailedJournalPage> {
+  const query = new URLSearchParams({ limit: String(JOURNAL_PAGE_SIZE) });
+  if (date) { query.set('from', date); query.set('to', date); }
+  if (cursor) query.set('cursor', cursor);
+  const page = await journalJson<JournalPage>(`journal-entries?${query.toString()}`);
+  const details = await Promise.all(page.items.map((entry) =>
+    journalJson<JournalDetail>(`journal-entries/${encodeURIComponent(entry.id)}`),
+  ));
+  return { items: details.map(toEntry), nextCursor: page.nextCursor };
+}
+
 export type JournalTag = { id: string; name: string; color: string | null };
 
 const containers = new Set(['doc', 'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'listItem']);

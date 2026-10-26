@@ -684,7 +684,7 @@ public interface JournalAnalyzer {
 }
 
 public interface EmbeddingProvider {
-    float[] embed(String text);
+    Batch embed(List<Input> inputs, TaskType taskType);
 }
 
 public interface KnowledgeRetriever {
@@ -700,7 +700,7 @@ classifier nội bộ và Chat Completions adapter cho `JournalAnalyzer`, đều
 `MYLOG_JOBS_ENABLED` mặc định false; V8 đã áp dụng lên Supabase nhưng worker chỉ nên bật khi
 môi trường, safety policy, output eval và điều kiện dữ liệu/provider theo ADR-0004 được duyệt.
 `MODERATE/CONSTRAIN` hiện bị chặn khỏi reflection thông thường cho tới khi có luồng riêng.
-`EmbeddingProvider` chưa có adapter được duyệt.
+`EmbeddingProvider` có Gemini adapter cho document/query embedding nhưng mặc định tắt và chưa được duyệt để xử lý dữ liệu người dùng thật; worker backfill và semantic retrieval chưa được nối.
 M6 đã có `KnowledgeRetriever` chỉ đọc chunk của version `APPROVED`, đúng locale và còn hiệu lực;
 recommendation API hiện trả nguyên văn excerpt kèm citation, chưa dùng LLM.
 Không đưa journal text vào retrieval request.

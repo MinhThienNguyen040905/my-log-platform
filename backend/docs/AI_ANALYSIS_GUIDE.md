@@ -30,7 +30,7 @@ Có **hai loại phản hồi ở hai thời điểm**: lúc đang viết là c�
 | **Safety screening** | Nội dung này có được đi vào phân tích/phản hồi thông thường không? | Có rule, classifier port, HTTP adapter cho model nội bộ và policy gate. Classifier mặc định unavailable; model/rule/nội dung hỗ trợ chưa được duyệt. |
 | **Journal analysis** | Bài viết có sentiment, emotion, topic gì; reflection nào có thể hiển thị? | Có outbox, job, lưu kết quả, API, fake analyzer và adapter Chat Completions có API key. Provider thật chưa được duyệt và adapter mặc định tắt. |
 | **Insight, dashboard, report** | Dữ liệu nhiều ngày cho thấy mẫu quan sát nào? | Backend tính từ check-in, chỉ số và analysis có cấu trúc; report narrative hiện là câu dựng theo dữ liệu, không gọi LLM trên request path. |
-| **Knowledge/recommendation, RAG** | Có nguồn kiến thức đã duyệt phù hợp topic/locale không? | Có workflow duyệt, chunk, retrieval và citation. API hiện trả excerpt nguyên văn; chưa có embedding provider, semantic ranking hay LLM generation. |
+| **Knowledge/recommendation, RAG** | Có nguồn kiến thức đã duyệt phù hợp topic/locale không? | Có workflow duyệt, chunk, retrieval và citation. Khi được bật và cấu hình provider đã duyệt, worker backfill chunk đã duyệt còn thiếu vector và endpoint recommendation xếp hạng ngữ nghĩa; nếu provider lỗi hoặc chưa có vector, endpoint dùng retrieval catalog hiện có. Chưa có LLM generation. |
 
 AI không chẩn đoán hoặc điều trị. Risk classifier phục vụ quyết định an toàn; `JournalAnalyzer` phục vụ phân tích nhật ký. Hai thành phần này khác nhau và không thay thế cho nhau.
 
@@ -166,7 +166,7 @@ Phân tích một **bài** nhật ký và insight từ **nhiều ngày** là hai
 
 **RAG** là cách tìm đoạn tài liệu phù hợp từ kho kiến thức, đưa đoạn đó làm ngữ cảnh cho model, rồi trả lời kèm nguồn. Kiến trúc mục tiêu: `draft → review → approve → chunk → embed → retrieve → generate → output safety validation`.
 
-Hiện code đã có workflow duyệt/chunk và [`ApprovedKnowledgeRetriever`](../src/main/java/com/mylog/knowledge/infrastructure/ApprovedKnowledgeRetriever.java) chỉ đọc version `APPROVED`, đúng locale và còn hiệu lực. [`RecommendationService`](../src/main/java/com/mylog/knowledge/application/RecommendationService.java) nhận `topicCode`, lấy locale từ profile và trả tối đa ba excerpt cùng citation. Endpoint này **chưa gọi LLM**, chưa dùng journal text, chưa có embedding provider/model được duyệt hay semantic vector retrieval. Xem [M6 knowledge API](KNOWLEDGE_M6_API.md).
+Hiện code có workflow duyệt/chunk và [`ApprovedKnowledgeRetriever`](../src/main/java/com/mylog/knowledge/infrastructure/ApprovedKnowledgeRetriever.java) chỉ đọc version `APPROVED`, đúng locale và còn hiệu lực. [`RecommendationService`](../src/main/java/com/mylog/knowledge/application/RecommendationService.java) nhận `topicCode`, lấy locale từ profile và trả tối đa ba excerpt cùng citation. Gemini adapter tạo vector cho `RETRIEVAL_DOCUMENT` và `RETRIEVAL_QUERY`; [`KnowledgeEmbeddingWorker`](../src/main/java/com/mylog/knowledge/infrastructure/embedding/KnowledgeEmbeddingWorker.java) quét theo lô các chunk trong knowledge đã duyệt còn thiếu vector theo model signature, rồi lưu vào pgvector. Recommendation dùng cosine search/HNSW khi embedding bật; provider lỗi hoặc chưa có vector thì fallback sang retrieval catalog. Bật provider cần cấu hình và phê duyệt xử lý dữ liệu theo ADR-0004; mặc định tắt. Endpoint không dùng journal text và chưa gọi LLM generation. Xem [M6 knowledge API](KNOWLEDGE_M6_API.md).
 
 ## 8. Cấu hình, demo và giới hạn hiện tại
 
