@@ -24,7 +24,6 @@ export function useJournalEditor() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [existingDate, setExistingDate] = useState<string | null>(null);
   const [rowVersion, setRowVersion] = useState<number | null>(null);
-  const [contentVersion, setContentVersion] = useState<number | null>(null);
   const [loadedEntryId, setLoadedEntryId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [createKey, setCreateKey] = useState(() => crypto.randomUUID());
@@ -39,7 +38,7 @@ export function useJournalEditor() {
   const [stressScore, setStressScore] = useState(3.0);
   const [energyScore, setEnergyScore] = useState(7.5);
   const [sleepHours, setSleepHours] = useState(7.5);
-  const [showDetailedMetrics, setShowDetailedMetrics] = useState(true);
+  const [showDetailedMetrics, setShowDetailedMetrics] = useState(false);
 
   // Topics & Tags
   const [topics, setTopics] = useState<string[]>([]);
@@ -56,10 +55,7 @@ export function useJournalEditor() {
   const [showImageModal, setShowImageModal] = useState(false);
 
   // Writing Prompts
-  const [showPromptModal, setShowPromptModal] = useState(false);
-
-  // AI Drawer & State
-  const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
 
   // Safety Crisis Modal
   const [isSafetyModalOpen, setIsSafetyModalOpen] = useState(false);
@@ -67,21 +63,12 @@ export function useJournalEditor() {
   const [detectedCrisisKeywords, setDetectedCrisisKeywords] = useState<string[]>([]);
 
 
-  const writingPrompts = [
-    { category: 'Thấu cảm', prompt: 'Hôm nay điều gì đã làm tiêu tốn nhiều năng lượng tinh thần của bạn nhất?' },
-    { category: 'Biết ơn', prompt: 'Một khoảnh khắc nhỏ nào trong ngày hôm nay khiến bạn mỉm cười nhẹ nhõm?' },
-    { category: 'Tự vấn', prompt: 'Nếu được nhắn nhủ một câu dịu dàng với chính mình lúc này, bạn sẽ nói gì?' },
-    { category: 'Giải tỏa', prompt: 'Có suy nghĩ nào đang luẩn quẩn trong đầu mà bạn muốn trút cạn lên trang giấy?' },
-    { category: 'Tự hào', prompt: 'Bạn cảm thấy trân trọng nỗ lực nào của bản thân sau những ngày vừa qua?' },
-  ];
-
   // Reset to clean new entry
   const handleResetToNewEntry = () => {
     baselineRef.current = JSON.stringify(['', '', 'calm-joy', 'happy', 8, 3, 7.5, 7.5, []]);
     setIsEditMode(false);
     setLoadedEntryId(null);
     setRowVersion(null);
-    setContentVersion(null);
     setExistingDate(null);
     setTitle('');
     setContent('');
@@ -108,7 +95,6 @@ export function useJournalEditor() {
         if (!active) return;
         setIsEditMode(true);
         setRowVersion(existing.rowVersion ?? null);
-        setContentVersion(existing.contentVersion ?? null);
         setLoadedEntryId(editId);
         setExistingDate(existing.date);
         baselineRef.current = JSON.stringify([
@@ -134,7 +120,6 @@ export function useJournalEditor() {
       setIsEditMode(false);
       setLoadedEntryId(null);
       setRowVersion(null);
-      setContentVersion(null);
       setExistingDate(null);
       baselineRef.current = JSON.stringify(['', '', 'calm-joy', 'happy', 8, 3, 7.5, 7.5, []]);
       setTitle('');
@@ -199,33 +184,6 @@ export function useJournalEditor() {
     return () => clearTimeout(timer);
   }, [title, content, mood, moodScore, selectedEmotion, stressScore, energyScore, sleepHours, topics, isEditMode, draftStorageKey]);
 
-  const handleOpenAiDrawer = () => {
-    if (!editId || loadedEntryId !== editId || contentVersion === null) {
-      showToast({ title: 'Hãy lưu bài viết trước', message: 'Phân tích chỉ dành cho bài viết đã lưu.', type: 'info' });
-      return;
-    }
-    if (currentSnapshot !== baselineRef.current) {
-      showToast({ title: 'Bài viết có thay đổi chưa lưu', message: 'Hãy lưu thay đổi trước khi xem phân tích.', type: 'info' });
-      return;
-    }
-    setIsAiDrawerOpen(true);
-  };
-
-  // Append question to editor to continue writing
-  const handleAnswerQuestionInJournal = (q: string) => {
-    if (editorRef.current) {
-      editorRef.current.insertContent(`<blockquote>💭 <strong>${q}</strong></blockquote><p></p>`);
-      editorRef.current.focus();
-    } else {
-      setContent((prev) => `${prev.trim()}<br/><blockquote>💭 ${q}</blockquote><p></p>`);
-    }
-    showToast({
-      title: 'Đã đưa câu hỏi vào bài viết.',
-      message: 'Bạn có thể tiếp tục viết dòng suy ngẫm của mình.',
-      type: 'info',
-    });
-  };
-
   // Save entry
   const executeSave = async () => {
     if (isSaving) return;
@@ -249,7 +207,7 @@ export function useJournalEditor() {
       return;
     }
     if (!journalEditorFieldsSchema.safeParse({ title, topics }).success) {
-      showToast({ title: 'Thông tin quá dài', message: 'Tiêu đề tối đa 160 ký tự; mỗi bài tối đa 20 chủ đề, mỗi chủ đề tối đa 40 ký tự.', type: 'error' });
+      showToast({ title: 'Thông tin quá dài', message: 'Tiêu đề tối đa 160 ký tự; mỗi bài tối đa 20 tag, mỗi tag tối đa 40 ký tự.', type: 'error' });
       return;
     }
 
@@ -259,7 +217,7 @@ export function useJournalEditor() {
       moodScore, stressScore, energyScore, sleepMinutes: Math.round(sleepHours * 60),
     };
     if (topics.some((topic) => topic.trim())) {
-      showToast({ title: 'Chủ đề chưa khả dụng', message: 'Chưa thể lưu chủ đề theo bài viết. Vui lòng bỏ chủ đề trước khi lưu.', type: 'error' });
+      showToast({ title: 'Tag chưa khả dụng', message: 'Chưa thể lưu tag theo bài viết. Vui lòng bỏ tag trước khi lưu.', type: 'error' });
       return;
     }
     setIsSaving(true);
@@ -269,7 +227,6 @@ export function useJournalEditor() {
         if (rowVersion === null) throw new Error('Chưa tải phiên bản bài viết. Vui lòng mở lại bài.');
         saved = await updateEntry(editId, body, rowVersion);
         setRowVersion(saved.rowVersion ?? null);
-        setContentVersion(saved.contentVersion ?? null);
       } else {
         saved = await addEntry(body, createKey);
       }
@@ -303,7 +260,6 @@ export function useJournalEditor() {
     isEditMode,
     editId,
     rowVersion,
-    contentVersion,
     loadedEntryId,
     isSaving,
     existingDate,
@@ -333,18 +289,13 @@ export function useJournalEditor() {
     setShowAddTopicModal,
     showImageModal,
     setShowImageModal,
-    showPromptModal,
-    setShowPromptModal,
-    isAiDrawerOpen,
-    setIsAiDrawerOpen,
+    isToolsOpen,
+    setIsToolsOpen,
     isSafetyModalOpen,
     safetySaved,
     setIsSafetyModalOpen,
     detectedCrisisKeywords,
-    writingPrompts,
     handleResetToNewEntry,
-    handleOpenAiDrawer,
-    handleAnswerQuestionInJournal,
     executeSave,
     wordCount,
     router,

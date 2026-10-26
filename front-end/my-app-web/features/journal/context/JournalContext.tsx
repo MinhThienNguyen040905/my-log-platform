@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useCallback, useMemo, useRef } from 'react';
 import { JournalEntry } from '@/types';
-import { journalBody, journalJson, journalRequest, toEntry, type JournalDetail, type JournalPage } from '../api/client';
+import { getDetailedJournalPage, journalBody, journalJson, journalRequest, toEntry, type JournalDetail } from '../api/client';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 
 interface JournalContextType {
@@ -12,10 +12,10 @@ interface JournalContextType {
   updateEntry: (id: string, entry: Record<string, unknown>, version: number) => Promise<JournalEntry>;
   deleteEntry: (id: string, version: number) => Promise<void>;
   getEntryById: (id: string) => JournalEntry | undefined;
-  toggleFavorite: (id: string) => Promise<JournalEntry>;
+  toggleFavorite: (id: string, currentlyFavorite?: boolean) => Promise<JournalEntry>;
   loadEntry: (id: string) => Promise<JournalEntry>;
   reloadEntries: () => Promise<void>;
-  loadMoreEntries: () => Promise<void>;
+  loadMoreEntries: () => Promise<boolean>;
   hasMoreEntries: boolean;
   entriesLoadingMore: boolean;
   entriesLoading: boolean;
@@ -36,7 +36,7 @@ export function JournalProvider({ children, userId, streakCount, loadEntries }: 
 }) {
   const queryClient = useQueryClient();
   const storageKey = useCallback((name: string) => `mylog_${userId}_${name}`, [userId]);
-  const entriesKey = useMemo(() => ['journal', userId, 'entries'] as const, [userId]);
+  const entriesKey = useMemo(() => ['journal', userId, 'entries', null] as const, [userId]);
   const journalLeaveCheck = useRef<(() => boolean) | null>(null);
   const registerJournalLeaveCheck = useCallback((check: (() => boolean) | null) => {
     journalLeaveCheck.current = check;
@@ -47,19 +47,24 @@ export function JournalProvider({ children, userId, streakCount, loadEntries }: 
     queryKey: entriesKey,
     enabled: loadEntries,
     initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) => journalJson<JournalPage>(`journal-entries?limit=100${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`),
+    queryFn: ({ pageParam }) => getDetailedJournalPage({ cursor: pageParam }),
     getNextPageParam: (page) => page.nextCursor,
   });
-  const entries = useMemo(() => entriesQuery.data?.pages.flatMap((page) => page.items.map(toEntry)) ?? [], [entriesQuery.data]);
+  const entries = useMemo(() => entriesQuery.data?.pages.flatMap((page) => page.items) ?? [], [entriesQuery.data]);
   const entriesLoading = entriesQuery.isPending;
   const entriesError = entriesQuery.error instanceof Error ? entriesQuery.error.message : null;
   const reloadEntries = async () => { await entriesQuery.refetch(); };
-  const loadMoreEntries = async () => { await entriesQuery.fetchNextPage(); };
+  const loadMoreEntries = async () => {
+    const previousPageCount = entriesQuery.data?.pages.length ?? 0;
+    const result = await entriesQuery.fetchNextPage();
+    return (result.data?.pages.length ?? previousPageCount) > previousPageCount;
+  };
   const refreshDerived = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ['dashboard', userId] }),
     queryClient.invalidateQueries({ queryKey: ['insights', userId] }),
     queryClient.invalidateQueries({ queryKey: ['reports', userId] }),
     queryClient.invalidateQueries({ queryKey: ['journal', userId, 'recent'] }),
+    queryClient.invalidateQueries({ queryKey: ['journal', userId, 'entries'] }),
   ]);
 
   const addEntry = async (body: Record<string, unknown>, key: string) => {
@@ -100,14 +105,16 @@ export function JournalProvider({ children, userId, streakCount, loadEntries }: 
     return entries.find(e => e.id === id);
   }, [entries]);
 
-  const toggleFavorite = async (id: string) => {
+  const toggleFavorite = async (id: string, currentlyFavorite?: boolean) => {
     const current = entries.find((entry) => entry.id === id);
-    if (!current) throw new Error('Không tìm thấy bài viết.');
+    const isFavorite = current?.isFavorite ?? currentlyFavorite;
+    if (isFavorite === undefined) throw new Error('Không tìm thấy trạng thái yêu thích của bài viết.');
     const saved = await journalJson<JournalDetail>(`journal-entries/${id}/favorite`, {
-      method: current.isFavorite ? 'DELETE' : 'PUT',
+      method: isFavorite ? 'DELETE' : 'PUT',
     });
     const entry = toEntry(saved);
     await queryClient.invalidateQueries({ queryKey: entriesKey });
+    await queryClient.invalidateQueries({ queryKey: ['journal', userId, 'entries'] });
     return entry;
   };
 

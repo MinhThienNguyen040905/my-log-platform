@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Tag, X, Plus, Sparkles } from 'lucide-react';
+import { Tag, X, Plus } from 'lucide-react';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 
@@ -11,18 +11,6 @@ interface AddTopicModalProps {
   onAddTopic: (topic: string) => void;
   existingTopics: string[];
 }
-
-const SUGGESTED_TOPICS = [
-  'Biết ơn',
-  'Học tập',
-  'Công việc',
-  'Gia đình',
-  'Bạn bè',
-  'Sức khỏe',
-  'Chữa lành',
-  'Du lịch',
-  'Tự chăm sóc',
-];
 
 export const AddTopicModal: React.FC<AddTopicModalProps> = ({
   isOpen,
@@ -52,25 +40,16 @@ export const AddTopicModal: React.FC<AddTopicModalProps> = ({
     const cleanTopic = inputValue.trim().replace(/^#+/, '').trim();
 
     if (!cleanTopic) {
-      setError('Vui lòng nhập tên chủ đề.');
+      setError('Vui lòng nhập tag.');
       return;
     }
 
     if (existingTopics.some((t) => t.toLowerCase() === cleanTopic.toLowerCase())) {
-      setError('Chủ đề này đã có trong trang viết của bạn rồi.');
+      setError('Tag này đã có trong trang viết của bạn rồi.');
       return;
     }
 
     onAddTopic(cleanTopic);
-    onClose();
-  };
-
-  const handleSelectSuggestion = (suggestion: string) => {
-    if (existingTopics.some((t) => t.toLowerCase() === suggestion.toLowerCase())) {
-      setError(`Chủ đề "#${suggestion}" đã tồn tại.`);
-      return;
-    }
-    onAddTopic(suggestion);
     onClose();
   };
 
@@ -87,10 +66,10 @@ export const AddTopicModal: React.FC<AddTopicModalProps> = ({
             </div>
             <div>
               <h3 className="font-space text-base sm:text-lg font-extrabold text-on-surface leading-tight">
-                Thêm chủ đề / Hashtag
+                Thêm tag
               </h3>
               <p className="text-xs text-neutral-600 font-sans">
-                Gắn nhãn để phân loại dòng suy nghĩ
+                Gắn tag để phân loại dòng suy nghĩ
               </p>
             </div>
           </div>
@@ -118,7 +97,7 @@ export const AddTopicModal: React.FC<AddTopicModalProps> = ({
                 setInputValue(e.target.value);
                 if (error) setError(null);
               }}
-              placeholder="Nhập tên chủ đề (vd: đồ án tốt nghiệp, hồ Tây...)"
+              placeholder="Nhập tag (vd: đồ án tốt nghiệp, hồ Tây...)"
               className="w-full pl-8 pr-3.5 py-2.5 bg-white border-2 border-black rounded-xl font-space text-sm text-black placeholder:text-neutral-400 focus:outline-none focus:shadow-neo-sm transition-all"
             />
           </div>
@@ -128,34 +107,6 @@ export const AddTopicModal: React.FC<AddTopicModalProps> = ({
               ⚠️ {error}
             </p>
           )}
-
-          {/* Suggested Tags Chips */}
-          <div className="flex flex-col gap-1.5 pt-1">
-            <span className="text-[11px] font-space font-bold uppercase tracking-wider text-neutral-500 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-500" />
-              Gợi ý phổ biến:
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {SUGGESTED_TOPICS.map((tag) => {
-                const isAdded = existingTopics.some((t) => t.toLowerCase() === tag.toLowerCase());
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    disabled={isAdded}
-                    onClick={() => handleSelectSuggestion(tag)}
-                    className={`px-2.5 py-1 rounded-lg border text-xs font-space font-semibold transition-all ${
-                      isAdded
-                        ? 'bg-neutral-200 border-neutral-300 text-neutral-400 cursor-not-allowed opacity-60'
-                        : 'bg-white hover:bg-primary-container border-black text-black shadow-neo-xs hover:-translate-y-0.5 cursor-pointer'
-                    }`}
-                  >
-                    #{tag}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-black/15 mt-1">
@@ -173,7 +124,7 @@ export const AddTopicModal: React.FC<AddTopicModalProps> = ({
               className="font-bold text-xs shadow-neo-sm"
               icon={<Plus className="w-3.5 h-3.5" />}
             >
-              Thêm chủ đề
+              Thêm tag
             </NeoButton>
           </div>
         </form>

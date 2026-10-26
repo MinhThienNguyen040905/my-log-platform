@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { DayPicker, type DayButtonProps } from 'react-day-picker';
-import { useJournal, LegacyJournalImport, journalEmotionLabel, JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, normalizeJournalEmotion } from '@/features/journal';
+import { getDetailedJournalPage, JOURNAL_PAGE_SIZE, useJournal, LegacyJournalImport, journalEmotionLabel, JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, normalizeJournalEmotion } from '@/features/journal';
 import { useToast } from '@/providers/ToastProvider';
 import { JournalEntry, JournalEmotion, MoodType } from '@/types';
 import { WashiTape, PolaroidCard } from '@/components/ui/ScrapbookDecorations';
@@ -27,10 +28,11 @@ import {
 } from 'lucide-react';
 
 export function CalendarView() {
-  const { entries, deleteEntry, toggleFavorite, loadEntry, entriesLoading, entriesError, reloadEntries, hasMoreEntries, entriesLoadingMore, loadMoreEntries } = useJournal();
+  const { userId, entries, deleteEntry, toggleFavorite, loadEntry, entriesLoading, entriesError, reloadEntries, hasMoreEntries, entriesLoadingMore, loadMoreEntries } = useJournal();
   const { showToast } = useToast();
 
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
+  const [pageIndex, setPageIndex] = useState(0);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [selectedMood, setSelectedMood] = useState<JournalEmotion | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,6 +64,7 @@ export function CalendarView() {
     setSearchTerm('');
     setAppliedFilters(EMPTY_FILTERS);
   };
+  useEffect(() => { setPageIndex(0); }, [appliedFilters, selectedDate]);
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
@@ -98,10 +101,44 @@ export function CalendarView() {
 
   // Index entries by date for fast calendar queries and stats [FR-JOURNAL-07]
   const entriesByDate = useMemo(() => indexEntriesByDate(entries), [entries]);
-
-  const selectedDateEntries = entriesByDate[selectedDate] || [];
+  const selectedDayQuery = useInfiniteQuery({
+    queryKey: ['journal', userId, 'entries', selectedDate],
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => getDetailedJournalPage({ date: selectedDate, cursor: pageParam }),
+    getNextPageParam: (page) => page.nextCursor,
+    enabled: filterByDate,
+    staleTime: Infinity,
+    gcTime: 30 * 60 * 1000,
+  });
+  const selectedDateEntries = useMemo(
+    () => selectedDayQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [selectedDayQuery.data],
+  );
   const selectedDateAvgScore = averageMoodScore(selectedDateEntries);
-  const filteredEntries = filterEntries(entries, appliedFilters);
+  const entriesForFilters = appliedFilters.date === selectedDate && selectedDayQuery.data
+    ? selectedDayQuery.data
+      .pages.flatMap((page) => page.items)
+    : entries;
+  const loadedPageCount = Math.ceil(entriesForFilters.length / JOURNAL_PAGE_SIZE);
+  const currentPageEntries = entriesForFilters.slice(pageIndex * JOURNAL_PAGE_SIZE, (pageIndex + 1) * JOURNAL_PAGE_SIZE);
+  const filteredEntries = filterEntries(currentPageEntries, appliedFilters);
+  const showingFilteredDate = appliedFilters.date === selectedDate;
+  const listHasMore = showingFilteredDate ? !!selectedDayQuery.hasNextPage : hasMoreEntries;
+  const listLoading = showingFilteredDate ? selectedDayQuery.isPending : entriesLoading;
+  const listLoadingNextPage = showingFilteredDate ? selectedDayQuery.isFetchingNextPage : entriesLoadingMore;
+  const listError = showingFilteredDate ? selectedDayQuery.error : entriesError;
+  const canGoPrevious = pageIndex > 0;
+  const canGoNext = pageIndex + 1 < loadedPageCount || listHasMore;
+  const goPreviousPage = () => setPageIndex((current) => Math.max(0, current - 1));
+  const goNextPage = async () => {
+    if (pageIndex + 1 < loadedPageCount) { setPageIndex((current) => current + 1); return; }
+    if (!listHasMore) return;
+    const loaded = showingFilteredDate
+      ? (await selectedDayQuery.fetchNextPage()).data?.pages.length === (selectedDayQuery.data?.pages.length ?? 0) + 1
+      : await loadMoreEntries();
+    if (loaded) setPageIndex((current) => current + 1);
+  };
+  const retryList = () => showingFilteredDate ? selectedDayQuery.refetch() : reloadEntries();
 
   const monthNames = [
     'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
@@ -149,7 +186,7 @@ export function CalendarView() {
 
   const favoriteEntry = async (entry: JournalEntry) => {
     try {
-      const saved = await toggleFavorite(entry.id);
+      const saved = await toggleFavorite(entry.id, entry.isFavorite);
       setSelectedEntry((current) => current?.id === saved.id ? { ...current, isFavorite: saved.isFavorite, rowVersion: saved.rowVersion } : current);
       showToast({ title: saved.isFavorite ? 'Đã thêm vào mục yêu thích' : 'Đã bỏ khỏi danh sách yêu thích', type: 'info' });
     } catch (error) { showToast({ title: 'Chưa thể cập nhật yêu thích', message: error instanceof Error ? error.message : 'Vui lòng thử lại.', type: 'error' }); }
@@ -163,6 +200,7 @@ export function CalendarView() {
     const dayEntries = entriesByDate[isoDate] || [];
     const hasEntries = dayEntries.length > 0;
     const isSelected = filterByDate && selectedDate === isoDate;
+    const isToday = modifiers.today;
     const isOutside = modifiers.outside;
 
     return (
@@ -181,6 +219,8 @@ export function CalendarView() {
             ? 'opacity-25 border-transparent text-gray-400'
             : isSelected
             ? 'bg-primary-container border-2 border-black font-extrabold shadow-neo-sm scale-105 z-10'
+            : isToday
+            ? 'bg-amber-100 border-2 border-amber-400 hover:border-amber-600 text-black font-extrabold'
             : hasEntries
             ? 'bg-white border-2 border-black/80 hover:border-black shadow-neo-sm text-black font-bold'
             : 'border-border-soft hover:border-black bg-surface-container-lowest text-gray-700'
@@ -304,12 +344,12 @@ export function CalendarView() {
           </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {entriesLoading && <p className="lg:col-span-12 font-space text-sm" role="status">Đang tải nhật ký...</p>}
-        {entriesError && <div className="lg:col-span-12 font-space text-sm text-red-700">{entriesError} <button type="button" className="underline" onClick={() => void reloadEntries()}>Thử lại</button></div>}
+        {listLoading && <p className="lg:col-span-12 font-space text-sm" role="status">Đang tải nhật ký...</p>}
+        {listError && <div className="lg:col-span-12 font-space text-sm text-red-700">{listError instanceof Error ? listError.message : entriesError} <button type="button" className="underline" onClick={() => void retryList()}>Thử lại</button></div>}
         {/* ========================================================== */}
         {/* LEFT COLUMN: Calendar (4 cols on lg)                       */}
         {/* ========================================================== */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
+        <div className="lg:col-span-4 lg:sticky lg:top-[101px] lg:self-start flex flex-col gap-6">
           {/* CALENDAR CARD */}
           <div className="bg-surface-card border-neo rounded-3xl p-5 shadow-neo relative">
             <WashiTape color="lime" rotate={-2} className="absolute -top-3 left-8 w-28" />
@@ -358,6 +398,7 @@ export function CalendarView() {
                 showOutsideDays
                 hideNavigation
                 weekStartsOn={1}
+                modifiers={{ today: new Date() }}
                 formatters={{
                   formatWeekdayName: (date) => ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][date.getDay()],
                 }}
@@ -384,13 +425,23 @@ export function CalendarView() {
               <div>
                 {!filterByDate ? (
                   <span className="font-bold text-gray-600">Chọn một ngày để xem bài viết và cảm xúc đã ghi.</span>
+                ) : selectedDayQuery.isPending ? (
+                  <span className="font-bold text-gray-600">Đang tải nhật ký ngày {selectedDateLabel}...</span>
+                ) : selectedDayQuery.error ? (
+                  <span className="font-bold text-red-700">
+                    Không tải được nhật ký ngày này. <button type="button" className="underline" onClick={() => void selectedDayQuery.refetch()}>Thử lại</button>
+                  </span>
                 ) : selectedDateAvgScore ? (
                   <span className="font-extrabold text-black">
                     Ngày {selectedDateLabel}: {selectedDateEntries.length} bài viết · Điểm cảm xúc trung bình từ các bài viết: {selectedDateAvgScore}/10
                   </span>
+                ) : selectedDateEntries.length > 0 ? (
+                  <span className="font-bold text-gray-600">
+                    Ngày {selectedDateLabel}: {selectedDateEntries.length} bài viết · Chưa có điểm cảm xúc để tính trung bình.
+                  </span>
                 ) : (
                   <span className="font-bold text-gray-600">
-                    Ngày {selectedDateLabel}: {hasMoreEntries ? 'Chưa có bài viết trong các trang đã tải.' : 'Chưa có bài viết nhật ký.'}
+                    Ngày {selectedDateLabel}: Chưa có bài viết nhật ký.
                   </span>
                 )}
               </div>
@@ -407,36 +458,28 @@ export function CalendarView() {
         {/* ========================================================== */}
         {/* RIGHT COLUMN: Timeline Stream & Polaroid Cards (8 cols)    */}
         {/* ========================================================== */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
-          <div className="flex items-center justify-between">
-            <span className="font-space text-xs font-extrabold text-gray-700">
-              {filteredEntries.length} bài viết đã tải{appliedFilters.date ? ` · Ngày ${appliedFilters.date.split('-').reverse().join('/')}` : ''}
-              {appliedFilters.favorites ? ' · Yêu thích' : ''}
-              {appliedFilters.emotion !== 'all' ? ` · ${JOURNAL_EMOTIONS[appliedFilters.emotion].label}` : ''}
-              {appliedFilters.search ? ' · Kết quả tìm kiếm' : ''}
-            </span>
-            {hasActiveFilters && (
-              <button type="button" onClick={clearFilters} className="min-h-11 px-2 text-xs font-space font-bold underline text-gray-700 hover:text-black cursor-pointer">
-                Bỏ lọc
-              </button>
-            )}
-          </div>
+        <div className="lg:col-span-8 flex flex-col gap-3">
+          {hasActiveFilters && <div className="flex justify-end">
+            <button type="button" onClick={clearFilters} className="min-h-11 px-2 text-xs font-space font-bold underline text-gray-700 hover:text-black cursor-pointer">
+              Bỏ lọc
+            </button>
+          </div>}
 
-          {entries.length > 0 && (
+          {entriesForFilters.length > 0 && (
             <label className="inline-flex min-h-11 items-center gap-2 self-start font-space text-xs font-bold text-gray-700 cursor-pointer">
               <input type="checkbox" checked={showPreviews} onChange={(event) => setShowPreviews(event.target.checked)} className="h-4 w-4 accent-black" />
               Hiện cảm xúc và chỉ số
             </label>
           )}
 
-          {!entriesLoading && !entriesError && filteredEntries.length === 0 ? (
+          {!listLoading && !listError && filteredEntries.length === 0 ? (
             <div className="bg-surface-card border-neo rounded-3xl p-10 text-center flex flex-col items-center justify-center gap-3 shadow-neo">
               <Calendar className="w-10 h-10 text-gray-400 stroke-[1.5]" />
-              <p className="font-space text-base font-extrabold text-black">{entries.length === 0 && !hasMoreEntries ? 'Bạn chưa có trang nhật ký nào' : 'Không tìm thấy bài viết phù hợp trong các trang đã tải'}</p>
+              <p className="font-space text-base font-extrabold text-black">{entries.length === 0 && entriesForFilters.length === 0 && !listHasMore ? 'Bạn chưa có trang nhật ký nào' : 'Không tìm thấy bài viết phù hợp trong trang này'}</p>
               <p className="text-xs text-gray-600 max-w-sm">
                 {entries.length === 0 ? 'Viết trang đầu tiên để bắt đầu lưu lại những ngày của bạn.' : 'Thử đổi từ khóa hoặc bỏ các điều kiện lọc hiện tại.'}
               </p>
-              {entries.length === 0 && !hasMoreEntries ? <Link href="/journal-editor" className="mt-2"><NeoButton size="sm">Viết trang đầu tiên</NeoButton></Link> : <button type="button" onClick={clearFilters} className="mt-2 min-h-11 px-4 border border-black rounded-lg bg-primary-container font-space text-sm font-bold shadow-neo-sm">Bỏ bộ lọc</button>}
+              {entries.length === 0 && entriesForFilters.length === 0 && !listHasMore ? <Link href="/journal-editor" className="mt-2"><NeoButton size="sm">Viết trang đầu tiên</NeoButton></Link> : <button type="button" onClick={clearFilters} className="mt-2 min-h-11 px-4 border border-black rounded-lg bg-primary-container font-space text-sm font-bold shadow-neo-sm">Bỏ bộ lọc</button>}
             </div>
           ) : (
             <div className="flex flex-col gap-6">
@@ -584,9 +627,13 @@ export function CalendarView() {
               ))}
             </div>
           )}
-          {hasMoreEntries && <div className="flex flex-col items-center gap-2">
-            <p className="text-xs text-gray-600">Bộ lọc chỉ áp dụng cho các bài đã tải. Tải thêm để xem các bài cũ hơn.</p>
-            <button type="button" disabled={entriesLoadingMore} onClick={() => void loadMoreEntries()} className="min-h-11 rounded-xl border-2 border-black bg-primary-container px-4 py-2 text-sm font-bold disabled:opacity-50">{entriesLoadingMore ? 'Đang tải...' : 'Tải thêm bài viết'}</button>
+          {(canGoPrevious || canGoNext) && <div className="flex flex-col items-center gap-2">
+            <p className="text-xs text-gray-600">Mỗi trang hiển thị tối đa {JOURNAL_PAGE_SIZE} bài viết.</p>
+            <div className="flex items-center gap-3">
+              <button type="button" disabled={!canGoPrevious || listLoadingNextPage} onClick={goPreviousPage} className="min-h-11 rounded-xl border-2 border-black bg-white px-4 py-2 text-sm font-bold disabled:opacity-50">Trước</button>
+              <span className="text-sm font-bold">Trang {pageIndex + 1}</span>
+              <button type="button" disabled={!canGoNext || listLoadingNextPage} onClick={() => void goNextPage()} className="min-h-11 rounded-xl border-2 border-black bg-primary-container px-4 py-2 text-sm font-bold disabled:opacity-50">{listLoadingNextPage ? 'Đang tải...' : 'Sau'}</button>
+            </div>
           </div>}
         </div>
       </div>

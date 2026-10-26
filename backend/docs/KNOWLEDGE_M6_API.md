@@ -37,7 +37,7 @@ Thay role code theo phân công; tách editor và approver thành hai người k
 
 Một item chỉ có một version APPROVED cùng lúc. Archive version cũ trước khi approve version thay thế. Approved/archived content và chunk bất biến ở database; archive giữ citation lịch sử. Audit approve/archive chỉ lưu ID, action và reason code. Nguồn có license hạn chế chỉ được nhập nội dung phù hợp với quyền sử dụng.
 
-`GET /api/v1/recommendations?topicCode=MINDFULNESS` lấy locale từ profile hiện tại và chỉ trả tối đa 3 excerpt nguyên văn của version APPROVED, còn hiệu lực, kèm `itemId`, `versionId`, `version`, `chunkId`, source. Chưa có embedding, semantic ranking hoặc LLM generation; không gọi provider và không truyền journal content.
+`GET /api/v1/recommendations?topicCode=MINDFULNESS` lấy locale từ profile hiện tại và chỉ trả tối đa 3 excerpt nguyên văn của version APPROVED, còn hiệu lực, kèm `itemId`, `versionId`, `version`, `chunkId`, source. Khi `MYLOG_RAG_EMBEDDING_ENABLED=true` và provider data được phê duyệt, endpoint embed truy vấn theo topic rồi xếp hạng cosine trong cùng model signature. Nếu chưa có vector hoặc provider lỗi, endpoint fallback sang retrieval catalog đã duyệt. Không truyền journal content.
 
 ## Admin vận hành
 
@@ -47,4 +47,4 @@ Một item chỉ có một version APPROVED cùng lúc. Archive version cũ trư
 - `POST /api/v1/admin/ai-jobs/{jobId}:retry`: chỉ retry job `DEAD` do `PROVIDER_UNAVAILABLE`, sau cooldown 60 giây; job và journal cùng chuyển về `PENDING` trong một transaction. Worker vẫn kiểm tra consent/safety trước khi xử lý.
 - `GET /api/v1/admin/dashboard`: ẩn toàn bộ khi dưới 20 active users, ẩn từng metric journal/check-in nếu dưới 20 người đóng góp.
 
-M6 vẫn mở ở embedding provider/model, partial vector index, curated retrieval eval, RAG generation và output safety validation. Chỉ bật các phần đó sau ADR-0004 provider review và nội dung/policy được duyệt.
+Worker quét định kỳ các chunk thuộc version đã duyệt còn thiếu vector theo model signature và backfill theo lô; lỗi để chunk ở trạng thái có thể thử lại trong lần quét sau. `MYLOG_RAG_EMBEDDING_POLL_DELAY_MS` cấu hình chu kỳ quét. Semantic retrieval đã nối vào recommendation API nhưng vẫn mặc định tắt. Gemini chỉ được bật sau ADR-0004 provider review bằng cờ `MYLOG_RAG_EMBEDDING_PROVIDER_DATA_APPROVED`. Curated retrieval evaluation, RAG generation và output safety validation vẫn còn mở.
