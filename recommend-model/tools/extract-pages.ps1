@@ -23,5 +23,5 @@ foreach ($file in $files) {
     java "-Dpdfbox.fontcache=$output" -cp $classPath $source $inputPdf $outputTsv
     if ($LASTEXITCODE -ne 0) { throw "PDF extraction failed: $file" }
 }
-python (Join-Path $PSScriptRoot 'build-review.py') $output
-if ($LASTEXITCODE -ne 0) { throw 'Review build failed' }
+# Chunk the extracted text with build-all-doc-chunks.py after extraction.
+# The old build-review.py expected JSON files that are no longer part of this corpus.

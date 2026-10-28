@@ -58,6 +58,9 @@ mylog:
     provider-data-approved: ${MYLOG_AI_PROVIDER_DATA_APPROVED:false}
     output-safety-approved: ${MYLOG_AI_OUTPUT_SAFETY_APPROVED:false}
   rag:
+    generation:
+      model: ${MYLOG_RAG_GENERATION_MODEL:gemini-3.8-flash}
+      api-key: ${MYLOG_RAG_GENERATION_API_KEY:}
     embedding:
       enabled: ${MYLOG_RAG_EMBEDDING_ENABLED:false}
       provider: ${MYLOG_RAG_EMBEDDING_PROVIDER:gemini}
@@ -92,7 +95,7 @@ mylog:
   feedback:
     retention-delay-ms: ${MYLOG_FEEDBACK_RETENTION_DELAY_MS:86400000}
   identity:
-    enabled: false
+    enabled: ${MYLOG_IDENTITY_ENABLED:false}
   web:
     allowed-origins: ${MYLOG_ALLOWED_ORIGINS:http://localhost:3000}
   open-api:

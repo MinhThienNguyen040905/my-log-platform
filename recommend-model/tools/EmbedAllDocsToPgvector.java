@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 /** Imports the prepared recommend-model corpus and embeds its missing chunks. */
 public final class EmbedAllDocsToPgvector {
     private static final int DIMENSIONS = 768;
-    private static final int BATCH_SIZE = 32;
+    private static final int BATCH_SIZE = 8;
     private static final String PROVIDER = "GEMINI";
     private static final String TOPIC = "RECOMMEND_MODEL_DOCS";
     private static final String LOCALE = "vi-VN";
@@ -56,12 +56,17 @@ public final class EmbedAllDocsToPgvector {
         Map<String, List<Chunk>> bySource = new LinkedHashMap<>();
         for (Chunk chunk : chunks) bySource.computeIfAbsent(chunk.source(), ignored -> new ArrayList<>()).add(chunk);
         int inserted = 0;
+        int published = 0;
         try (Connection db = DriverManager.getConnection(required(env, "MYLOG_DB_URL"),
                 required(env, "MYLOG_DB_USERNAME"), required(env, "MYLOG_DB_PASSWORD"))) {
             db.setAutoCommit(false);
-            for (var entry : bySource.entrySet()) inserted += importSource(db, entry.getKey(), entry.getValue());
+            for (var entry : bySource.entrySet()) {
+                inserted += importSource(db, entry.getKey(), entry.getValue());
+                published += publishStaticSource(db, entry.getKey());
+            }
             db.commit();
-            System.out.println("source_files=" + bySource.size() + " chunks_imported=" + inserted);
+            System.out.println("source_files=" + bySource.size() + " chunks_imported=" + inserted
+                    + " static_sources_published=" + published);
 
             List<Pending> pending = loadPending(db, model, modelVersion);
             System.out.println("chunks_waiting_for_embedding=" + pending.size());
@@ -76,6 +81,8 @@ public final class EmbedAllDocsToPgvector {
                 db.commit();
                 System.out.println("embedded=" + Math.min(offset + batch.size(), pending.size()) + "/" + pending.size());
             }
+            if (!loadPending(db, model, modelVersion).isEmpty())
+                throw new IllegalStateException("Some corpus chunks are still missing embeddings");
         }
     }
 
@@ -137,13 +144,53 @@ public final class EmbedAllDocsToPgvector {
         return chunks.size();
     }
 
+    /** Project-owned docs are published by this explicit corpus import, without an end-user reviewer account. */
+    private static int publishStaticSource(Connection db, String source) throws Exception {
+        String slug = "recommend-model-" + source.toLowerCase().replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-|-$", "");
+        UUID itemId;
+        try (PreparedStatement find = db.prepareStatement("select id from knowledge_items where slug=?")) {
+            find.setString(1, slug);
+            try (ResultSet rs = find.executeQuery()) {
+                if (!rs.next()) throw new IllegalStateException("Imported corpus source is missing: " + slug);
+                itemId = rs.getObject(1, UUID.class);
+            }
+        }
+        Instant now = Instant.now();
+        int updated;
+        try (PreparedStatement publish = db.prepareStatement("""
+                update knowledge_versions v set status='APPROVED', approved_at=?, updated_at=?
+                where item_id=? and version=1 and status='DRAFT'
+                  and not exists (select 1 from knowledge_versions live
+                      where live.item_id=v.item_id and live.status in ('APPROVED','ARCHIVED'))
+                """)) {
+            publish.setTimestamp(1, Timestamp.from(now));
+            publish.setTimestamp(2, Timestamp.from(now));
+            publish.setObject(3, itemId);
+            updated = publish.executeUpdate();
+        }
+        if (updated > 0) {
+            try (PreparedStatement audit = db.prepareStatement("""
+                    insert into audit_logs(id,actor_user_id,actor_type,action,target_type,target_id,reason_code,safe_metadata,occurred_at)
+                    values (?,null,'SYSTEM','KNOWLEDGE_STATIC_CORPUS_PUBLISHED','KNOWLEDGE_ITEM',?,'USER_REQUEST',cast(? as jsonb),?)
+                    """)) {
+                audit.setObject(1, uuid7());
+                audit.setObject(2, itemId);
+                audit.setString(3, "{\"sourceFile\":\"" + jsonEscape(source) + "\",\"topicCode\":\"" + TOPIC + "\"}");
+                audit.setTimestamp(4, Timestamp.from(now));
+                audit.executeUpdate();
+            }
+        }
+        return updated;
+    }
+
     private static List<Pending> loadPending(Connection db, String model, String modelVersion) throws Exception {
         var pending = new ArrayList<Pending>();
         try (PreparedStatement query = db.prepareStatement("""
                 select c.id,i.source_name,c.content
                 from knowledge_chunks c join knowledge_versions v on v.id=c.knowledge_version_id
                 join knowledge_items i on i.id=v.item_id
-                where i.slug like 'recommend-model-%' and i.status='ACTIVE' and v.status in ('DRAFT','APPROVED')
+                where i.slug like 'recommend-model-%' and i.status='ACTIVE' and v.status='APPROVED'
                   and not exists(select 1 from knowledge_embeddings e where e.chunk_id=c.id and e.provider=?
                     and e.model=? and e.model_version=? and e.dimensions=?)
                 order by i.slug,c.chunk_index

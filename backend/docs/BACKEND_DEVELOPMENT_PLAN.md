@@ -552,7 +552,7 @@ Chưa có API cập nhật habit, chỉ goal update dùng `If-Match` và version
 
 - [x] Chunk strategy có version (`paragraph-800-v1`).
 - [x] Embedding model/dimension provenance và Gemini adapter: cùng model cho document/query, mặc định tắt và chưa được duyệt để xử lý dữ liệu thật.
-- [x] Partial HNSW cosine index cho 768/1536 dimensions; worker tạo/backfill vector còn mở.
+- [x] Partial HNSW cosine index cho 768/1536 dimensions; worker tạo/backfill vector đã có trong code. Cấu hình provider, phê duyệt dữ liệu và xác nhận vận hành staging còn mở.
 - [x] Filter APPROVED + locale + effective date trước retrieval.
 - [x] Citation tới knowledge version/chunk.
 - [ ] Eval retrieval bằng curated queries.
@@ -560,10 +560,12 @@ Chưa có API cập nhật habit, chỉ goal update dùng `If-Match` và version
 ### RAG-001 — Safe recommendation (P1, L)
 
 - [x] Context minimization: endpoint chỉ nhận topic code, không gửi journal ra ngoài.
-- [x] Endpoint hiện chỉ trả approved excerpts.
+- [x] GET endpoint trả approved excerpts; POST endpoint sinh câu hỏi tự vấn từ các excerpt đó.
 - [x] Structured excerpt response kèm citation.
-- [ ] Safety validation sau generation.
-- [x] Không tự tạo hotline/nguồn hỗ trợ vì endpoint hiện không sinh nội dung.
+- [x] Endpoint POST tạo tối đa 3 câu hỏi từ approved excerpts; FE câu hỏi tự vấn gọi endpoint này.
+- [x] Structural validation sau generation (đánh số, dạng câu hỏi, word limit, số lượng).
+- [ ] Semantic grounding/safety evaluation và provider approval/operation cho môi trường thật.
+- [ ] Output safety evaluation; câu hỏi tự vấn không thay thế safety response.
 
 ### ADM-001 — Admin foundation (P0/P1, L)
 
@@ -589,8 +591,7 @@ metadata admin, suspend/restore, sanitized job list/retry và aggregate dashboar
 V11–V13 đã áp dụng lên Supabase ngày 2026-10-01; Hibernate schema validation khởi động thành công.
 Test PostgreSQL xác nhận nội dung draft/review/archive không được retrieve, citation đúng version/chunk,
 DB chặn sửa version đã approve và permission matrix có cả deny/allow.
-Đã có Gemini embedding adapter và vector index nhưng chưa có provider/model được duyệt, worker tạo/backfill vector, semantic retrieval, curated retrieval eval hoặc generation/output safety validation;
-recommendation hiện chỉ trả nguyên văn approved excerpts, chưa phải RAG sinh nội dung.
+Đã có Gemini embedding adapter, worker backfill vector, semantic retrieval và endpoint generation câu hỏi từ approved excerpts bằng Gemini. Curated retrieval eval, generation evaluation và output safety validation còn mở; API GET vẫn trả excerpts nguyên văn, API POST trả câu hỏi nếu provider được cấu hình.
 
 ## 13. M7 — Data rights, export và support
 

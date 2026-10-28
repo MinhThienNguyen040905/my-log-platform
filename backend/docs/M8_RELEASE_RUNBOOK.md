@@ -12,6 +12,38 @@ Use synthetic data only in staging. The release owner records date, image digest
 6. Probe `/actuator/health/liveness` and `/actuator/health/readiness`; readiness includes PostgreSQL in staging/prod. Keep detailed health, metrics and DB access on internal networks. Observe HTTP error/latency, Hikari pool, outbox/AI queue depth and age, dead jobs, safety dependency failures, deletion retries and disk usage.
 7. Run a synthetic end-to-end demo: register/verify/login; journal/check-in; consent; approved safety route; AI job if approved provider exists; dashboard/report; export; deletion cancellation and processing. Confirm 401/403/404 owner and permission cases.
 
+## RAG embedding rollout
+
+The document worker and recommendation API both call Gemini: the worker embeds approved knowledge chunks, while the API embeds each recommendation query. Therefore the API key must be injected server-side into **both** processes when semantic recommendations are enabled; never expose it to the browser. Keep it disabled until provider data handling has been reviewed and the approval is recorded.
+
+For a staging rollout, configure both API and worker with `MYLOG_IDENTITY_ENABLED=true`, `MYLOG_RAG_EMBEDDING_ENABLED=true`, `MYLOG_RAG_EMBEDDING_PROVIDER=gemini`, the same model/model version/dimensions, and `MYLOG_RAG_EMBEDDING_PROVIDER_DATA_APPROVED=true` only after approval. Inject `MYLOG_RAG_EMBEDDING_API_KEY` from the secret manager. Run one worker replica initially; the current pending-batch query does not claim rows, so multiple replicas can send duplicate embedding requests. Keep `MYLOG_APP_PROFILE=api` for the API and `MYLOG_APP_PROFILE=worker` for the worker. The worker processes one batch per poll; the default batch size is 32 and poll delay is 10 seconds.
+
+After submitting and approving a staging knowledge version, verify only counts (do not select/log chunk text):
+replace `:model`, `:model_version` and `:dimensions` with the exact configured values before running these queries.
+
+```sql
+SELECT COUNT(*) AS pending_chunks
+FROM knowledge_chunks c
+JOIN knowledge_versions v ON v.id = c.knowledge_version_id
+JOIN knowledge_items i ON i.id = v.item_id
+WHERE i.status = 'ACTIVE' AND v.status = 'APPROVED'
+  AND NOT EXISTS (
+    SELECT 1 FROM knowledge_embeddings e
+    WHERE e.chunk_id = c.id AND e.provider = 'GEMINI'
+      AND e.model = :model AND e.model_version = :model_version
+      AND e.dimensions = :dimensions
+  );
+
+SELECT COUNT(*) AS saved_vectors
+FROM knowledge_embeddings
+WHERE provider = 'GEMINI' AND model = :model
+  AND model_version = :model_version AND dimensions = :dimensions;
+```
+
+The worker emits a sanitized log for each saved batch and each failed poll; it logs counts/model metadata, not document text or provider payloads. A failed batch remains pending and is retried on the next poll. Confirm the pending count reaches zero for the test content, then call the authenticated recommendations endpoint for its topic and locale and confirm it returns cited excerpts. If the worker is stopped, the API can still return catalog fallback results; that does not prove semantic embedding is active.
+
+If provider approval or credentials are unavailable, leave the embedding flags off. The existing catalog fallback remains available, but do not describe that mode as semantic retrieval.
+
 ## AI rollout gate
 
 The adapters added by ADR-0009 are disabled by default. Before setting

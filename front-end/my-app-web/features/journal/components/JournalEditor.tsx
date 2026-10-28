@@ -9,6 +9,7 @@ import { SafetyModal } from './SafetyModal';
 import { AddTopicModal } from './AddTopicModal';
 import { JournalTipTapEditor } from './JournalTipTapEditor';
 import { useJournalEditor } from '../hooks/useJournalEditor';
+import { generateReflectiveQuestions, type ReflectiveQuestions } from '@/features/knowledge';
 import { JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER } from '../utils/journal-emotions';
 import type { JournalEmotion } from '@/types';
 import {
@@ -45,11 +46,7 @@ export function JournalEditor() {
 }
 
 const MOOD_ICONS = JOURNAL_EMOTION_ORDER.map((id) => ({ id, ...JOURNAL_EMOTIONS[id] }));
-const SELF_REFLECTION_QUESTIONS = [
-  'Điều gì đang chiếm nhiều suy nghĩ của mình nhất lúc này?',
-  'Mình đang cần điều gì, và có thể dịu dàng đáp ứng nhu cầu đó ra sao?',
-  'Có điều gì nhỏ hôm nay mình muốn ghi nhận hoặc biết ơn?',
-];
+const REFLECTION_TOPIC_CODE = 'RECOMMEND_MODEL_DOCS';
 const TOPIC_TITLE_SUGGESTIONS = [
   'Một điều nhỏ khiến mình vui hôm nay',
   'Điều mình đang học cách chấp nhận',
@@ -71,6 +68,9 @@ function JournalEditorContent() {
   const [metricsPopoverPosition, setMetricsPopoverPosition] = React.useState<React.CSSProperties | null>(null);
   const [questionsPopoverPosition, setQuestionsPopoverPosition] = React.useState<React.CSSProperties | null>(null);
   const [topicSuggestionPosition, setTopicSuggestionPosition] = React.useState<React.CSSProperties | null>(null);
+  const [recommendation, setRecommendation] = React.useState<ReflectiveQuestions | null>(null);
+  const [isLoadingRecommendation, setIsLoadingRecommendation] = React.useState(false);
+  const [recommendationError, setRecommendationError] = React.useState<string | null>(null);
   const {
     editorRef,
     isEditMode,
@@ -114,6 +114,22 @@ function JournalEditorContent() {
     router,
     streakCount,
   } = useJournalEditor();
+
+  const isQuestionsPopoverOpen = questionsPopoverPosition !== null;
+  React.useEffect(() => {
+    if (!isQuestionsPopoverOpen) return;
+    let active = true;
+    generateReflectiveQuestions(REFLECTION_TOPIC_CODE)
+      .then((result) => { if (active) setRecommendation(result); })
+      .catch(() => { if (active) setRecommendationError('Chưa tải được gợi ý. Bạn có thể thử mở lại sau.'); })
+      .finally(() => { if (active) setIsLoadingRecommendation(false); });
+    return () => { active = false; };
+  }, [isQuestionsPopoverOpen]);
+
+  const escapeHtml = (value: string) => {
+    const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return value.replace(/[&<>"']/g, (character) => entities[character]);
+  };
   const selectedMoodScore = MOOD_ICONS.reduce((closest, candidate) =>
     Math.abs(candidate.score - moodScore) < Math.abs(closest - moodScore) ? candidate.score : closest,
     MOOD_ICONS[0].score);
@@ -148,11 +164,15 @@ function JournalEditorContent() {
     setMetricsPopoverPosition(null);
     if (questionsPopoverPosition) {
       setQuestionsPopoverPosition(null);
+      setIsLoadingRecommendation(false);
       return;
     }
     const button = questionsButtonRef.current;
     if (!button) return;
     const rect = button.getBoundingClientRect();
+    setRecommendation(null);
+    setRecommendationError(null);
+    setIsLoadingRecommendation(true);
     if (window.matchMedia('(min-width: 1360px)').matches) {
       setQuestionsPopoverPosition({ position: 'fixed', top: rect.top, left: rect.left - 300 });
     } else {
@@ -399,17 +419,23 @@ function JournalEditorContent() {
             <span>Câu hỏi tự vấn</span>
             <button type="button" onClick={() => setQuestionsPopoverPosition(null)} aria-label="Đóng câu hỏi tự vấn" className="rounded-lg p-1 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-black"><X className="h-4 w-4" /></button>
           </div>
-          <div className="flex flex-col gap-2">
-            {SELF_REFLECTION_QUESTIONS.map((question) => (
-              <button key={question} type="button" onClick={() => {
-                editorRef.current?.insertContent(`<blockquote><p>${question}</p></blockquote><p></p>`);
-                editorRef.current?.focus();
-                setQuestionsPopoverPosition(null);
-              }} className="rounded-xl border border-black bg-white p-3 text-left text-sm leading-relaxed transition-all hover:-translate-y-0.5 hover:bg-lime-100 hover:shadow-neo-sm active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
-                {question}
-              </button>
-            ))}
-          </div>
+          {isLoadingRecommendation ? <p className="py-3 text-sm text-gray-600" role="status">Đang tải gợi ý...</p>
+            : recommendationError ? <p className="py-3 text-sm text-red-700" role="alert">{recommendationError}</p>
+            : !recommendation?.questions.length ? <p className="py-3 text-sm text-gray-600">{recommendation?.message ?? 'Chưa đủ thông tin để tạo câu hỏi phù hợp.'}</p>
+            : <div className="flex max-h-[min(55dvh,24rem)] flex-col gap-2 overflow-y-auto">
+              {recommendation.questions.map((question, index) => (
+                <div key={`${index}-${question}`} className="rounded-xl border border-black bg-white p-3 text-sm leading-relaxed">
+                  <p>{question}</p>
+                  <div className="mt-2 flex justify-end border-t border-black/10 pt-2">
+                    <button type="button" onClick={() => {
+                      editorRef.current?.insertContent(`<blockquote><p>${escapeHtml(question)}</p></blockquote><p></p>`);
+                      editorRef.current?.focus();
+                      setQuestionsPopoverPosition(null);
+                    }} className="shrink-0 rounded-lg border border-black px-2 py-1 font-bold transition-colors hover:bg-lime-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">Chèn</button>
+                  </div>
+                </div>
+              ))}
+            </div>}
         </div>,
         document.body,
       )}
