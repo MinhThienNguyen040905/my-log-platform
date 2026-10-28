@@ -15,6 +15,7 @@ const routes: AllowedRoute[] = [
   { methods: ['PATCH'], pattern: new RegExp(`^self-care/goals/${uuid}$`) },
   { methods: ['POST'], pattern: new RegExp(`^self-care/goals/${uuid}/habits$`) },
   { methods: ['PUT', 'DELETE'], pattern: new RegExp(`^self-care/habits/${uuid}/completions/${date}$`) },
+  { methods: ['POST'], pattern: /^recommendations\/questions$/ },
   { methods: ['GET'], pattern: /^recommendations$/ },
   { methods: ['POST'], pattern: /^exports$/ },
   { methods: ['GET'], pattern: new RegExp(`^exports/${uuid}$`) },
@@ -80,7 +81,12 @@ export async function securedProxy(request: Request, segments: string[]) {
       }
     }
     return new Response(response.status === 204 ? null : response.body, { status: response.status, headers });
-  } catch {
+  } catch (error) {
+    console.error('Backend proxy request failed', {
+      method: request.method,
+      path,
+      failureType: error instanceof Error ? error.name : 'UnknownError',
+    });
     return new Response(null, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
 }

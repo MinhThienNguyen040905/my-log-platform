@@ -38,3 +38,11 @@ Kiểm thử local, không cần key:
 ```powershell
 python -X utf8 -m unittest discover -s tests -v
 ```
+
+## Backend retrieval corpus
+
+`recommend-model/docs` is a repository-owned static corpus used by Journal Editor recommendations. The `EmbedAllDocsToPgvector.java` importer publishes these imported versions as `APPROVED` under a system audit event; no end-user or developer account is required. This exception is limited to the files in this importer feed. Knowledge content created through `/api/v1/admin/knowledge-items` still uses the normal submit and review permissions.
+
+The importer is idempotent for already imported source slugs, embeds only missing vectors, and publishes existing `DRAFT` versions for those same source slugs. Rebuild the PDF page/chunk feed before importing after adding new sources. Updating an already imported source requires a new knowledge version rather than changing its approved content in place.
+
+The Journal Editor uses locale vi. For the RECOMMEND_MODEL_DOCS topic, the recommendation service maps vi to the corpus locale vi-VN.

@@ -83,6 +83,7 @@ class SecurityConfiguration {
                                 .authenticated();
                         authorize.requestMatchers("/api/v1/admin/**").authenticated();
                         authorize.requestMatchers(HttpMethod.GET, "/api/v1/recommendations").authenticated();
+                        authorize.requestMatchers(HttpMethod.POST, "/api/v1/recommendations/questions").authenticated();
                     }
                     authorize.anyRequest().denyAll();
                 })
