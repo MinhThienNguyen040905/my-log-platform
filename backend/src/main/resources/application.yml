@@ -23,6 +23,10 @@ spring:
 server:
   port: ${MYLOG_SERVER_PORT:8080}
   shutdown: graceful
+  forward-headers-strategy: framework
+  tomcat:
+    remoteip:
+      internal-proxies: "127\\.0\\.0\\.1|::1|10\\..*|172\\.(1[6-9]|2[0-9]|3[0-1])\\..*|192\\.168\\..*"
   error:
     include-message: never
     include-stacktrace: never
@@ -96,6 +100,11 @@ mylog:
     retention-delay-ms: ${MYLOG_FEEDBACK_RETENTION_DELAY_MS:86400000}
   identity:
     enabled: ${MYLOG_IDENTITY_ENABLED:false}
+    oauth:
+      google:
+        enabled: ${MYLOG_GOOGLE_OAUTH_ENABLED:false}
+        client-id: ${MYLOG_GOOGLE_OAUTH_CLIENT_ID:}
+        client-secret: ${MYLOG_GOOGLE_OAUTH_CLIENT_SECRET:}
   web:
     allowed-origins: ${MYLOG_ALLOWED_ORIGINS:http://localhost:3000}
   open-api:

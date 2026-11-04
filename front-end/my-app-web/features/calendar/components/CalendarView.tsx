@@ -119,9 +119,10 @@ export function CalendarView() {
     ? selectedDayQuery.data
       .pages.flatMap((page) => page.items)
     : entries;
-  const loadedPageCount = Math.ceil(entriesForFilters.length / JOURNAL_PAGE_SIZE);
-  const currentPageEntries = entriesForFilters.slice(pageIndex * JOURNAL_PAGE_SIZE, (pageIndex + 1) * JOURNAL_PAGE_SIZE);
-  const filteredEntries = filterEntries(currentPageEntries, appliedFilters);
+  const allFilteredEntries = filterEntries(entriesForFilters, appliedFilters);
+  const loadedPageCount = Math.max(1, Math.ceil(allFilteredEntries.length / JOURNAL_PAGE_SIZE));
+  const currentPageEntries = allFilteredEntries.slice(pageIndex * JOURNAL_PAGE_SIZE, (pageIndex + 1) * JOURNAL_PAGE_SIZE);
+  const filteredEntries = currentPageEntries;
   const showingFilteredDate = appliedFilters.date === selectedDate;
   const listHasMore = showingFilteredDate ? !!selectedDayQuery.hasNextPage : hasMoreEntries;
   const listLoading = showingFilteredDate ? selectedDayQuery.isPending : entriesLoading;
@@ -209,8 +210,14 @@ export function CalendarView() {
         type="button"
         onClick={(e) => {
           buttonProps.onClick?.(e);
-          setSelectedDate(isoDate);
-          setFilterByDate(true);
+          if (filterByDate && selectedDate === isoDate) {
+            setFilterByDate(false);
+            setAppliedFilters((prev) => ({ ...prev, date: null }));
+          } else {
+            setSelectedDate(isoDate);
+            setFilterByDate(true);
+            setAppliedFilters((prev) => ({ ...prev, date: isoDate }));
+          }
         }}
         aria-label={`${dayNum}/${day.date.getMonth() + 1}/${day.date.getFullYear()}: ${dayEntries.length} bài viết`}
         aria-pressed={isSelected}
@@ -274,16 +281,20 @@ export function CalendarView() {
                 type="text"
                 aria-label="Tìm trong nhật ký"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tìm kiếm sẽ khả dụng khi API hỗ trợ"
-                disabled
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSearchTerm(val);
+                  setAppliedFilters((prev) => ({ ...prev, search: val.trim() }));
+                }}
+                placeholder="Tìm kiếm theo tiêu đề hoặc nội dung nhật ký..."
+
                 className="min-w-0 flex-1 min-h-11 font-space text-sm p-2.5 rounded-xl border border-border-soft bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
               />
               <button type="submit" aria-label="Tìm và lọc" title="Tìm và lọc" className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl border border-black bg-primary-container text-black cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
                 <Search className="w-5 h-5" />
               </button>
             </form>
-            <p className="text-xs font-space text-gray-600">Tìm nội dung chưa khả dụng. Các bộ lọc ngày, cảm xúc và yêu thích áp dụng sau khi tải xong danh sách.</p>
+
 
             {/* Date filter active chip */}
             {filterByDate && (
@@ -294,7 +305,10 @@ export function CalendarView() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setFilterByDate(false)}
+                  onClick={() => {
+                  setFilterByDate(false);
+                  setAppliedFilters((prev) => ({ ...prev, date: null }));
+                }}
                   className="w-11 h-11 flex items-center justify-center hover:bg-black/10 rounded cursor-pointer"
                   aria-label="Bỏ lọc ngày"
                 >
@@ -309,7 +323,11 @@ export function CalendarView() {
             <div id="history-extra-filters" className={`${showMoreFilters ? 'flex' : 'hidden'} sm:flex flex-wrap gap-2 pt-1`}>
               <button
                 type="button"
-                onClick={() => setOnlyFavorites(!onlyFavorites)}
+                onClick={() => {
+                const nextFav = !onlyFavorites;
+                setOnlyFavorites(nextFav);
+                setAppliedFilters((prev) => ({ ...prev, favorites: nextFav }));
+              }}
                 aria-pressed={onlyFavorites}
                 className={`min-h-11 text-xs font-space font-bold px-3 py-2 rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${
                   onlyFavorites
@@ -327,7 +345,10 @@ export function CalendarView() {
                 <button
                   key={emotion}
                   type="button"
-                  onClick={() => setSelectedMood(emotion)}
+                  onClick={() => {
+                  setSelectedMood(emotion);
+                  setAppliedFilters((prev) => ({ ...prev, emotion }));
+                }}
                   aria-pressed={selectedMood === emotion}
                   className={`min-h-11 text-xs font-space font-bold px-3 py-2 rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${
                     selectedMood === emotion
@@ -366,6 +387,7 @@ export function CalendarView() {
                   onClick={() => {
                     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
                     setFilterByDate(false);
+                    setAppliedFilters((prev) => ({ ...prev, date: null }));
                   }}
                   className="w-11 h-11 border border-black rounded-lg hover:bg-paper-warm flex items-center justify-center cursor-pointer shadow-neo-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                   aria-label="Tháng trước"
@@ -377,6 +399,7 @@ export function CalendarView() {
                   onClick={() => {
                     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
                     setFilterByDate(false);
+                    setAppliedFilters((prev) => ({ ...prev, date: null }));
                   }}
                   className="w-11 h-11 border border-black rounded-lg hover:bg-paper-warm flex items-center justify-center cursor-pointer shadow-neo-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                   aria-label="Tháng sau"
@@ -394,6 +417,7 @@ export function CalendarView() {
                 onMonthChange={(month) => {
                   setCurrentMonth(month);
                   setFilterByDate(false);
+                  setAppliedFilters((prev) => ({ ...prev, date: null }));
                 }}
                 showOutsideDays
                 hideNavigation
@@ -447,7 +471,7 @@ export function CalendarView() {
               </div>
             </div>
 
-            {hasPendingFilters && filterByDate && <p className="mt-2 text-xs font-space text-gray-600">Ngày đã chọn. Bấm kính lúp ở bộ lọc phía trên để xem kết quả.</p>}
+            
 
             <p className="mt-3 text-xs font-space text-gray-600">Số trong ô ngày là số bài viết đã tải.</p>
           </div>
@@ -475,7 +499,7 @@ export function CalendarView() {
           {!listLoading && !listError && filteredEntries.length === 0 ? (
             <div className="bg-surface-card border-neo rounded-3xl p-10 text-center flex flex-col items-center justify-center gap-3 shadow-neo">
               <Calendar className="w-10 h-10 text-gray-400 stroke-[1.5]" />
-              <p className="font-space text-base font-extrabold text-black">{entries.length === 0 && entriesForFilters.length === 0 && !listHasMore ? 'Bạn chưa có trang nhật ký nào' : 'Không tìm thấy bài viết phù hợp trong trang này'}</p>
+              <p className="font-space text-base font-extrabold text-black">{entries.length === 0 && entriesForFilters.length === 0 && !listHasMore ? 'Bạn chưa có trang nhật ký nào' : 'Không tìm thấy bài viết phù hợp'}</p>
               <p className="text-xs text-gray-600 max-w-sm">
                 {entries.length === 0 ? 'Viết trang đầu tiên để bắt đầu lưu lại những ngày của bạn.' : 'Thử đổi từ khóa hoặc bỏ các điều kiện lọc hiện tại.'}
               </p>
@@ -692,7 +716,7 @@ export function CalendarView() {
                 </div>
               </div>
 
-              <h2 id="journal-detail-title" className="font-space text-2xl sm:text-3xl font-extrabold text-black leading-tight mt-1">
+              <h2 id="journal-detail-title" className="font-space text-2xl sm:text-3xl font-extrabold text-black leading-tight mt-1 break-words [overflow-wrap:anywhere]">
                 {selectedEntry.title}
               </h2>
 
@@ -720,16 +744,16 @@ export function CalendarView() {
             </div>
 
             {/* 2. Scrollable Modal Body */}
-            <div className="p-6 sm:p-7 py-5 overflow-y-auto custom-scrollbar flex-1 flex flex-col gap-6">
+            <div className="p-6 sm:p-7 py-5 overflow-y-auto overflow-x-hidden custom-scrollbar flex-1 flex flex-col gap-6 min-w-0">
               {/* Full Content */}
-              <div className="p-4 sm:p-6 bg-white rounded-2xl border-2 border-black shadow-inner">
+              <div className="p-4 sm:p-6 bg-white rounded-2xl border-2 border-black shadow-inner min-w-0 break-words [overflow-wrap:anywhere] overflow-hidden">
                 {selectedEntry.content.includes('<') ? (
                   <div
-                    className="font-serif text-base sm:text-lg text-on-surface leading-loose tiptap"
+                    className="font-serif text-base sm:text-lg text-on-surface leading-loose tiptap break-words [overflow-wrap:anywhere]"
                     dangerouslySetInnerHTML={{ __html: selectedEntry.content }}
                   />
                 ) : (
-                  <p className="font-serif text-base sm:text-lg text-on-surface leading-loose italic whitespace-pre-line">
+                  <p className="font-serif text-base sm:text-lg text-on-surface leading-loose italic whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                     {selectedEntry.content}
                   </p>
                 )}

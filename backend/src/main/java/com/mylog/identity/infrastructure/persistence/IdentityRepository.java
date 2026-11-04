@@ -11,6 +11,7 @@ import com.mylog.identity.infrastructure.persistence.entity.Role;
 import com.mylog.identity.infrastructure.persistence.entity.RolePermission;
 import com.mylog.identity.infrastructure.persistence.entity.User;
 import com.mylog.identity.infrastructure.persistence.entity.UserRole;
+import com.mylog.identity.infrastructure.persistence.entity.UserOAuthIdentity;
 
 import com.mylog.identity.application.IdentityStore;
 import com.mylog.platform.crypto.SensitiveDataCipher;
@@ -169,6 +170,15 @@ class IdentityRepository implements IdentityStore {
         user.rowVersion++;
     }
 
+    @Override public void clearPassword(UUID id, Instant now) {
+        User user = entityManager.find(User.class, id);
+        if (user != null) {
+            user.passwordHash = null;
+            user.updatedAt = now;
+            user.rowVersion++;
+        }
+    }
+
     @Override public void assignUserRole(UUID id, Instant now) {
         Role role = entityManager.createQuery("select r from Role r where r.code='USER'", Role.class)
                 .getSingleResult();
@@ -318,7 +328,9 @@ class IdentityRepository implements IdentityStore {
                 """, Long.class).setParameter("hash", hash).setParameter("purpose", purpose).getSingleResult() > 0;
     }
 
-    @Override public boolean recordRateLimit(byte[] subject, Instant now, int maximum, long windowSeconds) {
+    @Override
+    @Transactional
+    public boolean recordRateLimit(byte[] subject, Instant now, int maximum, long windowSeconds) {
         Instant cutoff = now.minusSeconds(windowSeconds);
         entityManager.createNativeQuery("""
                 INSERT INTO auth_rate_limits(subject_hash,attempts,window_started_at,blocked_until) VALUES (?1,1,?2,NULL)
@@ -361,7 +373,7 @@ class IdentityRepository implements IdentityStore {
         return new Account(user.id, user.emailLookupHash,
                 new SensitiveDataCipher.Encrypted(user.encryptedEmail, user.emailIv,
                         user.emailWrappedKey, user.emailKeyVersion), user.passwordHash,
-                user.status, user.failedLoginCount, user.lockedUntil, user.rowVersion);
+                user.status, user.failedLoginCount, user.lockedUntil, user.rowVersion, user.emailVerifiedAt);
     }
 
     private IdentityStore.PendingRegistration pending(PendingRegistrationEntity row) {
@@ -375,5 +387,77 @@ class IdentityRepository implements IdentityStore {
     private Session session(AuthSession authSession) {
         return new Session(authSession.id, authSession.userId, authSession.tokenFamilyId, authSession.currentTokenHash,
                 authSession.expiresAt, authSession.revokedAt, authSession.createdAt, authSession.lastUsedAt, authSession.deviceName);
+    }
+
+    @Override
+    public Optional<UUID> findUserIdByOAuth(String provider, String providerUserId) {
+        return entityManager.createQuery(
+                "select o.userId from UserOAuthIdentity o where o.provider = :provider and o.providerUserId = :puid",
+                UUID.class)
+                .setParameter("provider", provider)
+                .setParameter("puid", providerUserId)
+                .getResultStream()
+                .findFirst();
+    }
+
+    @Override
+    public void linkOAuthIdentity(UUID userId, String provider, String providerUserId, Instant now) {
+        boolean exists = entityManager.createQuery(
+                "select count(o) from UserOAuthIdentity o where o.provider = :provider and o.providerUserId = :puid",
+                Long.class)
+                .setParameter("provider", provider)
+                .setParameter("puid", providerUserId)
+                .getSingleResult() > 0;
+        if (!exists) {
+            UserOAuthIdentity identity = new UserOAuthIdentity();
+            identity.id = ids.next();
+            identity.userId = userId;
+            identity.provider = provider;
+            identity.providerUserId = providerUserId;
+            identity.createdAt = now;
+            identity.updatedAt = now;
+            entityManager.persist(identity);
+            entityManager.flush();
+        }
+    }
+
+    @Override
+    public void createOAuthAccount(Account account, String provider, String providerUserId, Instant now) {
+        User user = new User();
+        user.id = account.id();
+        user.emailLookupHash = account.emailHash();
+        user.encryptedEmail = account.email().ciphertext();
+        user.emailIv = account.email().iv();
+        user.emailWrappedKey = account.email().wrappedKey();
+        user.emailKeyVersion = account.email().keyVersion();
+        user.passwordHash = null;
+        user.authProvider = provider;
+        user.status = account.status();
+        user.emailVerifiedAt = now;
+        user.createdAt = now;
+        user.updatedAt = now;
+        entityManager.persist(user);
+
+        UserOAuthIdentity identity = new UserOAuthIdentity();
+        identity.id = ids.next();
+        identity.userId = account.id();
+        identity.provider = provider;
+        identity.providerUserId = providerUserId;
+        identity.createdAt = now;
+        identity.updatedAt = now;
+        entityManager.persist(identity);
+        entityManager.flush();
+    }
+
+    @Override
+    public void reclaimUnverifiedAccountForOAuth(UUID userId, String provider, Instant now) {
+        User user = entityManager.find(User.class, userId);
+        if (user != null) {
+            user.authProvider = provider;
+            user.passwordHash = null;
+            user.emailVerifiedAt = now;
+            user.updatedAt = now;
+            entityManager.flush();
+        }
     }
 }

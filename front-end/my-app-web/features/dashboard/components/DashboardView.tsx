@@ -36,7 +36,7 @@ export function DashboardView() {
   const recentEntries = recentQuery.data ?? [];
   const dashboard = dashboardQuery.data;
   const dashboardError = dashboardQuery.isError;
-  const stats = dashboard?.timeline.slice(-14) ?? [];
+  const stats = dashboard?.timeline ?? [];
   const average = (key: 'moodScore' | 'stressScore' | 'energyScore' | 'sleepMinutes') => {
     const values = stats.map((day) => day[key]).filter((value): value is number => value !== null);
     return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;

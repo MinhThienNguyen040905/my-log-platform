@@ -60,7 +60,7 @@ export function InsightView() {
         <div>
           <div className="inline-flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 bg-paper-warm border border-black rounded text-[11px] font-space font-extrabold uppercase">
-              FR-REPORT & FR-INSIGHT
+              {t('insight.badge')}
             </span>
             <span className="text-xs font-space text-gray-500 font-bold">{t('insight.period')} {reportWeek}</span>
           </div>

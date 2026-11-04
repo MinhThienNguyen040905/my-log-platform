@@ -1,9 +1,23 @@
 import 'server-only';
+import { headers } from 'next/headers';
 
 const backendUrl = process.env.MYLOG_BACKEND_URL ?? 'http://localhost:8080';
 
 export async function authBackend(path: string, init: RequestInit = {}) {
-  return fetch(`${backendUrl}/api/v1${path}`, { ...init, cache: 'no-store' });
+  const headerList = await headers();
+  const rawForwarded = headerList.get('x-forwarded-for') || headerList.get('x-real-ip');
+  const clientIp = rawForwarded ? rawForwarded.split(',')[0].trim() : '';
+
+  const mergedHeaders = new Headers(init.headers);
+  if (clientIp) {
+    mergedHeaders.set('X-Forwarded-For', clientIp);
+  }
+
+  return fetch(`${backendUrl}/api/v1${path}`, {
+    ...init,
+    headers: mergedHeaders,
+    cache: 'no-store',
+  });
 }
 
 export async function forwardProblem(response: Response) {

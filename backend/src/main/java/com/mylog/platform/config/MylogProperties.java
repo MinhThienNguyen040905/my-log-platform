@@ -23,6 +23,18 @@ public record MylogProperties(
     public record OpenApi(boolean enabled) {
     }
 
-    public record Identity(boolean enabled) {
+    public record Identity(boolean enabled, @Valid OAuth oauth) {
+        public Identity {
+            if (oauth == null) oauth = new OAuth(new OAuth.Google(false, null, null));
+        }
+
+        public record OAuth(@Valid Google google) {
+            public OAuth {
+                if (google == null) google = new Google(false, null, null);
+            }
+
+            public record Google(boolean enabled, String clientId, String clientSecret) {
+            }
+        }
     }
 }

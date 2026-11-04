@@ -77,7 +77,7 @@ public final class GlobalExceptionHandler {
     ResponseEntity<ApiProblem> handleUnexpected(Exception exception, HttpServletRequest request) {
         log.error("Unhandled exception type={} requestId={}",
                 exception.getClass().getName(),
-                request.getAttribute(RequestIdFilter.REQUEST_ID_ATTRIBUTE));
+                request.getAttribute(RequestIdFilter.REQUEST_ID_ATTRIBUTE), exception);
         return response(ErrorCode.INTERNAL_ERROR, "Hệ thống gặp lỗi không mong đợi.", request, List.of());
     }
 

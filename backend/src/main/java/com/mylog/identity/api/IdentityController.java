@@ -4,6 +4,7 @@ import com.mylog.identity.application.IdentityService;
 import com.mylog.identity.api.request.ConfirmEmailVerificationRequest;
 import com.mylog.identity.api.request.ConfirmEmailVerificationCodeRequest;
 import com.mylog.identity.api.request.EmailVerificationRequest;
+import com.mylog.identity.api.request.GoogleAuthRequest;
 import com.mylog.identity.api.request.LoginRequest;
 import com.mylog.identity.api.request.RefreshRequest;
 import com.mylog.identity.api.request.RegisterRequest;
@@ -56,6 +57,11 @@ public class IdentityController {
                                              HttpServletRequest http) {
         identity.confirmVerificationCode(request.email(), request.code(), http.getRemoteAddr());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/google")
+    public AuthResponse loginWithGoogle(@Valid @RequestBody GoogleAuthRequest request, HttpServletRequest http) {
+        return AuthResponse.from(identity.loginWithGoogle(request, http.getRemoteAddr()));
     }
 
     @PostMapping("/login")

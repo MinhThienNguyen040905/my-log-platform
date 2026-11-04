@@ -12,6 +12,9 @@ import com.mylog.platform.web.ConflictException;
 import com.mylog.platform.web.ErrorCode;
 import com.mylog.platform.web.RateLimitExceededException;
 import com.mylog.platform.web.ResourceNotFoundException;
+import com.mylog.identity.api.request.GoogleAuthRequest;
+import com.mylog.identity.infrastructure.GoogleOAuthClient;
+import com.mylog.platform.config.MylogProperties;
 import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.user.application.UserProfileUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -47,11 +50,16 @@ public class IdentityService {
     private final Clock clock;
     private final SecureRandom random;
     private final PasswordEncoder passwords = new BCryptPasswordEncoder(12);
+    private final GoogleOAuthClient googleClient;
+    private final GoogleAuthProvisioningService provisioningService;
+    private final MylogProperties properties;
 
     public IdentityService(IdentityStore store, SensitiveDataCipher cipher, AccessTokens accessTokens,
-            VerificationDelivery delivery, UserProfileUseCase profiles, IdGenerator ids, Clock clock, SecureRandom random) {
+            VerificationDelivery delivery, UserProfileUseCase profiles, IdGenerator ids, Clock clock, SecureRandom random,
+            GoogleOAuthClient googleClient, GoogleAuthProvisioningService provisioningService, MylogProperties properties) {
         this.store = store; this.cipher = cipher; this.accessTokens = accessTokens; this.delivery = delivery;
         this.profiles = profiles; this.ids = ids; this.clock = clock; this.random = random;
+        this.googleClient = googleClient; this.provisioningService = provisioningService; this.properties = properties;
     }
 
     public static String normalizeEmail(String value) {
@@ -130,6 +138,25 @@ public class IdentityService {
         completeRegistration(pending, now);
     }
 
+    public AuthResult loginWithGoogle(GoogleAuthRequest request, String remoteAddress) {
+        if (!properties.identity().oauth().google().enabled()) {
+            throw new ResourceNotFoundException("Google OAuth chưa được bật.");
+        }
+
+        Instant now = clock.instant();
+        rate("oauth-google-ip:" + remoteAddress, now, 30);
+
+        GoogleOAuthClient.GoogleTokenPayload payload = googleClient.exchangeCode(request.code());
+        rate("oauth-google-sub:" + payload.sub(), now, 10);
+
+        String refresh = randomToken();
+        try {
+            return provisioningService.completeGoogleAuthTransaction(payload, request, refresh, now);
+        } catch (DataIntegrityViolationException e) {
+            return provisioningService.completeGoogleAuthTransaction(payload, request, refresh, now);
+        }
+    }
+
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public AuthResult login(String email, String password, String deviceName, String remoteAddress) {
         Instant now = clock.instant();
@@ -139,6 +166,7 @@ public class IdentityService {
         Account account = store.accountByEmailHashForUpdate(cipher.lookupHash(normalized)).orElse(null);
         if (account == null) { passwords.matches(password, DUMMY_HASH); throw new InvalidCredentialsException(); }
         if (account.lockedUntil() != null && account.lockedUntil().isAfter(now)) throw new InvalidCredentialsException();
+        if (account.passwordHash() == null) { passwords.matches(password, DUMMY_HASH); throw new InvalidCredentialsException(); }
         if (!passwords.matches(password, account.passwordHash())) {
             int failures = account.failedLogins() + 1;
             store.setLoginFailure(account.id(), failures, failures >= 5 ? now.plus(15, ChronoUnit.MINUTES) : null, now);
@@ -205,7 +233,7 @@ public class IdentityService {
     @Transactional(readOnly = true)
     public void reauthenticate(UUID userId, String password) {
         Account account = store.accountById(userId).orElseThrow(InvalidCredentialsException::new);
-        if (!"ACTIVE".equals(account.status()) || password == null
+        if (!"ACTIVE".equals(account.status()) || password == null || account.passwordHash() == null
                 || !passwords.matches(password, account.passwordHash())) throw new InvalidCredentialsException();
     }
 
@@ -237,7 +265,7 @@ public class IdentityService {
         rate("deletion-cancel-email:" + normalized, now, 5);
         Account account = store.accountByEmailHash(cipher.lookupHash(normalized)).orElse(null);
         if (account == null) { passwords.matches(password, DUMMY_HASH); throw new InvalidCredentialsException(); }
-        if (!"DELETION_PENDING".equals(account.status()) || password == null
+        if (!"DELETION_PENDING".equals(account.status()) || password == null || account.passwordHash() == null
                 || !passwords.matches(password, account.passwordHash())) throw new InvalidCredentialsException();
         return account.id();
     }
@@ -266,7 +294,7 @@ public class IdentityService {
         var encrypted = cipher.encrypt("users.email", pending.id(), pending.id(), email);
         try {
             store.createAccount(new Account(pending.id(), pending.emailHash(), encrypted,
-                    pending.passwordHash(), "ACTIVE", 0, null, 0), now);
+                    pending.passwordHash(), "ACTIVE", 0, null, 0, now), now);
         } catch (DataIntegrityViolationException e) { throw new ConflictException("Email đã được đăng ký."); }
         store.assignUserRole(pending.id(), now);
         profiles.createDefault(pending.id(), pending.timezone(), pending.locale(),

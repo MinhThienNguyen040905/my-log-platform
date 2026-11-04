@@ -99,5 +99,6 @@ export interface UserProfile {
   isOnboarded?: boolean;
   journalingGoals?: string[];
   preferredTime?: string;
+  isAdmin?: boolean;
 }
 
