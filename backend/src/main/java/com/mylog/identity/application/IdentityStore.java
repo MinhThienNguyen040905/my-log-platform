@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public interface IdentityStore {
     record Account(UUID id, byte[] emailHash, SensitiveDataCipher.Encrypted email, String passwordHash,
-                   String status, int failedLogins, Instant lockedUntil, long version) {}
+                   String status, int failedLogins, Instant lockedUntil, long version, Instant emailVerifiedAt) {}
     record PendingRegistration(UUID id, byte[] emailHash, SensitiveDataCipher.Encrypted email,
                                String passwordHash, String timezone, String locale,
                                String termsVersion, String privacyVersion,
@@ -33,6 +33,7 @@ public interface IdentityStore {
     void setLoginSuccess(UUID userId, Instant now);
     void setStatus(UUID userId, String status, Instant now);
     void changePassword(UUID userId, String hash, Instant now);
+    void clearPassword(UUID userId, Instant now);
     void assignUserRole(UUID userId, Instant now);
     List<String> roles(UUID userId);
     List<String> permissions(UUID userId);
@@ -54,4 +55,10 @@ public interface IdentityStore {
     boolean recordRateLimit(byte[] subjectHash, Instant now, int maxAttempts, long windowSeconds);
     void audit(UUID actorId, String action, UUID targetId, Instant now);
     void purgeExpired(Instant now);
+
+    // OAuth Support
+    Optional<UUID> findUserIdByOAuth(String provider, String providerUserId);
+    void linkOAuthIdentity(UUID userId, String provider, String providerUserId, Instant now);
+    void createOAuthAccount(Account account, String provider, String providerUserId, Instant now);
+    void reclaimUnverifiedAccountForOAuth(UUID userId, String provider, Instant now);
 }

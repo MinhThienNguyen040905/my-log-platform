@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Users, BookOpen, CheckSquare, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Users, BookOpen, CheckSquare, ShieldAlert, ShieldCheck, Lock } from 'lucide-react';
 import { AdminDashboardData } from '../api/types';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 
@@ -43,10 +43,10 @@ export function AdminDashboardMetrics({ data, loading }: AdminDashboardMetricsPr
       )}
 
       {/* 4 Neo-Brutalist Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative pt-2">
         {/* Metric 1: Active Users */}
-        <div className="bg-white border-2 border-black rounded-2xl p-5 shadow-neo-sm flex flex-col justify-between relative overflow-hidden transition-all hover:-translate-y-0.5">
-          <WashiTape color="lime" rotate={1} className="absolute -top-3 right-6 w-20" />
+        <div className="bg-white border-2 border-black rounded-2xl p-5 shadow-neo-sm flex flex-col justify-between relative transition-all hover:-translate-y-0.5">
+          <WashiTape color="lime" rotate={1} className="absolute -top-3.5 right-6 w-24 z-10" />
           <div className="flex items-center justify-between">
             <span className="font-space text-xs font-extrabold uppercase text-gray-600 tracking-wider">
               Người dùng hoạt động
@@ -56,9 +56,18 @@ export function AdminDashboardMetrics({ data, loading }: AdminDashboardMetricsPr
             </div>
           </div>
           <div className="mt-4">
-            <div className="font-space text-3xl font-extrabold text-black">
-              {suppressed ? '—' : activeUsers?.toLocaleString('vi-VN') ?? '0'}
-            </div>
+            {suppressed ? (
+              <div className="flex items-center gap-2">
+                <span className="font-space text-3xl font-extrabold text-gray-400">—</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-300 text-[11px] font-space font-bold text-amber-800 shadow-neo-xs">
+                  <Lock className="w-3 h-3 stroke-[2.5]" /> &lt; {minimumCohortSize}
+                </span>
+              </div>
+            ) : (
+              <div className="font-space text-3xl font-extrabold text-black">
+                {activeUsers?.toLocaleString('vi-VN') ?? '0'}
+              </div>
+            )}
             <span className="text-[11px] font-sans text-gray-500 font-medium block mt-1">
               Đã xác thực và có phiên hợp lệ
             </span>
@@ -66,7 +75,7 @@ export function AdminDashboardMetrics({ data, loading }: AdminDashboardMetricsPr
         </div>
 
         {/* Metric 2: Total Journal Entries */}
-        <div className="bg-paper-warm border-2 border-black rounded-2xl p-5 shadow-neo-sm flex flex-col justify-between relative overflow-hidden transition-all hover:-translate-y-0.5">
+        <div className="bg-paper-warm border-2 border-black rounded-2xl p-5 shadow-neo-sm flex flex-col justify-between relative transition-all hover:-translate-y-0.5">
           <div className="flex items-center justify-between">
             <span className="font-space text-xs font-extrabold uppercase text-gray-600 tracking-wider">
               Tổng trang nhật ký
@@ -76,9 +85,18 @@ export function AdminDashboardMetrics({ data, loading }: AdminDashboardMetricsPr
             </div>
           </div>
           <div className="mt-4">
-            <div className="font-space text-3xl font-extrabold text-black">
-              {suppressed ? '—' : journalEntries?.toLocaleString('vi-VN') ?? '0'}
-            </div>
+            {suppressed ? (
+              <div className="flex items-center gap-2">
+                <span className="font-space text-3xl font-extrabold text-gray-400">—</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-300 text-[11px] font-space font-bold text-amber-800 shadow-neo-xs">
+                  <Lock className="w-3 h-3 stroke-[2.5]" /> &lt; {minimumCohortSize}
+                </span>
+              </div>
+            ) : (
+              <div className="font-space text-3xl font-extrabold text-black">
+                {journalEntries?.toLocaleString('vi-VN') ?? '0'}
+              </div>
+            )}
             <span className="text-[11px] font-sans text-gray-500 font-medium block mt-1">
               Mã hóa envelope encryption AES-256
             </span>
@@ -86,7 +104,7 @@ export function AdminDashboardMetrics({ data, loading }: AdminDashboardMetricsPr
         </div>
 
         {/* Metric 3: Daily Checkins */}
-        <div className="bg-white border-2 border-black rounded-2xl p-5 shadow-neo-sm flex flex-col justify-between relative overflow-hidden transition-all hover:-translate-y-0.5">
+        <div className="bg-white border-2 border-black rounded-2xl p-5 shadow-neo-sm flex flex-col justify-between relative transition-all hover:-translate-y-0.5">
           <div className="flex items-center justify-between">
             <span className="font-space text-xs font-extrabold uppercase text-gray-600 tracking-wider">
               Điểm danh cảm xúc
@@ -96,9 +114,18 @@ export function AdminDashboardMetrics({ data, loading }: AdminDashboardMetricsPr
             </div>
           </div>
           <div className="mt-4">
-            <div className="font-space text-3xl font-extrabold text-black">
-              {suppressed ? '—' : dailyCheckins?.toLocaleString('vi-VN') ?? '0'}
-            </div>
+            {suppressed ? (
+              <div className="flex items-center gap-2">
+                <span className="font-space text-3xl font-extrabold text-gray-400">—</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-300 text-[11px] font-space font-bold text-amber-800 shadow-neo-xs">
+                  <Lock className="w-3 h-3 stroke-[2.5]" /> &lt; {minimumCohortSize}
+                </span>
+              </div>
+            ) : (
+              <div className="font-space text-3xl font-extrabold text-black">
+                {dailyCheckins?.toLocaleString('vi-VN') ?? '0'}
+              </div>
+            )}
             <span className="text-[11px] font-sans text-gray-500 font-medium block mt-1">
               Lượt check-in chỉ số tâm trạng
             </span>
@@ -106,7 +133,7 @@ export function AdminDashboardMetrics({ data, loading }: AdminDashboardMetricsPr
         </div>
 
         {/* Metric 4: Privacy & Cohort Mode */}
-        <div className="bg-white border-2 border-black rounded-2xl p-5 shadow-neo-sm flex flex-col justify-between relative overflow-hidden transition-all hover:-translate-y-0.5">
+        <div className="bg-white border-2 border-black rounded-2xl p-5 shadow-neo-sm flex flex-col justify-between relative transition-all hover:-translate-y-0.5">
           <div className="flex items-center justify-between">
             <span className="font-space text-xs font-extrabold uppercase text-gray-600 tracking-wider">
               Bảo vệ quyền riêng tư

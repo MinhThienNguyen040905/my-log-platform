@@ -1,4 +1,4 @@
-export type Profile = { userId: string; displayName: string | null; penName: string | null; onboardingGoals: string[]; timezone: string; locale: string; onboardingCompletedAt: string | null; version: number };
+export type Profile = { userId: string; displayName: string | null; penName: string | null; onboardingGoals: string[]; timezone: string; locale: string; onboardingCompletedAt: string | null; version: number; isAdmin?: boolean };
 export type Consent = { type: string; documentVersion: string; granted: boolean; decidedAt: string };
 
 export class AccountApiError extends Error {

@@ -94,7 +94,7 @@ export function Navbar({ onLogout, penName, streakCount, userProfile, updateProf
   return (
     <>
       {/* Desktop & Top Sticky Header */}
-      <header className="fixed top-0 left-0 right-0 w-full z-40 bg-bg-canvas/95 backdrop-blur-md border-b-2 border-on-background">
+      <header className="fixed top-0 left-0 right-0 w-full z-50 bg-bg-canvas/95 backdrop-blur-md border-b-2 border-on-background">
         <div className="h-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sm:gap-4">
           {/* Brand Logo Container */}
           <Link
@@ -179,10 +179,10 @@ export function Navbar({ onLogout, penName, streakCount, userProfile, updateProf
               {userMenuOpen && (
                 <>
                   <div
-                    className="fixed inset-0 z-40"
+                    className="fixed inset-0 z-50"
                     onClick={() => setUserMenuOpen(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-64 bg-paper-warm border-2 border-black rounded-2xl p-3 shadow-neo-lg z-50 animate-in fade-in slide-in-from-top-2 flex flex-col gap-2">
+                  <div className="absolute right-0 mt-2 w-64 bg-paper-warm border-2 border-black rounded-2xl p-3 shadow-neo-lg z-[60] animate-in fade-in slide-in-from-top-2 flex flex-col gap-2">
                     {/* User info snippet */}
                     <div className="p-2.5 bg-white rounded-xl border border-black flex flex-col gap-0.5">
                       <div className="flex items-center justify-between">
@@ -210,15 +210,17 @@ export function Navbar({ onLogout, penName, streakCount, userProfile, updateProf
                     </Link>
 
                     {/* Admin Console Shortcut */}
-                    <Link
-                      href="/admin"
-                      onNavigate={(event) => { if (!confirmLeave('/admin')) event.preventDefault(); }}
-                      onClick={() => setUserMenuOpen(false)}
-                      className="w-full px-3 py-2 bg-paper-warm hover:bg-white text-left font-space text-xs font-extrabold rounded-xl border border-black flex items-center gap-2 cursor-pointer shadow-neo-sm transition-all"
-                    >
-                      <Shield className="w-3.5 h-3.5 text-black stroke-[2.3]" />
-                      <span>{t('nav.admin')}</span>
-                    </Link>
+                    {userProfile.isAdmin && (
+                      <Link
+                        href="/admin"
+                        onNavigate={(event) => { if (!confirmLeave('/admin')) event.preventDefault(); }}
+                        onClick={() => setUserMenuOpen(false)}
+                        className="w-full px-3 py-2 bg-paper-warm hover:bg-white text-left font-space text-xs font-extrabold rounded-xl border border-black flex items-center gap-2 cursor-pointer shadow-neo-sm transition-all"
+                      >
+                        <Shield className="w-3.5 h-3.5 text-black stroke-[2.3]" />
+                        <span>{t('nav.admin')}</span>
+                      </Link>
+                    )}
 
                     {/* Language Switcher */}
                     <div className="p-2 bg-white rounded-xl border border-black/80 flex flex-col gap-1.5">

@@ -17,7 +17,7 @@ public class User {
     @Column(name = "email_iv", nullable = false) public byte[] emailIv;
     @Column(name = "email_wrapped_key", nullable = false) public byte[] emailWrappedKey;
     @Column(name = "email_key_version", nullable = false) public String emailKeyVersion;
-    @Column(name = "password_hash", nullable = false) public String passwordHash;
+    @Column(name = "password_hash") public String passwordHash;
     @Column(name = "auth_provider", nullable = false) public String authProvider;
     @Column(name = "status", nullable = false) public String status;
     @Column(name = "email_verified_at") public Instant emailVerifiedAt;

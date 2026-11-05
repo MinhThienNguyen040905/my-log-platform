@@ -135,6 +135,8 @@
   outline: none;
   cursor: text;
   user-select: text;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .tiptap ::selection {
   background-color: #B7FF32;

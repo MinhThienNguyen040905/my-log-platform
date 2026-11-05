@@ -34,18 +34,18 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<ProfileResponse> me() { return etag(profiles.get(user())); }
+    public ResponseEntity<ProfileResponse> me() { return etag(profiles.get(user()), isAdmin()); }
 
     @PatchMapping
     public ResponseEntity<ProfileResponse> update(@Valid @RequestBody UpdateProfileRequest request,
                                                                   @RequestHeader("If-Match") String ifMatch) {
         return etag(profiles.update(user(), request.displayName(), request.penName(), request.onboardingGoals(), request.timezone(),
-                request.locale(), version(ifMatch)));
+                request.locale(), version(ifMatch)), isAdmin());
     }
 
     @PostMapping("/onboarding:complete")
     public ResponseEntity<ProfileResponse> complete(@RequestHeader("If-Match") String ifMatch) {
-        return etag(profiles.completeOnboarding(user(), version(ifMatch)));
+        return etag(profiles.completeOnboarding(user(), version(ifMatch)), isAdmin());
     }
 
     @GetMapping("/consents")
@@ -80,11 +80,20 @@ public class UserController {
     }
 
     private UUID user() { return current.requireCurrent().userId(); }
+    private boolean isAdmin() {
+        return current.findCurrent()
+                .map(u -> u.authorities().stream().anyMatch(a ->
+                        a.equals("ROLE_SYSTEM_ADMIN")
+                        || a.equals("ROLE_SAFETY_ADMIN")
+                        || a.equals("ROLE_SUPPORT_AGENT")
+                        || a.equals("admin:dashboard")))
+                .orElse(false);
+    }
     private static long version(String ifMatch) {
         try { return Long.parseLong(ifMatch.replace("\"", "")); }
         catch (NumberFormatException e) { throw new InvalidRequestException(); }
     }
-    private static ResponseEntity<ProfileResponse> etag(ProfileView p) {
-        return ResponseEntity.ok().eTag("\"" + p.version() + "\"").body(ProfileResponse.from(p));
+    private static ResponseEntity<ProfileResponse> etag(ProfileView p, boolean isAdmin) {
+        return ResponseEntity.ok().eTag("\"" + p.version() + "\"").body(ProfileResponse.from(p, isAdmin));
     }
 }

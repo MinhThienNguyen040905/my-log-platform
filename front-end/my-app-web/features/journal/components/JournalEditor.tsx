@@ -380,7 +380,7 @@ function JournalEditorContent() {
           </article>
         </div>
 
-        <aside className={`${isToolsOpen ? 'fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+10rem)] z-[100]' : 'hidden'} min-[1360px]:sticky min-[1360px]:top-[120px] min-[1360px]:z-[100] min-[1360px]:col-start-3 min-[1360px]:row-start-1 min-[1360px]:ml-[10px] min-[1360px]:mt-10 min-[1360px]:block min-[1360px]:w-32 min-[1360px]:self-start`}>
+        <aside className={`${isToolsOpen ? 'fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+10rem)] z-30' : 'hidden'} min-[1360px]:sticky min-[1360px]:top-[120px] min-[1360px]:z-20 min-[1360px]:col-start-3 min-[1360px]:row-start-1 min-[1360px]:ml-[10px] min-[1360px]:mt-10 min-[1360px]:block min-[1360px]:w-32 min-[1360px]:self-start`}>
           <div className="max-h-[65dvh] overflow-y-auto flex flex-col gap-[10px] rounded-2xl border-2 border-black bg-paper-warm p-[10px] shadow-neo-lg" style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}>
             <div className="flex items-center justify-between min-[1360px]:hidden">
               <span className="font-space text-sm font-extrabold">Công cụ</span>
@@ -399,7 +399,7 @@ function JournalEditorContent() {
       </main>
 
       {showDetailedMetrics && metricsPopoverPosition && createPortal(
-        <div style={metricsPopoverPosition} className="z-[1000] w-[min(290px,calc(100vw-2rem))] rounded-2xl border-2 border-black bg-paper-warm p-4 shadow-neo-lg animate-in fade-in" role="dialog" aria-label="Chỉ số nhật ký">
+        <div style={metricsPopoverPosition} className="z-40 w-[min(290px,calc(100vw-2rem))] rounded-2xl border-2 border-black bg-paper-warm p-4 shadow-neo-lg animate-in fade-in" role="dialog" aria-label="Chỉ số nhật ký">
           <div className="mb-3 flex items-center justify-between font-space text-sm font-extrabold">
             <span>Chỉ số hôm nay</span>
             <button type="button" onClick={toggleMetricsPopover} aria-label="Đóng chỉ số" className="rounded-lg p-1 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-black"><X className="h-4 w-4" /></button>
@@ -414,7 +414,7 @@ function JournalEditorContent() {
       )}
 
       {questionsPopoverPosition && createPortal(
-        <div style={questionsPopoverPosition} className="z-[1000] w-[min(290px,calc(100vw-2rem))] rounded-2xl border-2 border-black bg-paper-warm p-4 shadow-neo-lg animate-in fade-in" role="dialog" aria-label="Câu hỏi tự vấn">
+        <div style={questionsPopoverPosition} className="z-40 w-[min(290px,calc(100vw-2rem))] rounded-2xl border-2 border-black bg-paper-warm p-4 shadow-neo-lg animate-in fade-in" role="dialog" aria-label="Câu hỏi tự vấn">
           <div className="mb-3 flex items-center justify-between font-space text-sm font-extrabold">
             <span>Câu hỏi tự vấn</span>
             <button type="button" onClick={() => setQuestionsPopoverPosition(null)} aria-label="Đóng câu hỏi tự vấn" className="rounded-lg p-1 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-black"><X className="h-4 w-4" /></button>
@@ -441,7 +441,7 @@ function JournalEditorContent() {
       )}
 
       {topicSuggestionPosition && createPortal(
-        <div style={topicSuggestionPosition} className="z-[1000] w-[min(290px,calc(100vw-2rem))] rounded-2xl border-2 border-black bg-paper-warm p-4 shadow-neo-lg animate-in fade-in" role="dialog" aria-label="Gợi ý chủ đề viết">
+        <div style={topicSuggestionPosition} className="z-40 w-[min(290px,calc(100vw-2rem))] rounded-2xl border-2 border-black bg-paper-warm p-4 shadow-neo-lg animate-in fade-in" role="dialog" aria-label="Gợi ý chủ đề viết">
           <div className="mb-3 flex items-center justify-between font-space text-sm font-extrabold">
             <span>Gợi ý chủ đề</span>
             <button type="button" onClick={() => setTopicSuggestionPosition(null)} aria-label="Đóng gợi ý chủ đề" className="rounded-lg p-1 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-black"><X className="h-4 w-4" /></button>
@@ -460,7 +460,7 @@ function JournalEditorContent() {
         document.body,
       )}
 
-      <button type="button" onClick={() => setIsToolsOpen(!isToolsOpen)} aria-label={isToolsOpen ? 'Đóng công cụ' : 'Mở công cụ'} aria-expanded={isToolsOpen} className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full border-2 border-black bg-primary-container text-black shadow-neo-lg min-[1360px]:hidden"><Wrench className="h-6 w-6" /></button>
+      <button type="button" onClick={() => setIsToolsOpen(!isToolsOpen)} aria-label={isToolsOpen ? 'Đóng công cụ' : 'Mở công cụ'} aria-expanded={isToolsOpen} className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border-2 border-black bg-primary-container text-black shadow-neo-lg min-[1360px]:hidden"><Wrench className="h-6 w-6" /></button>
 
       {/* ADD TOPIC MODAL */}
       <AddTopicModal

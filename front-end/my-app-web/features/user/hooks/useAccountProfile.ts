@@ -21,6 +21,7 @@ export function useAccountProfile(profile: Profile) {
     language: profile.locale === 'en' ? 'en' : 'vi',
     isOnboarded: profile.onboardingCompletedAt !== null,
     journalingGoals: profile.onboardingGoals,
+    isAdmin: profile.isAdmin === true,
   });
 
   const updateProfile = async (data: Partial<UserProfile>) => {
@@ -42,6 +43,7 @@ export function useAccountProfile(profile: Profile) {
       timezone: saved.timezone,
       language: saved.locale === 'en' ? 'en' : 'vi',
       journalingGoals: saved.onboardingGoals,
+      isAdmin: saved.isAdmin ?? previous.isAdmin,
     }));
     void queryClient.invalidateQueries({ queryKey: ['dashboard', profile.userId] });
     void queryClient.invalidateQueries({ queryKey: ['reports', profile.userId] });
@@ -63,6 +65,7 @@ export function useAccountProfile(profile: Profile) {
       language: fresh.locale === 'en' ? 'en' : 'vi',
       journalingGoals: fresh.onboardingGoals,
       isOnboarded: fresh.onboardingCompletedAt !== null,
+      isAdmin: fresh.isAdmin ?? previous.isAdmin,
     }));
     return fresh;
   }, [queryClient, setLocale]);

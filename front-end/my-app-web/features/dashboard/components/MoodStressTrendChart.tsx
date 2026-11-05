@@ -104,7 +104,7 @@ export function MoodStressTrendChart({
         {!hasData ? (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-center text-gray-500">
             <Sparkles className="w-6 h-6 text-gray-400" />
-            <p className="font-space text-xs font-bold">Chưa có đủ điểm dữ liệu cảm xúc trong 14 ngày qua</p>
+            <p className="font-space text-xs font-bold">Chưa có đủ điểm dữ liệu cảm xúc để hiển thị</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

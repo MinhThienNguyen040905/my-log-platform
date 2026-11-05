@@ -28,6 +28,9 @@ logging:
 mylog:
   identity:
     enabled: true
+    oauth:
+      google:
+        enabled: ${MYLOG_GOOGLE_OAUTH_ENABLED:true}
   open-api:
     enabled: ${MYLOG_OPENAPI_ENABLED:true}
 
