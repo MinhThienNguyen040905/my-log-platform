@@ -1,14 +1,15 @@
 import { apiRequest, jsonBody } from '@/lib/api/client';
 
+export type JournalTag = { id: string; name: string; color: string | null };
 export type JournalSummary = { id: string; title: string | null; occurredAt: string; localDate: string;
-  moodCode: string | null; favorite: boolean; riskLevel: string | null; analysisStatus: string | null; rowVersion: number };
+  moodCode: string | null; favorite: boolean; riskLevel: string | null; analysisStatus: string | null; rowVersion: number;
+  tags?: JournalTag[] };
 export type JournalEntry = JournalSummary & { contentJson: unknown; location: string | null; timezone: string;
   moodScore: number | null; stressScore: number | null; energyScore: number | null; sleepMinutes: number | null;
   entryStatus: string; contentVersion: number; createdAt: string; updatedAt: string };
 export type JournalPage = { items: JournalSummary[]; nextCursor: string | null };
-export type JournalTag = { id: string; name: string; color: string | null };
 export type JournalInput = { title?: string; contentJson: unknown; timezone: string; occurredAt?: string;
-  moodCode?: string };
+  moodCode?: string; tagIds?: string[] };
 
 export function textDocument(value: string) {
   return { type: 'doc', content: value.split('\n').map((line) => ({ type: 'paragraph',
@@ -23,6 +24,10 @@ export function documentText(value: unknown): string {
 export async function listEntries(cursor?: string, filters: Record<string, string> = {}): Promise<JournalPage> {
   const query = new URLSearchParams({ limit: '20', ...filters, ...(cursor ? { cursor } : {}) });
   return (await apiRequest(`/journal-entries?${query}`)).json() as Promise<JournalPage>;
+}
+export async function searchEntries(query: string, cursor?: string | null, limit = 20): Promise<JournalPage> {
+  const params = new URLSearchParams({ query: query.trim(), limit: String(limit), ...(cursor ? { cursor } : {}) });
+  return (await apiRequest(`/journal-entries/search?${params}`)).json() as Promise<JournalPage>;
 }
 export async function getEntry(id: string): Promise<JournalEntry> {
   return (await apiRequest(`/journal-entries/${encodeURIComponent(id)}`)).json() as Promise<JournalEntry>;

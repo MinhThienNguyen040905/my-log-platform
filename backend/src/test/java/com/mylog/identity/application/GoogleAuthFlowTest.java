@@ -124,7 +124,7 @@ class GoogleAuthFlowTest {
         );
         IdentityService service = new IdentityService(
                 store, cipher, (u, s) -> "jwt", null, null, () -> fixedUserId, Clock.fixed(now, ZoneOffset.UTC),
-                new SecureRandom(), client, provisioningService, disabledProps
+                new SecureRandom(), client, provisioningService, disabledProps, null, null
         );
 
         assertThatThrownBy(() -> service.loginWithGoogle(
@@ -170,7 +170,7 @@ class GoogleAuthFlowTest {
         );
         IdentityService service = new IdentityService(
                 store, cipher, (u, s) -> "jwt", null, null, () -> fixedUserId, Clock.fixed(now, ZoneOffset.UTC),
-                new SecureRandom(), mockClient, provisioningService, props
+                new SecureRandom(), mockClient, provisioningService, props, null, null
         );
 
         AuthResult result = service.loginWithGoogle(
@@ -217,7 +217,7 @@ class GoogleAuthFlowTest {
         );
         IdentityService service = new IdentityService(
                 store, cipher, (u, s) -> "jwt", null, null, () -> fixedUserId, Clock.fixed(now, ZoneOffset.UTC),
-                new SecureRandom(), mockClient, provisioningService, props
+                new SecureRandom(), mockClient, provisioningService, props, null, null
         );
 
         AuthResult result = service.loginWithGoogle(
@@ -251,7 +251,7 @@ class GoogleAuthFlowTest {
 
         IdentityService service = new IdentityService(
                 store, cipher, (u, s) -> "jwt", null, null, () -> fixedUserId, Clock.fixed(now, ZoneOffset.UTC),
-                new SecureRandom(), null, null, props
+                new SecureRandom(), null, null, props, null, null
         );
 
         assertThatThrownBy(() -> service.login("googleuser@example.com", "any-password", "Web", "127.0.0.1"))

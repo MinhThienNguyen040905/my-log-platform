@@ -6,9 +6,27 @@ spring:
       repositories:
         enabled: false
 
+# Tests must never inherit AI/companion/safety switches from a developer's local .env
+# (imported via spring.config.import) — e.g. a real OpenAI key there must not be called by `mvn test`.
+# Individual tests that need these opt in explicitly via @SpringBootTest(properties = ...).
 mylog:
   open-api:
     enabled: true
+  ai:
+    provider: none
+    api-key: ""
+    provider-data-approved: false
+    output-safety-approved: false
+  writing-suggestions:
+    enabled: false
+  companion:
+    generation:
+      enabled: false
+  safety:
+    classifier:
+      url: ""
+    dev-allow:
+      enabled: false
 
 springdoc:
   api-docs:

@@ -8,13 +8,17 @@ import java.util.UUID;
 
 public record ProfileResponse(UUID userId, String displayName, String penName, List<String> onboardingGoals,
                               String timezone, String locale, Instant onboardingCompletedAt, long version,
-                              boolean isAdmin) {
-    public static ProfileResponse from(ProfileView view, boolean isAdmin) {
+                              boolean isAdmin, boolean canChangePassword) {
+    public static ProfileResponse from(ProfileView view, boolean isAdmin, boolean canChangePassword) {
         return new ProfileResponse(view.userId(), view.displayName(), view.penName(), view.onboardingGoals(),
-                view.timezone(), view.locale(), view.onboardingCompletedAt(), view.version(), isAdmin);
+                view.timezone(), view.locale(), view.onboardingCompletedAt(), view.version(), isAdmin, canChangePassword);
+    }
+
+    public static ProfileResponse from(ProfileView view, boolean isAdmin) {
+        return from(view, isAdmin, true);
     }
 
     public static ProfileResponse from(ProfileView view) {
-        return from(view, false);
+        return from(view, false, true);
     }
 }

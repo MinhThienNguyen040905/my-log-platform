@@ -1,8 +1,28 @@
-export type Profile = { userId: string; displayName: string | null; penName: string | null; onboardingGoals: string[]; timezone: string; locale: string; onboardingCompletedAt: string | null; version: number; isAdmin?: boolean };
+export type Profile = {
+  userId: string;
+  displayName: string | null;
+  penName: string | null;
+  onboardingGoals: string[];
+  timezone: string;
+  locale: string;
+  onboardingCompletedAt: string | null;
+  version: number;
+  isAdmin?: boolean;
+  canChangePassword?: boolean;
+};
+
 export type Consent = { type: string; documentVersion: string; granted: boolean; decidedAt: string };
 
 export class AccountApiError extends Error {
-  constructor(message: string, public readonly status: number) { super(message); }
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string,
+    public readonly detail?: string
+  ) {
+    super(message);
+    this.name = 'AccountApiError';
+  }
 }
 
 const supportedOnboardingGoals = new Set(['REFLECTION', 'SLEEP', 'MINDFULNESS', 'EXERCISE', 'SOCIAL']);
@@ -10,11 +30,18 @@ const supportedOnboardingGoals = new Set(['REFLECTION', 'SLEEP', 'MINDFULNESS', 
 export async function accountRequest(path: string, init: RequestInit = {}) {
   const response = await fetch(`/api/me${path}`, { cache: 'no-store', ...init });
   if (!response.ok) {
-    if (response.status === 401) throw new AccountApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401);
-    if (response.status === 409) throw new AccountApiError('Hồ sơ đã thay đổi ở nơi khác. Vui lòng kiểm tra và thử lại.', 409);
-    if (response.status === 429) throw new Error('Bạn đã thao tác quá nhiều lần. Vui lòng thử lại sau.');
-    if (response.status === 503) throw new Error('Không thể kết nối máy chủ. Vui lòng thử lại.');
-    throw new Error('Không thể hoàn tất yêu cầu. Vui lòng thử lại.');
+    let problem: { code?: string; detail?: string } | null = null;
+    try { problem = await response.json(); } catch {}
+    const code = problem?.code || problem?.detail;
+    const detail = problem?.detail;
+    if (response.status === 401) throw new AccountApiError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 401, code, detail);
+    if (response.status === 409) throw new AccountApiError('Hồ sơ đã thay đổi ở nơi khác. Vui lòng kiểm tra và thử lại.', 409, code, detail);
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('retry-after') || '900';
+      throw new AccountApiError(`Bạn đã thử sai quá nhiều lần. Vui lòng thử lại sau ${Math.ceil(parseInt(retryAfter, 10) / 60)} phút.`, 429, 'RATE_LIMITED', detail);
+    }
+    if (response.status === 503) throw new AccountApiError('Không thể kết nối máy chủ. Vui lòng thử lại.', 503, code, detail);
+    throw new AccountApiError(problem?.detail || 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.', response.status, code, detail);
   }
   return response;
 }
@@ -41,4 +68,12 @@ export async function updateProfile(data: Partial<Pick<Profile, 'displayName' | 
 
 export async function completeOnboarding(version: number): Promise<Profile> {
   return (await accountRequest('/onboarding', { method: 'POST', headers: { 'If-Match': `"${version}"` } })).json();
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await accountRequest('/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
 }

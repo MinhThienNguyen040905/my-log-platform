@@ -5,20 +5,27 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useToast } from '@/providers/ToastProvider';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
+import { completeHabit, CreateHabitFromTemplateModal, type HabitTemplatePreset } from '@/features/selfcare';
 import { SafetyModal } from './SafetyModal';
 import { AddTopicModal } from './AddTopicModal';
+import { InsertImageModal } from './InsertImageModal';
+import { CompanionPanel } from './companion/CompanionPanel';
+import { CalmingToolsMenu } from './calming-tools/CalmingToolsMenu';
+import { CalmingToolsStatusBar } from './calming-tools/CalmingToolsStatusBar';
+import { VENT_PROMPT_TEXT } from './calming-tools/vent-prompt';
 import { JournalTipTapEditor } from './JournalTipTapEditor';
 import { useJournalEditor } from '../hooks/useJournalEditor';
-import { generateReflectiveQuestions, type ReflectiveQuestions } from '@/features/knowledge';
+import { useCalmingTools, type CalmingToolSource } from '../hooks/useCalmingTools';
+import { useCompanionConversation } from '../hooks/useCompanionConversation';
 import { JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER } from '../utils/journal-emotions';
 import type { JournalEmotion } from '@/types';
+import type { CompanionActionCode } from '../types/companion.types';
 import {
   ArrowLeft,
   Save,
   Sliders,
   Check,
   Calendar,
-  Lightbulb,
   Zap,
   BatteryCharging,
   Moon,
@@ -26,9 +33,10 @@ import {
   Edit3,
   Flame,
   Wrench,
+  Wind,
   ImagePlus,
   X,
-  MessageCircleQuestionMark,
+  HeartHandshake,
 } from 'lucide-react';
 
 export function JournalEditor() {
@@ -46,12 +54,6 @@ export function JournalEditor() {
 }
 
 const MOOD_ICONS = JOURNAL_EMOTION_ORDER.map((id) => ({ id, ...JOURNAL_EMOTIONS[id] }));
-const REFLECTION_TOPIC_CODE = 'RECOMMEND_MODEL_DOCS';
-const TOPIC_TITLE_SUGGESTIONS = [
-  'Một điều nhỏ khiến mình vui hôm nay',
-  'Điều mình đang học cách chấp nhận',
-  'Khoảnh khắc hôm nay mình muốn nhớ',
-];
 const MOOD_COLORS: Record<JournalEmotion, { activeBg: string; hoverBg: string }> = {
   neutral: { activeBg: 'bg-slate-200', hoverBg: 'hover:bg-slate-100' },
   happy: { activeBg: 'bg-primary-container', hoverBg: 'hover:bg-lime-50' },
@@ -63,14 +65,21 @@ const MOOD_COLORS: Record<JournalEmotion, { activeBg: string; hoverBg: string }>
 function JournalEditorContent() {
   const { showToast } = useToast();
   const metricsButtonRef = React.useRef<HTMLButtonElement>(null);
-  const questionsButtonRef = React.useRef<HTMLButtonElement>(null);
-  const topicSuggestionButtonRef = React.useRef<HTMLButtonElement>(null);
+  const calmingToolsButtonRef = React.useRef<HTMLButtonElement>(null);
   const [metricsPopoverPosition, setMetricsPopoverPosition] = React.useState<React.CSSProperties | null>(null);
-  const [questionsPopoverPosition, setQuestionsPopoverPosition] = React.useState<React.CSSProperties | null>(null);
-  const [topicSuggestionPosition, setTopicSuggestionPosition] = React.useState<React.CSSProperties | null>(null);
-  const [recommendation, setRecommendation] = React.useState<ReflectiveQuestions | null>(null);
-  const [isLoadingRecommendation, setIsLoadingRecommendation] = React.useState(false);
-  const [recommendationError, setRecommendationError] = React.useState<string | null>(null);
+  const [calmingToolsMenuPosition, setCalmingToolsMenuPosition] = React.useState<React.CSSProperties | null>(null);
+  const [isImageModalOpen, setIsImageModalOpen] = React.useState(false);
+  const [habitTemplatePreset, setHabitTemplatePreset] = React.useState<HabitTemplatePreset | null>(null);
+
+  // Phá vòng lặp phụ thuộc giữa hai hook: calmingTools cần biết khi nào báo cho companion (tool
+  // chạy xong tự nhiên, bấm từ TRONG chat), còn companion cần gọi calmingTools để chạy tool. Hook
+  // useCalmingTools tạo trước với một callback ổn định đọc qua ref; ref được gán sau khi companion
+  // đã tồn tại — xem effect bên dưới.
+  const companionNotifyRef = React.useRef<(tool: 'BREATHING' | 'AMBIENT') => void>(() => {});
+  const handleToolNaturalComplete = React.useCallback((tool: 'BREATHING', source: CalmingToolSource) => {
+    if (source === 'CHAT') companionNotifyRef.current(tool);
+  }, []);
+  const calmingTools = useCalmingTools(handleToolNaturalComplete);
   const {
     editorRef,
     isEditMode,
@@ -115,17 +124,6 @@ function JournalEditorContent() {
     streakCount,
   } = useJournalEditor();
 
-  const isQuestionsPopoverOpen = questionsPopoverPosition !== null;
-  React.useEffect(() => {
-    if (!isQuestionsPopoverOpen) return;
-    let active = true;
-    generateReflectiveQuestions(REFLECTION_TOPIC_CODE)
-      .then((result) => { if (active) setRecommendation(result); })
-      .catch(() => { if (active) setRecommendationError('Chưa tải được gợi ý. Bạn có thể thử mở lại sau.'); })
-      .finally(() => { if (active) setIsLoadingRecommendation(false); });
-    return () => { active = false; };
-  }, [isQuestionsPopoverOpen]);
-
   const escapeHtml = (value: string) => {
     const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
     return value.replace(/[&<>"']/g, (character) => entities[character]);
@@ -134,14 +132,116 @@ function JournalEditorContent() {
     Math.abs(candidate.score - moodScore) < Math.abs(closest - moodScore) ? candidate.score : closest,
     MOOD_ICONS[0].score);
 
+  /** Mỗi câu hỏi thành một thẻ gợi ý (khối promptQuestion) kèm một dòng trống bên dưới để trả lời. */
+  const insertPromptQuestions = (questions: string[]) => {
+    if (questions.length === 0) return;
+    const html = questions
+      .map((question) => `<div data-prompt-question>${escapeHtml(question)}</div><p></p>`)
+      .join('');
+    editorRef.current?.insertContent(html);
+    editorRef.current?.focus();
+  };
+
+  const insertVentPrompt = () => {
+    editorRef.current?.insertContent(`<p>${escapeHtml(VENT_PROMPT_TEXT)}</p>`);
+    editorRef.current?.focus();
+  };
+
+  const handleCompanionAction = (code: CompanionActionCode) => {
+    switch (code) {
+      case 'BREATHING_2MIN':
+        calmingTools.startBreathing('CHAT');
+        break;
+      case 'AMBIENT': {
+        const started = calmingTools.startAmbient('CHAT');
+        if (!started) {
+          showToast({
+            title: 'Chưa thể phát âm thanh',
+            message: 'Trình duyệt của bạn chưa cho phép phát âm thanh lúc này. Thử lại nhé.',
+            type: 'error',
+          });
+        }
+        break;
+      }
+      case 'VENT_PROMPT':
+        insertVentPrompt();
+        showToast({ title: 'Đã thêm dòng mở đầu', message: 'Viết hết ra, không cần đúng sai.', type: 'info' });
+        break;
+      case 'TITLE':
+        // Không còn dữ liệu tĩnh ở client: tựa đề gợi ý giờ chỉ đến qua `suggestedTitle` của
+        // backend, hiển thị kèm nút "Điền làm tựa đề" ngay trên từng tin nhắn (xem onApplyTitle).
+        break;
+    }
+  };
+
+  const companion = useCompanionConversation({
+    getDraft: () => ({ title, text: editorRef.current?.getText() ?? '' }),
+    getMood: () => ({ selectedEmotion, stressScore, energyScore, sleepHours }),
+    onInsertQuestion: (question) => {
+      insertPromptQuestions([question]);
+      showToast({
+        title: 'Đã chèn câu hỏi gợi mở',
+        message: 'Câu hỏi đã được đưa vào trang viết của bạn.',
+        type: 'info',
+      });
+    },
+    onApplyTitle: (newTitle) => {
+      setTitle(newTitle);
+      showToast({ title: 'Đã điền tựa đề gợi ý', message: `“${newTitle}”`, type: 'info' });
+    },
+    onInsertQuestions: (questions) => {
+      insertPromptQuestions(questions);
+      showToast({
+        title: questions.length > 1 ? `Đã đưa ${questions.length} câu hỏi vào bài` : 'Đã đưa câu hỏi vào bài',
+        message: 'Viết câu trả lời ngay bên dưới từng câu hỏi nhé.',
+        type: 'success',
+      });
+    },
+    onRunAction: handleCompanionAction,
+    onAcceptHabitSuggestion: (suggestion) => {
+      if (suggestion.type === 'LOG_EXISTING' && suggestion.habitId && suggestion.localDate) {
+        void completeHabit(suggestion.habitId, suggestion.localDate, suggestion.targetValue ?? 1)
+          .then(() => {
+            showToast({
+              title: 'Đã ghi nhận thói quen',
+              message: 'Thói quen của bạn đã được đánh dấu hoàn thành hôm nay.',
+              type: 'success',
+            });
+          })
+          .catch(() => {
+            showToast({
+              title: 'Chưa thể ghi nhận',
+              message: 'Vui lòng thử lại sau giây lát.',
+              type: 'error',
+            });
+          });
+        return;
+      }
+      if (suggestion.type === 'CREATE_FROM_TEMPLATE') {
+        setHabitTemplatePreset({
+          templateCode: suggestion.templateCode,
+          category: suggestion.category,
+          presetTitle: suggestion.presetTitle,
+          presetTargetValue: suggestion.presetTargetValue,
+          presetUnit: suggestion.presetUnit,
+          presetToolCode: suggestion.presetToolCode,
+        });
+      }
+    },
+    onSafetyTriggered: () => setIsSafetyModalOpen(true),
+  });
+
+  React.useEffect(() => {
+    companionNotifyRef.current = companion.notifyToolCompleted;
+  }, [companion.notifyToolCompleted]);
+
   const toggleMetricsPopover = () => {
-    setTopicSuggestionPosition(null);
+    setCalmingToolsMenuPosition(null);
     if (showDetailedMetrics) {
       setShowDetailedMetrics(false);
       setMetricsPopoverPosition(null);
       return;
     }
-    setQuestionsPopoverPosition(null);
     const button = metricsButtonRef.current;
     if (!button) return;
     const rect = button.getBoundingClientRect();
@@ -158,26 +258,21 @@ function JournalEditorContent() {
     setShowDetailedMetrics(true);
   };
 
-  const toggleQuestionsPopover = () => {
-    setTopicSuggestionPosition(null);
-    setShowDetailedMetrics(false);
+  const toggleCalmingToolsMenu = () => {
     setMetricsPopoverPosition(null);
-    if (questionsPopoverPosition) {
-      setQuestionsPopoverPosition(null);
-      setIsLoadingRecommendation(false);
+    setShowDetailedMetrics(false);
+    if (calmingToolsMenuPosition) {
+      setCalmingToolsMenuPosition(null);
       return;
     }
-    const button = questionsButtonRef.current;
+    const button = calmingToolsButtonRef.current;
     if (!button) return;
     const rect = button.getBoundingClientRect();
-    setRecommendation(null);
-    setRecommendationError(null);
-    setIsLoadingRecommendation(true);
+    const width = Math.min(260, window.innerWidth - 32);
     if (window.matchMedia('(min-width: 1360px)').matches) {
-      setQuestionsPopoverPosition({ position: 'fixed', top: rect.top, left: rect.left - 300 });
+      setCalmingToolsMenuPosition({ position: 'fixed', top: rect.top, left: rect.left - width - 12 });
     } else {
-      const width = Math.min(290, window.innerWidth - 32);
-      setQuestionsPopoverPosition({
+      setCalmingToolsMenuPosition({
         position: 'fixed',
         bottom: window.innerHeight - rect.top + 8,
         left: Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16)),
@@ -185,23 +280,30 @@ function JournalEditorContent() {
     }
   };
 
-  const toggleTopicSuggestions = () => {
-    setMetricsPopoverPosition(null);
-    setShowDetailedMetrics(false);
-    setQuestionsPopoverPosition(null);
-    if (topicSuggestionPosition) {
-      setTopicSuggestionPosition(null);
-      return;
+  const handleStartBreathing = () => {
+    calmingTools.startBreathing();
+    setCalmingToolsMenuPosition(null);
+  };
+
+  const handleStartAmbient = () => {
+    const started = calmingTools.startAmbient();
+    setCalmingToolsMenuPosition(null);
+    if (!started) {
+      showToast({
+        title: 'Chưa thể phát âm thanh',
+        message: 'Trình duyệt của bạn chưa cho phép phát âm thanh lúc này. Thử lại nhé.',
+        type: 'error',
+      });
     }
-    const button = topicSuggestionButtonRef.current;
-    if (!button) return;
-    const rect = button.getBoundingClientRect();
-    const width = Math.min(290, window.innerWidth - 32);
-    const estimatedPopoverHeight = 220;
-    setTopicSuggestionPosition({
-      position: 'fixed',
-      top: Math.max(16, Math.min(rect.top - estimatedPopoverHeight - 8, window.innerHeight - estimatedPopoverHeight - 16)),
-      left: Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16)),
+  };
+
+  const handleVent = () => {
+    insertVentPrompt();
+    setCalmingToolsMenuPosition(null);
+    showToast({
+      title: 'Đã thêm dòng mở đầu',
+      message: 'Viết hết ra, không cần đúng sai.',
+      type: 'info',
     });
   };
 
@@ -331,19 +433,6 @@ function JournalEditorContent() {
 
               {/* Tags / Topics */}
               <div className="flex flex-col gap-2 pt-1">
-                <div className="flex items-center justify-end">
-                  <button
-                    ref={topicSuggestionButtonRef}
-                    type="button"
-                    onClick={toggleTopicSuggestions}
-                    aria-label="Gợi ý chủ đề viết"
-                    aria-expanded={!!topicSuggestionPosition}
-                    title="Gợi ý chủ đề viết"
-                    className={`rounded-full border border-black p-2 transition-all hover:-translate-y-0.5 hover:bg-amber-100 hover:shadow-neo-sm active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${topicSuggestionPosition ? 'bg-primary-container shadow-neo-sm' : 'bg-white'}`}
-                  >
-                    <Lightbulb className="h-4 w-4 text-amber-600" />
-                  </button>
-                </div>
                 <div className="flex flex-wrap items-center gap-2">
                 {topics.map((tag, idx) => (
                   <span key={`${tag}-${idx}`} className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-white rounded-lg border border-black text-xs font-space font-bold shadow-neo-sm">
@@ -364,6 +453,16 @@ function JournalEditorContent() {
               </div>
             </header>
 
+            {/* Calming tool running inline above the writing area */}
+            {calmingTools.activeTool && (
+              <CalmingToolsStatusBar
+                tool={calmingTools.activeTool}
+                breathingPhase={calmingTools.breathing.phase}
+                breathingLabel={calmingTools.breathing.label}
+                onStop={calmingTools.stop}
+              />
+            )}
+
             {/* Writing Area: Tactile Lined Paper with TipTap */}
             <div className="relative">
               {editId && loadedEntryId !== editId ? <p className="p-6 font-space text-sm" role="status">Đang tải bài viết...</p> :
@@ -372,7 +471,7 @@ function JournalEditorContent() {
                 ref={editorRef}
                 initialContent={content}
                 onChange={(html) => setContent(html)}
-                onOpenImageModal={() => showToast({ title: 'Chèn ảnh chưa khả dụng', message: 'Backend chưa hỗ trợ ảnh trong nội dung nhật ký.', type: 'info' })}
+                onOpenImageModal={() => setIsImageModalOpen(true)}
               />}
             </div>
 
@@ -389,13 +488,28 @@ function JournalEditorContent() {
             <button type="button" onClick={executeSave} disabled={isSaving || (!!editId && loadedEntryId !== editId)} aria-label={isSaving ? 'Đang lưu' : isEditMode ? 'Cập nhật bài' : 'Lưu'} title={isSaving ? 'Đang lưu' : isEditMode ? 'Cập nhật bài' : 'Lưu'} className="inline-flex h-14 w-full items-center justify-center rounded-xl border border-black bg-primary-container p-2 shadow-neo-sm transition-all hover:-translate-y-0.5 hover:bg-lime-200 hover:shadow-neo active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:opacity-50">
               {isEditMode ? <Check className="h-5 w-5" /> : <Save className="h-5 w-5" />}
             </button>
-            <button type="button" onClick={() => showToast({ title: 'Chèn nội dung', message: 'Gõ “/” trong trang viết để mở menu chèn.', type: 'info' })} aria-label="Chèn nội dung" title="Chèn nội dung (gõ / trong trang viết)" className="inline-flex h-14 w-full items-center justify-center rounded-xl border border-black bg-white p-2 transition-all hover:-translate-y-0.5 hover:bg-lime-100 hover:shadow-neo-sm active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"><ImagePlus className="h-5 w-5" /></button>
+            <button type="button" onClick={() => setIsImageModalOpen(true)} aria-label="Chèn ảnh" title="Chèn ảnh vào bài viết" className="inline-flex h-14 w-full items-center justify-center rounded-xl border border-black bg-white p-2 transition-all hover:-translate-y-0.5 hover:bg-lime-100 hover:shadow-neo-sm active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"><ImagePlus className="h-5 w-5" /></button>
             <div className="relative">
               <button ref={metricsButtonRef} type="button" onClick={toggleMetricsPopover} aria-label={showDetailedMetrics ? 'Ẩn chỉ số' : 'Hiện chỉ số'} title={showDetailedMetrics ? 'Ẩn chỉ số' : 'Hiện chỉ số'} aria-pressed={showDetailedMetrics} className={`inline-flex h-14 w-full items-center justify-center rounded-xl border border-black p-2 transition-all hover:-translate-y-0.5 hover:shadow-neo-sm active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${showDetailedMetrics ? 'bg-primary-container shadow-neo-sm' : 'bg-white hover:bg-lime-100'}`}><Sliders className="h-5 w-5" /></button>
             </div>
-            <button ref={questionsButtonRef} type="button" onClick={toggleQuestionsPopover} aria-label="Câu hỏi tự vấn" title="Câu hỏi tự vấn" aria-pressed={!!questionsPopoverPosition} className={`inline-flex h-14 w-full items-center justify-center rounded-xl border border-black p-2 transition-all hover:-translate-y-0.5 hover:shadow-neo-sm active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${questionsPopoverPosition ? 'bg-primary-container shadow-neo-sm' : 'bg-white hover:bg-lime-100'}`}><MessageCircleQuestionMark className="h-5 w-5" /></button>
+            <button
+              type="button"
+              onClick={() => (companion.isOpen ? companion.minimize() : companion.open())}
+              aria-label="Trợ lý đồng hành"
+              title="Trợ lý đồng hành (Chạm là có người hỏi han)"
+              aria-pressed={companion.isOpen}
+              className={`relative inline-flex h-14 w-full items-center justify-center rounded-xl border border-black p-2 transition-all hover:-translate-y-0.5 hover:shadow-neo-sm active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${companion.isOpen ? 'bg-primary-container shadow-neo-sm' : 'bg-white hover:bg-lime-100'}`}
+            >
+              <HeartHandshake className="h-5 w-5" />
+              {companion.unread && (
+                <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full border border-black bg-red-500" />
+              )}
+            </button>
+            <button ref={calmingToolsButtonRef} type="button" onClick={toggleCalmingToolsMenu} aria-label="Công cụ dịu" title="Công cụ dịu (Dùng ngay, không cần trò chuyện)" aria-pressed={!!calmingToolsMenuPosition || !!calmingTools.activeTool} className={`inline-flex h-14 w-full items-center justify-center rounded-xl border border-black p-2 transition-all hover:-translate-y-0.5 hover:shadow-neo-sm active:translate-y-0 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${calmingToolsMenuPosition || calmingTools.activeTool ? 'bg-primary-container shadow-neo-sm' : 'bg-white hover:bg-lime-100'}`}><Wind className="h-5 w-5" /></button>
           </div>
         </aside>
+
+        {companion.isOpen && <CompanionPanel conversation={companion} />}
       </main>
 
       {showDetailedMetrics && metricsPopoverPosition && createPortal(
@@ -413,50 +527,14 @@ function JournalEditorContent() {
         document.body,
       )}
 
-      {questionsPopoverPosition && createPortal(
-        <div style={questionsPopoverPosition} className="z-40 w-[min(290px,calc(100vw-2rem))] rounded-2xl border-2 border-black bg-paper-warm p-4 shadow-neo-lg animate-in fade-in" role="dialog" aria-label="Câu hỏi tự vấn">
-          <div className="mb-3 flex items-center justify-between font-space text-sm font-extrabold">
-            <span>Câu hỏi tự vấn</span>
-            <button type="button" onClick={() => setQuestionsPopoverPosition(null)} aria-label="Đóng câu hỏi tự vấn" className="rounded-lg p-1 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-black"><X className="h-4 w-4" /></button>
-          </div>
-          {isLoadingRecommendation ? <p className="py-3 text-sm text-gray-600" role="status">Đang tải gợi ý...</p>
-            : recommendationError ? <p className="py-3 text-sm text-red-700" role="alert">{recommendationError}</p>
-            : !recommendation?.questions.length ? <p className="py-3 text-sm text-gray-600">{recommendation?.message ?? 'Chưa đủ thông tin để tạo câu hỏi phù hợp.'}</p>
-            : <div className="flex max-h-[min(55dvh,24rem)] flex-col gap-2 overflow-y-auto">
-              {recommendation.questions.map((question, index) => (
-                <div key={`${index}-${question}`} className="rounded-xl border border-black bg-white p-3 text-sm leading-relaxed">
-                  <p>{question}</p>
-                  <div className="mt-2 flex justify-end border-t border-black/10 pt-2">
-                    <button type="button" onClick={() => {
-                      editorRef.current?.insertContent(`<blockquote><p>${escapeHtml(question)}</p></blockquote><p></p>`);
-                      editorRef.current?.focus();
-                      setQuestionsPopoverPosition(null);
-                    }} className="shrink-0 rounded-lg border border-black px-2 py-1 font-bold transition-colors hover:bg-lime-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">Chèn</button>
-                  </div>
-                </div>
-              ))}
-            </div>}
-        </div>,
-        document.body,
-      )}
-
-      {topicSuggestionPosition && createPortal(
-        <div style={topicSuggestionPosition} className="z-40 w-[min(290px,calc(100vw-2rem))] rounded-2xl border-2 border-black bg-paper-warm p-4 shadow-neo-lg animate-in fade-in" role="dialog" aria-label="Gợi ý chủ đề viết">
-          <div className="mb-3 flex items-center justify-between font-space text-sm font-extrabold">
-            <span>Gợi ý chủ đề</span>
-            <button type="button" onClick={() => setTopicSuggestionPosition(null)} aria-label="Đóng gợi ý chủ đề" className="rounded-lg p-1 transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-black"><X className="h-4 w-4" /></button>
-          </div>
-          <div className="flex flex-col gap-2">
-            {TOPIC_TITLE_SUGGESTIONS.map((suggestion) => (
-              <button key={suggestion} type="button" onClick={() => {
-                setTitle(suggestion);
-                setTopicSuggestionPosition(null);
-              }} className="rounded-xl border border-black bg-white p-3 text-left text-sm leading-relaxed transition-all hover:-translate-y-0.5 hover:bg-lime-100 hover:shadow-neo-sm active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        </div>,
+      {calmingToolsMenuPosition && createPortal(
+        <CalmingToolsMenu
+          style={calmingToolsMenuPosition}
+          onClose={() => setCalmingToolsMenuPosition(null)}
+          onBreathing={handleStartBreathing}
+          onAmbient={handleStartAmbient}
+          onVent={handleVent}
+        />,
         document.body,
       )}
 
@@ -477,12 +555,35 @@ function JournalEditorContent() {
         existingTopics={topics}
       />
 
+      {/* INSERT IMAGE MODAL */}
+      <InsertImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        onInsert={(url, assetId, caption) => {
+          editorRef.current?.insertImage(url, assetId, caption);
+        }}
+      />
+
       {/* SAFETY CRISIS MODAL */}
       <SafetyModal
         isOpen={isSafetyModalOpen}
         onClose={() => { setIsSafetyModalOpen(false); if (safetySaved) router.push('/history-calendar'); }}
         onNavigateHome={() => router.push('/dashboard')}
         detectedKeywords={detectedCrisisKeywords}
+      />
+
+      {/* CREATE HABIT FROM COMPANION TEMPLATE MODAL */}
+      <CreateHabitFromTemplateModal
+        isOpen={habitTemplatePreset !== null}
+        preset={habitTemplatePreset}
+        onClose={() => setHabitTemplatePreset(null)}
+        onCreated={(habit) => {
+          showToast({
+            title: 'Đã tạo thói quen mới!',
+            message: `“${habit.title}” đã được thêm vào danh sách tự chăm sóc của bạn.`,
+            type: 'success',
+          });
+        }}
       />
     </div>
   );

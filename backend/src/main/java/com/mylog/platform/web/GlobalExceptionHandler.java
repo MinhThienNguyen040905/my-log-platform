@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -51,6 +52,14 @@ public final class GlobalExceptionHandler {
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     ResponseEntity<ApiProblem> handleMalformedRequest(Exception ignored, HttpServletRequest request) {
         return response(ErrorCode.MALFORMED_REQUEST, "Cấu trúc hoặc kiểu dữ liệu của yêu cầu không hợp lệ.", request, List.of());
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    ResponseEntity<ApiProblem> handleRateLimit(RateLimitExceededException exception, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", "900")
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .body(problemFactory.create(ErrorCode.RATE_LIMITED, "Bạn đã thử sai quá nhiều lần. Vui lòng thử lại sau 15 phút.", request, List.of()));
     }
 
     @ExceptionHandler(ApplicationException.class)

@@ -7,7 +7,7 @@ export async function accountProxy(request: Request, path: string) {
   try {
     let token = await accessToken() ?? await refreshSession();
     if (!token) return new Response(null, { status: 401 });
-    const body = request.method === 'PATCH' || request.method === 'PUT' ? await request.text() : undefined;
+    const body = request.method === 'PATCH' || request.method === 'PUT' || request.method === 'POST' ? await request.text() : undefined;
     const send = (bearer: string) => authBackend(path, {
       method: request.method,
       headers: {

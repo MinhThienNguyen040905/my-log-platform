@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Image as ImageIcon, Upload, X, Link as LinkIcon } from 'lucide-react';
+import { Image as ImageIcon, Upload, X, Loader2 } from 'lucide-react';
 import { NeoButton } from '@/components/ui/NeoButton';
+import { uploadJournalAsset, type UploadedAsset } from '../api/client';
 
 interface InsertImageModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onInsert: (url: string, caption?: string) => void;
+  onInsert: (url: string, assetId: string, caption?: string) => void;
 }
 
 export const InsertImageModal: React.FC<InsertImageModalProps> = ({
@@ -15,32 +16,32 @@ export const InsertImageModal: React.FC<InsertImageModalProps> = ({
   onClose,
   onInsert,
 }) => {
-  const [activeTab, setActiveTab] = useState<'url' | 'upload'>('url');
-  const [url, setUrl] = useState('');
   const [caption, setCaption] = useState('');
   const [error, setError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedAsset, setUploadedAsset] = useState<UploadedAsset | null>(null);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim()) {
-      setError('Vui lòng nhập đường dẫn ảnh hợp lệ.');
+    if (!uploadedAsset) {
+      setError('Vui lòng chọn và tải ảnh lên trước khi dán vào bài viết.');
       return;
     }
-    onInsert(url.trim(), caption.trim());
-    setUrl('');
+    onInsert(uploadedAsset.url, uploadedAsset.id, caption.trim());
+    setUploadedAsset(null);
     setCaption('');
     setError('');
     onClose();
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setError('Tệp tải lên phải là định dạng hình ảnh.');
+      setError('Tệp tải lên phải là hình ảnh (JPEG, PNG, WebP).');
       return;
     }
 
@@ -49,14 +50,17 @@ export const InsertImageModal: React.FC<InsertImageModalProps> = ({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setUrl(reader.result);
-        setError('');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsUploading(true);
+      setError('');
+      const asset = await uploadJournalAsset(file);
+      setUploadedAsset(asset);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Tải ảnh thất bại. Vui lòng thử lại.';
+      setError(message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -81,80 +85,40 @@ export const InsertImageModal: React.FC<InsertImageModalProps> = ({
           </button>
         </div>
 
-        {/* Tab switch */}
-        <div className="flex gap-2 bg-white/60 p-1 rounded-xl border border-black/30 text-xs font-space font-bold">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('url');
-              setError('');
-            }}
-            className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'url'
-                ? 'bg-primary-container border border-black shadow-neo-sm text-black'
-                : 'text-gray-600 hover:text-black'
-            }`}
-          >
-            <LinkIcon className="w-3.5 h-3.5" />
-            <span>Liên kết ảnh</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('upload');
-              setError('');
-            }}
-            className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'upload'
-                ? 'bg-primary-container border border-black shadow-neo-sm text-black'
-                : 'text-gray-600 hover:text-black'
-            }`}
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Tải ảnh từ máy</span>
-          </button>
-        </div>
-
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          {activeTab === 'url' ? (
-            <div>
-              <label className="block text-xs font-space font-bold uppercase text-gray-700 mb-1">
-                URL Hình ảnh:
-              </label>
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => {
-                  setUrl(e.target.value);
-                  setError('');
-                }}
-                placeholder="https://images.unsplash.com/..."
-                className="w-full px-3 py-2 bg-white rounded-xl border border-black font-sans text-xs focus:outline-none shadow-neo-sm"
-              />
-            </div>
-          ) : (
-            <div>
-              <label className="block text-xs font-space font-bold uppercase text-gray-700 mb-1">
-                Chọn ảnh từ thiết bị:
-              </label>
+          <div>
+            <label className="block text-xs font-space font-bold uppercase text-gray-700 mb-1">
+              Chọn ảnh từ thiết bị (tối đa 5MB):
+            </label>
+            <div className="relative">
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={isUploading}
                 onChange={handleFileUpload}
-                className="w-full text-xs font-space file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border file:border-black file:text-xs file:font-bold file:bg-primary-container file:cursor-pointer cursor-pointer border border-black rounded-xl p-1 bg-white"
+                className="w-full text-xs font-space file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border file:border-black file:text-xs file:font-bold file:bg-primary-container file:cursor-pointer cursor-pointer border border-black rounded-xl p-1 bg-white disabled:opacity-50"
               />
+              {isUploading && (
+                <div className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center gap-2 text-xs font-space font-bold">
+                  <Loader2 className="w-4 h-4 animate-spin text-black" />
+                  <span>Đang tải ảnh an toàn lên đám mây...</span>
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Preview if url exists */}
-          {url && (
+          {/* Preview if uploaded */}
+          {uploadedAsset && (
             <div className="relative p-2 bg-white rounded-xl border border-black shadow-neo-sm flex flex-col items-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={url}
+                src={uploadedAsset.url}
                 alt="Preview"
                 className="max-h-36 object-contain rounded-lg border border-black/20"
               />
+              <span className="text-[10px] text-gray-500 font-space mt-1">
+                {uploadedAsset.width}x{uploadedAsset.height} px • {(uploadedAsset.sizeBytes / 1024).toFixed(1)} KB
+              </span>
             </div>
           )}
 
@@ -177,7 +141,8 @@ export const InsertImageModal: React.FC<InsertImageModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-space font-bold text-gray-700 hover:text-black cursor-pointer"
+              disabled={isUploading}
+              className="px-4 py-2 text-xs font-space font-bold text-gray-700 hover:text-black cursor-pointer disabled:opacity-50"
             >
               Hủy
             </button>
@@ -185,8 +150,10 @@ export const InsertImageModal: React.FC<InsertImageModalProps> = ({
               type="submit"
               variant="primary"
               size="sm"
-              className="font-space font-extrabold text-xs shadow-neo-sm"
+              disabled={isUploading || !uploadedAsset}
+              className="font-space font-extrabold text-xs shadow-neo-sm disabled:opacity-50"
             >
+              <Upload className="w-3.5 h-3.5 mr-1" />
               Dán vào trang viết
             </NeoButton>
           </div>
@@ -195,4 +162,3 @@ export const InsertImageModal: React.FC<InsertImageModalProps> = ({
     </div>
   );
 };
-

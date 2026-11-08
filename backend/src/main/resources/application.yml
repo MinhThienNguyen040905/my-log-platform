@@ -9,14 +9,18 @@ spring:
     time-zone: UTC
   jpa:
     open-in-view: false
+  hibernate:
+    ddl-auto: validate
+  properties:
     hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        jdbc:
-          time_zone: UTC
+      jdbc:
+        time_zone: UTC
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
@@ -82,8 +86,17 @@ mylog:
       url: ${MYLOG_SAFETY_CLASSIFIER_URL:}
       token: ${MYLOG_SAFETY_CLASSIFIER_TOKEN:}
       timeout-ms: ${MYLOG_SAFETY_CLASSIFIER_TIMEOUT_MS:2000}
+    # Local-only stand-in for the classifier while no trained model exists. Synthetic data only.
+    # Refuses to start outside the `local` profile or together with MYLOG_JOBS_ENABLED=true.
+    dev-allow:
+      enabled: ${MYLOG_SAFETY_DEV_ALLOW:false}
   writing-suggestions:
     enabled: ${MYLOG_WRITING_SUGGESTIONS_ENABLED:false}
+  companion:
+    generation:
+      enabled: ${MYLOG_COMPANION_GENERATION_ENABLED:false}
+      timeout-ms: ${MYLOG_COMPANION_TIMEOUT_MS:4000}
+      outbound-safety-hard-block: ${MYLOG_COMPANION_OUTBOUND_SAFETY_HARD_BLOCK:true}
   insights:
     minimum-samples: ${MYLOG_INSIGHTS_MINIMUM_SAMPLES:7}
   reports:
@@ -115,6 +128,10 @@ mylog:
     api-key: ${MYLOG_CLOUDINARY_API_KEY:}
     api-secret: ${MYLOG_CLOUDINARY_API_SECRET:}
     folder: ${MYLOG_CLOUDINARY_FOLDER:mylog}
+  assets:
+    max-images-per-entry: 20
+    max-user-quota-bytes: 209715200
+    local-raw-secret: ${MYLOG_ASSETS_LOCAL_RAW_SECRET:dev-asset-secret-key-must-be-changed-in-prod}
 
 springdoc:
   api-docs:

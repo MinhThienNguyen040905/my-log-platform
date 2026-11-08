@@ -21,6 +21,7 @@ import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useSettings, AVATAR_OPTIONS } from '../hooks/useSettings';
 import { AccountAccessPanel } from './AccountAccessPanel';
+import { ChangePasswordForm } from './ChangePasswordForm';
 import { AccountDataExport } from '@/features/export';
 import { useAccount } from '../context/AccountContext';
 import { useTranslation } from 'react-i18next';
@@ -237,9 +238,7 @@ export function SettingsView({ entryCount, draftStorageKey }: { entryCount: numb
                 {t('settingsExtra.password')}
               </h2>
             </div>
-            <div className="bg-white border-2 border-black rounded-2xl p-5 sm:p-6 shadow-neo-sm font-space text-sm text-gray-700">
-              {t('settingsExtra.passwordUnavailable')}
-            </div>
+            <ChangePasswordForm canChangePassword={userProfile.canChangePassword} userEmail={userProfile.email} />
           </section>
 
           {/* SECTION 3: PREFERENCES & TIMEZONE */}

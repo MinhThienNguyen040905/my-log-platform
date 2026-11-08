@@ -10,10 +10,11 @@ import Underline from '@tiptap/extension-underline';
 import Image from '@tiptap/extension-image';
 import { JournalBubbleMenu } from './JournalBubbleMenu';
 import { createSlashCommandExtension } from '../extensions/slash-command';
+import { PromptQuestion } from '../extensions/prompt-question';
 
 export interface JournalTipTapEditorRef {
   insertContent: (content: string) => void;
-  insertImage: (url: string, alt?: string) => void;
+  insertImage: (url: string, assetId: string, alt?: string) => void;
   focus: () => void;
   getText: () => string;
   getHTML: () => string;
@@ -26,6 +27,22 @@ interface JournalTipTapEditorProps {
   onOpenImageModal: () => void;
   editorRef?: React.Ref<JournalTipTapEditorRef>;
 }
+
+const CustomImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      'data-asset-id': {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-asset-id'),
+        renderHTML: (attributes) => {
+          if (!attributes['data-asset-id']) return {};
+          return { 'data-asset-id': attributes['data-asset-id'] };
+        },
+      },
+    };
+  },
+});
 
 export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTipTapEditorProps>(
   ({ initialContent, onChange, onOpenImageModal }, ref) => {
@@ -42,7 +59,7 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
           },
           blockquote: {
             HTMLAttributes: {
-              class: 'border-l-4 border-black pl-4 py-1.5 my-3 italic bg-black/5 rounded-r-xl font-serif text-on-surface',
+              class: 'border-l-4 border-black pl-4 py-1.5 my-3 italic bg-black/5 rounded-r-xl font-sans text-on-surface',
             },
           },
           bulletList: {
@@ -68,7 +85,7 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
           },
         }),
         Underline,
-        Image.configure({
+        CustomImage.configure({
           inline: false,
           allowBase64: true,
           HTMLAttributes: {
@@ -76,6 +93,7 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
               'max-h-96 w-auto mx-auto rounded-2xl border-2 border-black shadow-neo-sm p-1.5 bg-white my-4 object-contain transition-transform hover:scale-[1.01]',
           },
         }),
+        PromptQuestion,
         slashCommandExtension,
       ],
       content: initialContent || '',
@@ -83,7 +101,7 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
       editorProps: {
         attributes: {
           class:
-            'w-full min-h-[380px] bg-transparent font-serif text-base sm:text-lg text-on-surface focus:outline-none leading-relaxed tracking-wide p-1 cursor-text select-text',
+            'w-full min-h-[380px] bg-transparent font-sans text-base sm:text-lg text-on-surface focus:outline-none leading-relaxed p-1 cursor-text select-text',
         },
       },
       onUpdate: ({ editor: ed }) => {
@@ -103,12 +121,15 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
         if (!editor) return;
         editor.chain().focus().insertContent(content).run();
       },
-      insertImage: (url: string, alt?: string) => {
+      insertImage: (url: string, assetId: string, alt?: string) => {
         if (!editor) return;
-        editor
-          .chain()
-          .focus()
-          .setImage({ src: url, alt: alt || 'Kỷ niệm nhật ký' })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (editor.chain().focus() as any)
+          .setImage({
+            src: url,
+            alt: alt || 'Kỷ niệm nhật ký',
+            'data-asset-id': assetId,
+          })
           .run();
       },
       focus: () => {

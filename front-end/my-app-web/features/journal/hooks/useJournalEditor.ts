@@ -8,7 +8,7 @@ import { useToast } from '@/providers/ToastProvider';
 import { MoodType, JournalEmotion } from '@/types';
 import { normalizeJournalEmotion } from '../utils/journal-emotions';
 import { JournalTipTapEditorRef } from '../components/JournalTipTapEditor';
-import { prepareContent } from '../api/client';
+import { prepareContent, getOrCreateTagIds } from '../api/client';
 import { journalEditorFieldsSchema } from '../schemas/journal-editor-fields';
 
 export function useJournalEditor() {
@@ -211,17 +211,15 @@ export function useJournalEditor() {
       return;
     }
 
-    const body = {
-      title: title.trim() || 'Trang nhật ký không tên', contentJson,
-      timezone: userProfile.timezone, moodCode: selectedEmotion === 'very_bad' ? 'very-bad' : selectedEmotion ?? 'neutral',
-      moodScore, stressScore, energyScore, sleepMinutes: Math.round(sleepHours * 60),
-    };
-    if (topics.some((topic) => topic.trim())) {
-      showToast({ title: 'Tag chưa khả dụng', message: 'Chưa thể lưu tag theo bài viết. Vui lòng bỏ tag trước khi lưu.', type: 'error' });
-      return;
-    }
     setIsSaving(true);
     try {
+      const tagIds = await getOrCreateTagIds(topics);
+      const body = {
+        title: title.trim() || 'Trang nhật ký không tên', contentJson,
+        timezone: userProfile.timezone, moodCode: selectedEmotion === 'very_bad' ? 'very-bad' : selectedEmotion ?? 'neutral',
+        moodScore, stressScore, energyScore, sleepMinutes: Math.round(sleepHours * 60),
+        tagIds,
+      };
       let saved;
       if (isEditMode && editId) {
         if (rowVersion === null) throw new Error('Chưa tải phiên bản bài viết. Vui lòng mở lại bài.');

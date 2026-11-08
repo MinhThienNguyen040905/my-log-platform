@@ -68,7 +68,7 @@ class JpaSelfCareStore implements SelfCareStore {
         row.encryptedTitle = habit.title().ciphertext(); row.titleIv = habit.title().iv();
         row.titleWrappedKey = habit.title().wrappedKey(); row.titleKeyVersion = habit.title().keyVersion();
         row.targetValue = habit.targetValue(); row.unit = habit.unit(); row.frequencyType = habit.frequencyType();
-        row.frequencyConfig = habit.frequencyConfig(); row.timezone = habit.timezone(); row.status = habit.status();
+        row.frequencyConfig = habit.frequencyConfig(); row.timezone = habit.timezone(); row.toolCode = habit.toolCode(); row.status = habit.status();
         row.createdAt = habit.createdAt(); row.updatedAt = habit.updatedAt(); row.rowVersion = habit.version();
         em.persist(row);
     }
@@ -116,7 +116,7 @@ class JpaSelfCareStore implements SelfCareStore {
     private Habit habit(com.mylog.selfcare.infrastructure.persistence.entity.Habit h) {
         return new Habit(h.id, h.goalId, h.userId,
                 new Encrypted(h.encryptedTitle, h.titleIv, h.titleWrappedKey, h.titleKeyVersion), h.targetValue,
-                h.unit, h.frequencyType, h.frequencyConfig, h.timezone, h.status, h.createdAt, h.updatedAt, h.rowVersion);
+                h.unit, h.frequencyType, h.frequencyConfig, h.timezone, h.toolCode, h.status, h.createdAt, h.updatedAt, h.rowVersion);
     }
     private Completion completion(HabitCompletion c) {
         return new Completion(c.id, c.habitId, c.userId, c.localDate, c.value, c.source, c.createdAt, c.updatedAt);

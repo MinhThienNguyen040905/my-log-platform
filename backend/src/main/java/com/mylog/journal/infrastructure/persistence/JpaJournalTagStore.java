@@ -9,13 +9,13 @@ import com.mylog.journal.application.query.JournalTagView;
 import com.mylog.platform.crypto.SensitiveDataCipher;
 import com.mylog.platform.id.IdGenerator;
 import com.mylog.platform.web.InvalidRequestException;
+import com.mylog.platform.web.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Repository
 @ConditionalOnProperty(prefix = "mylog.identity", name = "enabled", havingValue = "true")
@@ -86,6 +86,80 @@ class JpaJournalTagStore implements JournalTagStore {
         em.createQuery("delete from JournalEntryTag jt where jt.journalEntryId=:entryId and jt.tagId=:tagId")
                 .setParameter("entryId", entryId).setParameter("tagId", tagId).executeUpdate();
         return true;
+    }
+
+    @Override
+    public Map<UUID, List<JournalTagView>> listTagsForEntries(UUID userId, Collection<UUID> entryIds) {
+        if (entryIds == null || entryIds.isEmpty()) return Map.of();
+        List<Object[]> rows = em.createQuery("""
+                select jt.journalEntryId, t from JournalEntryTag jt, JournalTag t
+                where jt.tagId = t.id and jt.journalEntryId in :entryIds and t.userId = :userId
+                order by t.createdAt asc
+                """, Object[].class)
+                .setParameter("entryIds", entryIds)
+                .setParameter("userId", userId)
+                .getResultList();
+
+        Map<UUID, List<JournalTagView>> map = new HashMap<>();
+        Map<UUID, JournalTagView> cache = new HashMap<>();
+
+        for (Object[] row : rows) {
+            UUID entryId = (UUID) row[0];
+            JournalTag tag = (JournalTag) row[1];
+            JournalTagView view = cache.computeIfAbsent(tag.id, id -> view(tag));
+            map.computeIfAbsent(entryId, k -> new ArrayList<>()).add(view);
+        }
+        return map;
+    }
+
+    @Override
+    public List<JournalTagView> listTagsForEntry(UUID userId, UUID entryId) {
+        if (entryId == null) return List.of();
+        return listTagsForEntries(userId, List.of(entryId)).getOrDefault(entryId, List.of());
+    }
+
+    @Override
+    public void replaceTags(UUID userId, UUID entryId, List<UUID> tagIds, Instant now) {
+        if (!lockOwnedEntry(userId, entryId)) {
+            throw new ResourceNotFoundException("Không tìm thấy nhật ký.");
+        }
+        List<UUID> distinct = tagIds == null ? List.of() : tagIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (distinct.size() > 20) throw new InvalidRequestException();
+
+        if (!distinct.isEmpty()) {
+            Number count = (Number) em.createQuery("select count(t) from JournalTag t where t.id in :tagIds and t.userId = :userId")
+                    .setParameter("tagIds", distinct)
+                    .setParameter("userId", userId)
+                    .getSingleResult();
+            if (count.intValue() != distinct.size()) {
+                throw new ResourceNotFoundException("Không tìm thấy tag.");
+            }
+        }
+
+        em.createQuery("delete from JournalEntryTag jt where jt.journalEntryId = :entryId")
+                .setParameter("entryId", entryId)
+                .executeUpdate();
+
+        for (UUID tagId : distinct) {
+            em.createNativeQuery("""
+                    insert into journal_entry_tags(journal_entry_id, tag_id, created_at)
+                    values (?1, ?2, ?3)
+                    on conflict (journal_entry_id, tag_id) do nothing
+                    """).setParameter(1, entryId)
+                    .setParameter(2, tagId)
+                    .setParameter(3, now)
+                    .executeUpdate();
+        }
+    }
+
+    @Override
+    public boolean ownsEntry(UUID userId, UUID entryId) {
+        if (userId == null || entryId == null) return false;
+        Number count = (Number) em.createNativeQuery("""
+                select count(*) from journal_entries j
+                where j.id=?1 and j.user_id=?2 and j.deleted_at is null
+                """).setParameter(1, entryId).setParameter(2, userId).getSingleResult();
+        return count.intValue() == 1;
     }
 
     private boolean owns(UUID userId, UUID entryId, UUID tagId) {

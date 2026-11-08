@@ -6,3 +6,4 @@ export { requestAccountDeletion, getAccountDeletionStatus, cancelAccountDeletion
 export type { DeletionRequest } from './api/account-deletion';
 export { useAccountProfile } from './hooks/useAccountProfile';
 export { AccountProvider, useAccount } from './context/AccountContext';
+export { checkPasswordContainsUserInfo, resolvePasswordErrorMessage, PASSWORD_ERROR_MAP } from './utils/password-rules';

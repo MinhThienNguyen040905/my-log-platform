@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { DayPicker, type DayButtonProps } from 'react-day-picker';
-import { getDetailedJournalPage, JOURNAL_PAGE_SIZE, useJournal, LegacyJournalImport, journalEmotionLabel, JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, normalizeJournalEmotion } from '@/features/journal';
+import { getDetailedJournalPage, getSearchJournalPage, JOURNAL_PAGE_SIZE, useJournal, LegacyJournalImport, journalEmotionLabel, JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, normalizeJournalEmotion } from '@/features/journal';
 import { useToast } from '@/providers/ToastProvider';
 import { JournalEntry, JournalEmotion, MoodType } from '@/types';
 import { WashiTape, PolaroidCard } from '@/components/ui/ScrapbookDecorations';
@@ -64,7 +64,11 @@ export function CalendarView() {
     setSearchTerm('');
     setAppliedFilters(EMPTY_FILTERS);
   };
-  useEffect(() => { setPageIndex(0); }, [appliedFilters, selectedDate]);
+  const [prevFilterState, setPrevFilterState] = useState({ appliedFilters, selectedDate });
+  if (prevFilterState.appliedFilters !== appliedFilters || prevFilterState.selectedDate !== selectedDate) {
+    setPrevFilterState({ appliedFilters, selectedDate });
+    setPageIndex(0);
+  }
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
@@ -115,31 +119,63 @@ export function CalendarView() {
     [selectedDayQuery.data],
   );
   const selectedDateAvgScore = averageMoodScore(selectedDateEntries);
-  const entriesForFilters = appliedFilters.date === selectedDate && selectedDayQuery.data
-    ? selectedDayQuery.data
-      .pages.flatMap((page) => page.items)
-    : entries;
+  const isSearchActive = Boolean(appliedFilters.search);
+  const searchQuery = useInfiniteQuery({
+    queryKey: ['journal', userId, 'search', appliedFilters.search],
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) => getSearchJournalPage({ query: appliedFilters.search, cursor: pageParam }),
+    getNextPageParam: (page) => page.nextCursor,
+    enabled: isSearchActive,
+    staleTime: 60 * 1000,
+  });
+  const searchEntries = useMemo(
+    () => searchQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [searchQuery.data],
+  );
+
+  const entriesForFilters = isSearchActive
+    ? searchEntries
+    : (appliedFilters.date === selectedDate && selectedDayQuery.data
+        ? selectedDayQuery.data.pages.flatMap((page) => page.items)
+        : entries);
+
   const allFilteredEntries = filterEntries(entriesForFilters, appliedFilters);
   const loadedPageCount = Math.max(1, Math.ceil(allFilteredEntries.length / JOURNAL_PAGE_SIZE));
   const currentPageEntries = allFilteredEntries.slice(pageIndex * JOURNAL_PAGE_SIZE, (pageIndex + 1) * JOURNAL_PAGE_SIZE);
   const filteredEntries = currentPageEntries;
-  const showingFilteredDate = appliedFilters.date === selectedDate;
-  const listHasMore = showingFilteredDate ? !!selectedDayQuery.hasNextPage : hasMoreEntries;
-  const listLoading = showingFilteredDate ? selectedDayQuery.isPending : entriesLoading;
-  const listLoadingNextPage = showingFilteredDate ? selectedDayQuery.isFetchingNextPage : entriesLoadingMore;
-  const listError = showingFilteredDate ? selectedDayQuery.error : entriesError;
+  const showingFilteredDate = !isSearchActive && appliedFilters.date === selectedDate;
+  const listHasMore = isSearchActive
+    ? !!searchQuery.hasNextPage
+    : (showingFilteredDate ? !!selectedDayQuery.hasNextPage : hasMoreEntries);
+  const listLoading = isSearchActive
+    ? searchQuery.isPending
+    : (showingFilteredDate ? selectedDayQuery.isPending : entriesLoading);
+  const listLoadingNextPage = isSearchActive
+    ? searchQuery.isFetchingNextPage
+    : (showingFilteredDate ? selectedDayQuery.isFetchingNextPage : entriesLoadingMore);
+  const listError = isSearchActive
+    ? searchQuery.error
+    : (showingFilteredDate ? selectedDayQuery.error : entriesError);
   const canGoPrevious = pageIndex > 0;
   const canGoNext = pageIndex + 1 < loadedPageCount || listHasMore;
   const goPreviousPage = () => setPageIndex((current) => Math.max(0, current - 1));
   const goNextPage = async () => {
     if (pageIndex + 1 < loadedPageCount) { setPageIndex((current) => current + 1); return; }
     if (!listHasMore) return;
+    if (isSearchActive) {
+      const loaded = (await searchQuery.fetchNextPage()).data?.pages.length === (searchQuery.data?.pages.length ?? 0) + 1;
+      if (loaded) setPageIndex((current) => current + 1);
+      return;
+    }
     const loaded = showingFilteredDate
       ? (await selectedDayQuery.fetchNextPage()).data?.pages.length === (selectedDayQuery.data?.pages.length ?? 0) + 1
       : await loadMoreEntries();
     if (loaded) setPageIndex((current) => current + 1);
   };
-  const retryList = () => showingFilteredDate ? selectedDayQuery.refetch() : reloadEntries();
+  const retryList = () => {
+    if (isSearchActive) return searchQuery.refetch();
+    return showingFilteredDate ? selectedDayQuery.refetch() : reloadEntries();
+  };
 
   const monthNames = [
     'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
@@ -286,7 +322,7 @@ export function CalendarView() {
                   setSearchTerm(val);
                   setAppliedFilters((prev) => ({ ...prev, search: val.trim() }));
                 }}
-                placeholder="Tìm kiếm theo tiêu đề hoặc nội dung nhật ký..."
+                placeholder="Tìm kiếm theo tiêu đề nhật ký..."
 
                 className="min-w-0 flex-1 min-h-11 font-space text-sm p-2.5 rounded-xl border border-border-soft bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
               />
@@ -365,7 +401,7 @@ export function CalendarView() {
           </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {listLoading && <p className="lg:col-span-12 font-space text-sm" role="status">Đang tải nhật ký...</p>}
+        {listLoading && <p className="lg:col-span-12 font-space text-sm" role="status">{isSearchActive ? 'Đang tìm kiếm nhật ký...' : 'Đang tải nhật ký...'}</p>}
         {listError && <div className="lg:col-span-12 font-space text-sm text-red-700">{listError instanceof Error ? listError.message : entriesError} <button type="button" className="underline" onClick={() => void retryList()}>Thử lại</button></div>}
         {/* ========================================================== */}
         {/* LEFT COLUMN: Calendar (4 cols on lg)                       */}
@@ -609,7 +645,7 @@ export function CalendarView() {
                   </div>
 
                   {/* Entry Snippet Content */}
-                  {showPreviews && entry.content && <p className="font-serif text-sm sm:text-base text-on-surface leading-relaxed line-clamp-3 italic">&ldquo;{entry.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}&rdquo;</p>}
+                  {showPreviews && entry.content && <p className="font-sans text-sm sm:text-base text-on-surface leading-relaxed line-clamp-3 italic">&ldquo;{entry.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}&rdquo;</p>}
 
                   {/* Optional Polaroid thumbnail preview */}
                   {showPreviews && entry.photoUrl && (
@@ -749,11 +785,11 @@ export function CalendarView() {
               <div className="p-4 sm:p-6 bg-white rounded-2xl border-2 border-black shadow-inner min-w-0 break-words [overflow-wrap:anywhere] overflow-hidden">
                 {selectedEntry.content.includes('<') ? (
                   <div
-                    className="font-serif text-base sm:text-lg text-on-surface leading-loose tiptap break-words [overflow-wrap:anywhere]"
+                    className="font-sans text-base sm:text-lg text-on-surface leading-loose tiptap break-words [overflow-wrap:anywhere]"
                     dangerouslySetInnerHTML={{ __html: selectedEntry.content }}
                   />
                 ) : (
-                  <p className="font-serif text-base sm:text-lg text-on-surface leading-loose italic whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                  <p className="font-sans text-base sm:text-lg text-on-surface leading-loose italic whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                     {selectedEntry.content}
                   </p>
                 )}

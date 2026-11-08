@@ -22,6 +22,7 @@ export function useAccountProfile(profile: Profile) {
     isOnboarded: profile.onboardingCompletedAt !== null,
     journalingGoals: profile.onboardingGoals,
     isAdmin: profile.isAdmin === true,
+    canChangePassword: profile.canChangePassword ?? true,
   });
 
   const updateProfile = async (data: Partial<UserProfile>) => {
@@ -66,6 +67,7 @@ export function useAccountProfile(profile: Profile) {
       journalingGoals: fresh.onboardingGoals,
       isOnboarded: fresh.onboardingCompletedAt !== null,
       isAdmin: fresh.isAdmin ?? previous.isAdmin,
+      canChangePassword: fresh.canChangePassword ?? previous.canChangePassword ?? true,
     }));
     return fresh;
   }, [queryClient, setLocale]);

@@ -42,6 +42,13 @@ public class JournalController {
                 .eTag(etag(view.version())).body(JournalEntryResponse.from(view));
     }
 
+    @GetMapping("/search")
+    public JournalPageResponse search(@RequestParam String query,
+                                      @RequestParam(required = false) String cursor,
+                                      @RequestParam(defaultValue = "5") int limit) {
+        return JournalPageResponse.from(journal.searchByTitle(user(), query, cursor, limit));
+    }
+
     @GetMapping("/{entryId}")
     public ResponseEntity<JournalEntryResponse> get(@PathVariable UUID entryId) {
         var view = journal.get(user(), entryId);

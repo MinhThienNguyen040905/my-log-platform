@@ -15,7 +15,14 @@ public interface SelfCareStore {
                 Instant updatedAt, Instant completedAt, long version) {}
     record Habit(UUID id, UUID goalId, UUID userId, Encrypted title, BigDecimal targetValue,
                  String unit, String frequencyType, Map<String, Object> frequencyConfig, String timezone,
-                 String status, Instant createdAt, Instant updatedAt, long version) {}
+                 String toolCode, String status, Instant createdAt, Instant updatedAt, long version) {
+        public Habit(UUID id, UUID goalId, UUID userId, Encrypted title, BigDecimal targetValue,
+                     String unit, String frequencyType, Map<String, Object> frequencyConfig, String timezone,
+                     String status, Instant createdAt, Instant updatedAt, long version) {
+            this(id, goalId, userId, title, targetValue, unit, frequencyType, frequencyConfig, timezone,
+                    null, status, createdAt, updatedAt, version);
+        }
+    }
     record Completion(UUID id, UUID habitId, UUID userId, LocalDate localDate, BigDecimal value,
                       String source, Instant createdAt, Instant updatedAt) {}
 

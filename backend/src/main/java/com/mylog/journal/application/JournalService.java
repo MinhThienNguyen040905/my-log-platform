@@ -5,9 +5,12 @@ import com.mylog.journal.application.command.UpdateJournalEntryCommand;
 import com.mylog.journal.application.query.JournalEntryView;
 import com.mylog.journal.application.query.JournalPage;
 import com.mylog.journal.application.query.JournalSummaryView;
+import com.mylog.journal.application.query.JournalTagView;
+import com.mylog.journal.infrastructure.persistence.entity.JournalAsset;
 import com.mylog.platform.id.IdGenerator;
 import com.mylog.platform.idempotency.IdempotencyStore;
 import com.mylog.platform.outbox.OutboxPublisher;
+import com.mylog.platform.text.VietnameseStringUtils;
 import com.mylog.platform.web.ConflictException;
 import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.platform.web.ResourceNotFoundException;
@@ -26,14 +29,17 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 @ConditionalOnProperty(prefix = "mylog.identity", name = "enabled", havingValue = "true")
 public class JournalService implements JournalAnalysisAccess {
     private final JournalStore store;
+    private final JournalTagStore tagStore;
     private final JournalContentCipher cipher;
     private final SafetyScreeningUseCase screening;
     private final SafetyEventRecorder safetyEvents;
@@ -42,12 +48,18 @@ public class JournalService implements JournalAnalysisAccess {
     private final IdGenerator ids;
     private final Clock clock;
     private final ObjectMapper mapper;
+    private final JournalAssetStore assetStore;
+    private final JournalAssetService assetService;
 
-    public JournalService(JournalStore store, JournalContentCipher cipher, SafetyScreeningUseCase screening,
-                          SafetyEventRecorder safetyEvents, OutboxPublisher outbox, IdempotencyStore idempotency,
-                          IdGenerator ids, Clock clock, ObjectMapper mapper) {
-        this.store = store; this.cipher = cipher; this.screening = screening; this.safetyEvents = safetyEvents;
-        this.outbox = outbox; this.idempotency = idempotency; this.ids = ids; this.clock = clock; this.mapper = mapper;
+    public JournalService(JournalStore store, JournalTagStore tagStore, JournalContentCipher cipher,
+                          SafetyScreeningUseCase screening, SafetyEventRecorder safetyEvents,
+                          OutboxPublisher outbox, IdempotencyStore idempotency,
+                          IdGenerator ids, Clock clock, ObjectMapper mapper,
+                          JournalAssetStore assetStore, JournalAssetService assetService) {
+        this.store = store; this.tagStore = tagStore; this.cipher = cipher; this.screening = screening;
+        this.safetyEvents = safetyEvents; this.outbox = outbox; this.idempotency = idempotency;
+        this.ids = ids; this.clock = clock; this.mapper = mapper;
+        this.assetStore = assetStore; this.assetService = assetService;
     }
 
     @Transactional
@@ -58,13 +70,20 @@ public class JournalService implements JournalAnalysisAccess {
         String timezone = timezone(command.timezone());
         validate(occurredAt, command.title(), command.location(), command.moodCode(), command.moodScore(),
                 command.stressScore(), command.energyScore(), command.sleepMinutes());
+
+        List<UUID> assetIds = TipTapContent.extractAssetIds(command.contentJson());
+        if (assetIds.size() > 20) {
+            throw new InvalidRequestException("Mỗi bài viết chỉ được đính kèm tối đa 20 hình ảnh.");
+        }
+
         String plainText = TipTapContent.plainText(command.contentJson());
         var existing = idempotency.reserve(userId, "journal-create", key,
                 cipher.lookupHash("journal-create:" + mapper.writeValueAsString(command)), now);
         if (existing.isPresent()) return get(userId, existing.get());
         UUID id = ids.next();
         String title = command.title() == null ? "" : command.title().trim();
-        JournalPayload payload = new JournalPayload(1, title, command.contentJson(), plainText, command.location());
+        JsonNode cleanContentJson = TipTapContent.sanitizeForStorage(command.contentJson());
+        JournalPayload payload = new JournalPayload(1, title, cleanContentJson, plainText, command.location());
         SafetyDecision decision = screening.screen(title + "\n" + plainText);
         String status = decision.permitsOrdinaryAnalysis() ? "PENDING" : "BLOCKED_BY_SAFETY";
         JournalEntrySnapshot entry = new JournalEntrySnapshot(id, userId,
@@ -73,20 +92,31 @@ public class JournalService implements JournalAnalysisAccess {
                 command.moodScore(), command.stressScore(), command.energyScore(), command.sleepMinutes(), false,
                 "SAVED", decision.riskLevel().name(), status, 1, 0, now, now, null);
         store.create(entry);
+        if (command.tagIds() != null && !command.tagIds().isEmpty()) {
+            tagStore.replaceTags(userId, id, command.tagIds(), now);
+        }
+        if (assetStore != null) {
+            assetStore.linkAssets(userId, id, assetIds, now);
+        }
         safetyEvents.record(userId, id, decision, now);
         publish(id, 1, decision, now);
         idempotency.complete(userId, "journal-create", key, id, 201, now);
-        return view(entry);
+        return view(entry, tagStore.listTagsForEntry(userId, id));
     }
 
     @Transactional(readOnly = true)
-    public JournalEntryView get(UUID userId, UUID entryId) { return view(require(userId, entryId)); }
+    public JournalEntryView get(UUID userId, UUID entryId) {
+        JournalEntrySnapshot entry = require(userId, entryId);
+        return view(entry, tagStore.listTagsForEntry(userId, entryId));
+    }
 
     @Transactional(readOnly = true)
     public List<JournalEntryView> exportAll(UUID userId) {
-        List<JournalEntrySnapshot> entries=store.exportAll(userId,10001);
-        if (entries.size()>10000) throw new IllegalStateException("Export row limit exceeded");
-        return entries.stream().map(this::view).toList();
+        List<JournalEntrySnapshot> entries = store.exportAll(userId, 10001);
+        if (entries.size() > 10000) throw new IllegalStateException("Export row limit exceeded");
+        List<UUID> entryIds = entries.stream().map(JournalEntrySnapshot::id).toList();
+        Map<UUID, List<JournalTagView>> tagsByEntry = tagStore.listTagsForEntries(userId, entryIds);
+        return entries.stream().map(e -> view(e, tagsByEntry.getOrDefault(e.id(), List.of()))).toList();
     }
 
     @Transactional(readOnly = true)
@@ -100,7 +130,89 @@ public class JournalService implements JournalAnalysisAccess {
         boolean more = entries.size() > pageSize;
         List<JournalEntrySnapshot> page = more ? entries.subList(0, pageSize) : entries;
         String next = more ? encode(page.get(page.size() - 1)) : null;
-        return new JournalPage(page.stream().map(this::summary).toList(), next);
+
+        List<UUID> entryIds = page.stream().map(JournalEntrySnapshot::id).toList();
+        Map<UUID, List<JournalTagView>> tagsByEntry = tagStore.listTagsForEntries(userId, entryIds);
+        Map<UUID, JournalAsset> coverAssets = assetStore == null ? Map.of() : assetStore.findCoverAssetsForEntries(userId, entryIds);
+
+        return new JournalPage(page.stream()
+                .map(e -> {
+                    String photoUrl = assetService == null ? null : assetService.resolveCoverUrl(coverAssets.get(e.id()));
+                    return summary(e, tagsByEntry.getOrDefault(e.id(), List.of()), photoUrl);
+                })
+                .toList(), next);
+    }
+
+    @Transactional(readOnly = true)
+    public JournalPage searchByTitle(UUID userId, String query, String cursor, int pageSize) {
+        if (pageSize < 1 || pageSize > 50 || query == null || query.isBlank()) {
+            throw new InvalidRequestException();
+        }
+        String normalizedQuery = VietnameseStringUtils.normalize(query);
+        if (normalizedQuery.isBlank()) {
+            return new JournalPage(List.of(), null);
+        }
+
+        Cursor currentCursor = decode(cursor);
+        Instant cursorTime = currentCursor == null ? null : currentCursor.occurredAt();
+        UUID cursorId = currentCursor == null ? null : currentCursor.id();
+
+        final int chunkSize = 100;
+        final int maxScanned = 1000;
+        int totalScanned = 0;
+        List<JournalEntrySnapshot> matched = new ArrayList<>();
+        String nextCursor = null;
+
+        while (matched.size() <= pageSize && totalScanned < maxScanned) {
+            int fetchLimit = chunkSize + 1;
+            List<JournalEntrySnapshot> chunk = store.list(userId, null, null, null, null, cursorTime, cursorId, fetchLimit);
+            if (chunk.isEmpty()) {
+                break;
+            }
+
+            int scanCount = Math.min(chunk.size(), chunkSize);
+            for (int i = 0; i < scanCount; i++) {
+                JournalEntrySnapshot entry = chunk.get(i);
+                totalScanned++;
+                String title = payload(entry).title();
+                if (VietnameseStringUtils.matches(title, normalizedQuery)) {
+                    matched.add(entry);
+                    if (matched.size() > pageSize) {
+                        break;
+                    }
+                }
+            }
+
+            if (matched.size() > pageSize) {
+                nextCursor = encode(matched.get(pageSize - 1));
+                break;
+            }
+
+            if (chunk.size() < chunkSize) {
+                break;
+            }
+
+            JournalEntrySnapshot lastInChunk = chunk.get(chunk.size() - 1);
+            cursorTime = lastInChunk.occurredAt();
+            cursorId = lastInChunk.id();
+        }
+
+        List<JournalEntrySnapshot> pageEntries = matched.size() > pageSize
+                ? matched.subList(0, pageSize)
+                : matched;
+
+        List<UUID> entryIds = pageEntries.stream().map(JournalEntrySnapshot::id).toList();
+        Map<UUID, List<JournalTagView>> tagsByEntry = tagStore.listTagsForEntries(userId, entryIds);
+        Map<UUID, JournalAsset> coverAssets = assetStore == null ? Map.of() : assetStore.findCoverAssetsForEntries(userId, entryIds);
+
+        List<JournalSummaryView> views = pageEntries.stream()
+                .map(e -> {
+                    String photoUrl = assetService == null ? null : assetService.resolveCoverUrl(coverAssets.get(e.id()));
+                    return summary(e, tagsByEntry.getOrDefault(e.id(), List.of()), photoUrl);
+                })
+                .toList();
+
+        return new JournalPage(views, nextCursor);
     }
 
     @Transactional
@@ -110,7 +222,14 @@ public class JournalService implements JournalAnalysisAccess {
         JournalPayload previous = payload(old);
         String title = command.title() == null ? previous.title() : command.title().trim();
         JsonNode content = command.contentJson() == null ? previous.contentJson() : command.contentJson();
+
+        List<UUID> assetIds = TipTapContent.extractAssetIds(content);
+        if (assetIds.size() > 20) {
+            throw new InvalidRequestException("Mỗi bài viết chỉ được đính kèm tối đa 20 hình ảnh.");
+        }
+
         String plainText = TipTapContent.plainText(content);
+        JsonNode cleanContent = TipTapContent.sanitizeForStorage(content);
         String location = command.location() == null ? previous.location() : command.location();
         Instant occurredAt = command.occurredAt() == null ? old.occurredAt() : command.occurredAt();
         String timezone = command.timezone() == null ? old.timezone() : timezone(command.timezone());
@@ -123,16 +242,22 @@ public class JournalService implements JournalAnalysisAccess {
         SafetyDecision decision = screening.screen(title + "\n" + plainText);
         Instant now = clock.instant();
         JournalEntrySnapshot next = new JournalEntrySnapshot(entryId, userId,
-                cipher.encrypt(userId, entryId, mapper.writeValueAsString(new JournalPayload(1, title, content, plainText, location))),
+                cipher.encrypt(userId, entryId, mapper.writeValueAsString(new JournalPayload(1, title, cleanContent, plainText, location))),
                 occurredAt, occurredAt.atZone(ZoneId.of(timezone)).toLocalDate(), timezone, moodCode,
                 mood, stress, energy, sleep, old.favorite(), old.entryStatus(), decision.riskLevel().name(),
                 decision.permitsOrdinaryAnalysis() ? "ANALYSIS_OUTDATED" : "BLOCKED_BY_SAFETY",
                 old.contentVersion() + 1, old.rowVersion() + 1, old.createdAt(), now, null);
         if (!store.update(next, expectedVersion)) throw new ConflictException("Nhật ký đã được cập nhật ở nơi khác.");
+        if (command.tagIds() != null) {
+            tagStore.replaceTags(userId, entryId, command.tagIds(), now);
+        }
+        if (assetStore != null) {
+            assetStore.linkAssets(userId, entryId, assetIds, now);
+        }
         safetyEvents.record(userId, entryId, decision, now);
         outbox.publish("JOURNAL_ENTRY", entryId, "JournalEntryChanged", next.contentVersion(), now);
         publish(entryId, next.contentVersion(), decision, now);
-        return view(next);
+        return view(next, tagStore.listTagsForEntry(userId, entryId));
     }
 
     @Transactional
@@ -140,6 +265,9 @@ public class JournalService implements JournalAnalysisAccess {
         JournalEntrySnapshot old = require(userId, entryId);
         if (!store.softDelete(userId, entryId, expectedVersion, clock.instant())) {
             throw new ConflictException("Nhật ký đã được cập nhật ở nơi khác.");
+        }
+        if (assetStore != null) {
+            assetStore.softDeleteAssetsForEntry(userId, entryId, clock.instant());
         }
         outbox.publish("JOURNAL_ENTRY", entryId, "JournalEntryDeleted", old.contentVersion(), clock.instant());
     }
@@ -232,18 +360,38 @@ public class JournalService implements JournalAnalysisAccess {
         return mapper.readValue(cipher.decrypt(entry.userId(), entry.id(), entry.payload()), JournalPayload.class);
     }
 
-    private JournalEntryView view(JournalEntrySnapshot entry) {
+    private JournalEntryView view(JournalEntrySnapshot entry, List<JournalTagView> tags) {
         JournalPayload data = payload(entry);
-        return new JournalEntryView(entry.id(), data.title(), data.contentJson(), data.location(),
+        JsonNode enrichedContent = assetService == null ? data.contentJson() : assetService.enrichContentWithSignedUrls(entry.userId(), data.contentJson());
+        String photoUrl = null;
+        if (assetStore != null && assetService != null) {
+            Map<UUID, JournalAsset> covers = assetStore.findCoverAssetsForEntries(entry.userId(), List.of(entry.id()));
+            JournalAsset cover = covers.get(entry.id());
+            photoUrl = assetService.resolveCoverUrl(cover);
+        }
+        return new JournalEntryView(entry.id(), data.title(), enrichedContent, data.location(),
                 entry.occurredAt(), entry.localDate(), entry.timezone(), entry.moodCode(), entry.moodScore(),
                 entry.stressScore(), entry.energyScore(), entry.sleepMinutes(), entry.favorite(),
                 entry.entryStatus(), entry.riskLevel(), entry.analysisStatus(), entry.contentVersion(),
-                entry.rowVersion(), entry.createdAt(), entry.updatedAt());
+                entry.rowVersion(), entry.createdAt(), entry.updatedAt(), tags == null ? List.of() : tags, photoUrl);
+    }
+
+    private JournalEntryView view(JournalEntrySnapshot entry) {
+        return view(entry, List.of());
+    }
+
+    private JournalSummaryView summary(JournalEntrySnapshot entry, List<JournalTagView> tags, String photoUrl) {
+        return new JournalSummaryView(entry.id(), payload(entry).title(), entry.occurredAt(), entry.localDate(),
+                entry.moodCode(), entry.favorite(), entry.riskLevel(), entry.analysisStatus(), entry.rowVersion(),
+                tags == null ? List.of() : tags, photoUrl);
+    }
+
+    private JournalSummaryView summary(JournalEntrySnapshot entry, List<JournalTagView> tags) {
+        return summary(entry, tags, null);
     }
 
     private JournalSummaryView summary(JournalEntrySnapshot entry) {
-        return new JournalSummaryView(entry.id(), payload(entry).title(), entry.occurredAt(), entry.localDate(),
-                entry.moodCode(), entry.favorite(), entry.riskLevel(), entry.analysisStatus(), entry.rowVersion());
+        return summary(entry, List.of(), null);
     }
 
     private static String timezone(String value) {

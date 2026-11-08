@@ -9,8 +9,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
 import java.time.Clock;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -33,6 +35,24 @@ public class JournalTagService {
 
     @Transactional(readOnly = true)
     public List<JournalTagView> list(UUID userId) { return store.list(userId); }
+
+    @Transactional(readOnly = true)
+    public List<JournalTagView> listForEntry(UUID userId, UUID entryId) {
+        if (!store.ownsEntry(userId, entryId)) {
+            throw new ResourceNotFoundException("Không tìm thấy nhật ký.");
+        }
+        return store.listTagsForEntry(userId, entryId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, List<JournalTagView>> listForEntries(UUID userId, Collection<UUID> entryIds) {
+        return store.listTagsForEntries(userId, entryIds);
+    }
+
+    @Transactional
+    public void replaceTags(UUID userId, UUID entryId, List<UUID> tagIds) {
+        store.replaceTags(userId, entryId, tagIds, clock.instant());
+    }
 
     @Transactional(readOnly = true)
     public List<JournalTagStore.Link> exportLinks(UUID userId) { return store.links(userId); }
