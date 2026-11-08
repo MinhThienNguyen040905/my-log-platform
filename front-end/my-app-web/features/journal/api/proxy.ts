@@ -36,3 +36,36 @@ export async function journalProxy(request: Request, path: string) {
     });
   } catch { return new Response(null, { status: 503 }); }
 }
+
+export async function journalAssetUploadProxy(request: Request) {
+  if (!sameOrigin(request)) return new Response(null, { status: 403 });
+  try {
+    let token = await accessToken() ?? await refreshSession();
+    if (!token) return new Response(null, { status: 401 });
+    const formData = await request.formData();
+    const send = (bearer: string) => authBackend('/journal-assets/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${bearer}`,
+      },
+      body: formData,
+    });
+    let response = await send(token);
+    if (response.status === 401) {
+      token = await refreshSession();
+      if (!token) return new Response(null, { status: 401 });
+      response = await send(token);
+    }
+    if (response.status === 401) await clearTokens();
+    if (!response.ok) return forwardProblem(response);
+    return new Response(await response.text(), {
+      status: response.status,
+      headers: {
+        'Cache-Control': 'no-store',
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch {
+    return new Response(null, { status: 503 });
+  }
+}

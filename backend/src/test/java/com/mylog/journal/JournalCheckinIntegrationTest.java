@@ -233,6 +233,121 @@ class JournalCheckinIntegrationTest {
                 new BigDecimal("0.95"), now).isEmpty());
     }
 
+    @Test void journalEntriesIncludeTagsInResponseAndSupportBatchLoadingAndReplacing() throws Exception {
+        UUID owner = user();
+        UUID stranger = user();
+        var tag1 = tags.create(owner, "Reflection", "#123456");
+        var tag2 = tags.create(owner, "Mindfulness", "#654321");
+        var strangerTag = tags.create(stranger, "Stranger Tag", "#000000");
+
+        var content = mapper.readTree("""
+                {"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"A tagged entry"}]}]}
+                """);
+        var command = new CreateJournalEntryCommand("Tagged Title", content, null,
+                Instant.parse("2026-01-02T12:00:00Z"), "Asia/Ho_Chi_Minh", "happy",
+                BigDecimal.valueOf(8), null, null, null, List.of(tag1.id(), tag2.id()));
+
+        // Create with tags
+        var created = journal.create(owner, command, "journal-test-tags-1");
+        assertNotNull(created.tags());
+        assertEquals(2, created.tags().size());
+        assertTrue(created.tags().stream().anyMatch(t -> "Reflection".equals(t.name())));
+        assertTrue(created.tags().stream().anyMatch(t -> "Mindfulness".equals(t.name())));
+
+        // Direct get
+        var retrieved = journal.get(owner, created.id());
+        assertNotNull(retrieved.tags());
+        assertEquals(2, retrieved.tags().size());
+
+        // Batch list
+        var list = journal.list(owner, null, null, null, null, null, 20);
+        var summary = list.entries().stream().filter(e -> e.id().equals(created.id())).findFirst().orElseThrow();
+        assertNotNull(summary.tags());
+        assertEquals(2, summary.tags().size());
+
+        // HTTP GET /{id}
+        mvc.perform(get("/api/v1/journal-entries/{id}", created.id())
+                .with(jwt().jwt(jwt -> jwt.subject(owner.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tags.length()").value(2))
+                .andExpect(jsonPath("$.tags[0].name").isString());
+
+        // HTTP GET / (list)
+        mvc.perform(get("/api/v1/journal-entries")
+                .with(jwt().jwt(jwt -> jwt.subject(owner.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].tags.length()").value(2));
+
+        // Update tags: replace with only tag1
+        var updateCommand = new UpdateJournalEntryCommand("Updated Tagged Title", content, null,
+                null, null, "sad", BigDecimal.valueOf(4), null, null, null, List.of(tag1.id()));
+        var updated = journal.update(owner, created.id(), updateCommand, created.version());
+        assertNotNull(updated.tags());
+        assertEquals(1, updated.tags().size());
+        assertEquals("Reflection", updated.tags().get(0).name());
+
+        // IDOR check: Attempting to use a tag belonging to stranger throws ResourceNotFoundException
+        var idorCommand = new UpdateJournalEntryCommand(null, null, null,
+                null, null, null, null, null, null, null, List.of(strangerTag.id()));
+        assertThrows(ResourceNotFoundException.class, () ->
+                journal.update(owner, created.id(), idorCommand, updated.version()));
+    }
+
+    @Test void searchByTitlePaginatesAndMatchesDiacritics() throws Exception {
+        UUID owner = user();
+        UUID stranger = user();
+        var content = mapper.readTree("""
+                {"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"A private entry"}]}]}
+                """);
+
+        var cmd1 = new CreateJournalEntryCommand("Chuyến đi Đà Lạt ngày 1", content, null,
+                Instant.parse("2026-01-03T12:00:00Z"), "Asia/Ho_Chi_Minh", "happy", null, null, null, null);
+        var e1 = journal.create(owner, cmd1, "search-key-1");
+
+        var cmd2 = new CreateJournalEntryCommand("Hôm nay vui vẻ", content, null,
+                Instant.parse("2026-01-02T12:00:00Z"), "Asia/Ho_Chi_Minh", "happy", null, null, null, null);
+        var e2 = journal.create(owner, cmd2, "search-key-2");
+
+        var cmd3 = new CreateJournalEntryCommand("Đà Lạt ngày 2 mộng mơ", content, null,
+                Instant.parse("2026-01-01T12:00:00Z"), "Asia/Ho_Chi_Minh", "happy", null, null, null, null);
+        var e3 = journal.create(owner, cmd3, "search-key-3");
+
+        var strangerCmd = new CreateJournalEntryCommand("Đà Lạt bí mật của người lạ", content, null,
+                Instant.parse("2026-01-04T12:00:00Z"), "Asia/Ho_Chi_Minh", "happy", null, null, null, null);
+        journal.create(stranger, strangerCmd, "search-key-stranger");
+
+        var page1 = journal.searchByTitle(owner, "Đà Lạt", null, 1);
+        assertEquals(1, page1.entries().size());
+        assertEquals(e1.id(), page1.entries().get(0).id());
+        assertNotNull(page1.nextCursor());
+
+        var page2 = journal.searchByTitle(owner, "Đà Lạt", page1.nextCursor(), 1);
+        assertEquals(1, page2.entries().size());
+        assertEquals(e3.id(), page2.entries().get(0).id());
+        assertNull(page2.nextCursor());
+
+        var withoutDiacritics = journal.searchByTitle(owner, "da lat", null, 5);
+        assertEquals(2, withoutDiacritics.entries().size());
+        assertEquals(e1.id(), withoutDiacritics.entries().get(0).id());
+        assertEquals(e3.id(), withoutDiacritics.entries().get(1).id());
+
+        mvc.perform(get("/api/v1/journal-entries/search")
+                .param("query", "da lat")
+                .param("limit", "1")
+                .with(jwt().jwt(jwt -> jwt.subject(owner.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].title").value("Chuyến đi Đà Lạt ngày 1"))
+                .andExpect(jsonPath("$.nextCursor").isString());
+
+        mvc.perform(get("/api/v1/journal-entries/search")
+                .param("query", "da lat")
+                .with(jwt().jwt(jwt -> jwt.subject(stranger.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].title").value("Đà Lạt bí mật của người lạ"));
+    }
+
     private UUID user() {
         UUID id = UUID.randomUUID();
         String email = "m2-" + id + "@example.test";

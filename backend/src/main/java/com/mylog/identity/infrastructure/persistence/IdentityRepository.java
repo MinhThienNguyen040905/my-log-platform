@@ -312,6 +312,15 @@ class IdentityRepository implements IdentityStore {
         entityManager.persist(token);
     }
 
+    @Override
+    public void revokeExistingActionTokens(UUID userId, String purpose, Instant now) {
+        entityManager.createQuery("""
+                update AuthActionToken t set t.consumedAt=:now
+                where t.userId=:userId and t.purpose=:purpose and t.consumedAt is null
+                """).setParameter("now", now).setParameter("userId", userId).setParameter("purpose", purpose)
+                .executeUpdate();
+    }
+
     @Override public Optional<UUID> consumeActionToken(byte[] hash, String purpose, Instant now) {
         return entityManager.createQuery("""
                 select t from AuthActionToken t where t.tokenHash=:hash and t.purpose=:purpose
@@ -319,6 +328,63 @@ class IdentityRepository implements IdentityStore {
                 .setLockMode(LockModeType.PESSIMISTIC_WRITE).getResultStream().findFirst()
                 .filter(t -> t.consumedAt == null && t.expiresAt.isAfter(now))
                 .map(t -> { t.consumedAt = now; return t.userId; });
+    }
+
+    @Override
+    public Optional<UUID> consumeActionCode(UUID userId, byte[] codeHash, String purpose, Instant now) {
+        var token = entityManager.createQuery("""
+                select t from AuthActionToken t
+                where t.userId=:userId and t.purpose=:purpose and t.consumedAt is null
+                  and t.codeExpiresAt > :now and t.codeFailedAttempts < 5
+                order by t.createdAt desc
+                """, AuthActionToken.class)
+                .setParameter("userId", userId)
+                .setParameter("purpose", purpose)
+                .setParameter("now", now)
+                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                .getResultStream()
+                .findFirst()
+                .orElse(null);
+
+        if (token == null) {
+            return Optional.empty();
+        }
+
+        if (token.codeHash == null || !java.security.MessageDigest.isEqual(token.codeHash, codeHash)) {
+            token.codeFailedAttempts = token.codeFailedAttempts + 1;
+            return Optional.empty();
+        }
+
+        token.consumedAt = now;
+        return Optional.of(token.userId);
+    }
+
+    @Override
+    public void recordActionCodeFailure(UUID userId, String purpose, Instant now) {
+        var token = entityManager.createQuery("""
+                select t from AuthActionToken t
+                where t.userId=:userId and t.purpose=:purpose and t.consumedAt is null
+                  and t.codeExpiresAt > :now and t.codeFailedAttempts < 5
+                order by t.createdAt desc
+                """, AuthActionToken.class)
+                .setParameter("userId", userId)
+                .setParameter("purpose", purpose)
+                .setParameter("now", now)
+                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                .getResultStream()
+                .findFirst()
+                .orElse(null);
+
+        if (token != null) {
+            token.codeFailedAttempts = token.codeFailedAttempts + 1;
+        }
+    }
+
+    @Override
+    public void setEmailVerified(UUID userId, Instant now) {
+        entityManager.createQuery("""
+                update User u set u.emailVerifiedAt=:now where u.id=:userId and u.emailVerifiedAt is null
+                """).setParameter("now", now).setParameter("userId", userId).executeUpdate();
     }
 
     @Override public boolean actionTokenAlreadyConsumed(byte[] hash, String purpose) {
@@ -343,6 +409,36 @@ class IdentityRepository implements IdentityStore {
                 "SELECT attempts FROM auth_rate_limits WHERE subject_hash=?1")
                 .setParameter(1, subject).getSingleResult();
         return attempts.intValue() <= maximum;
+    }
+
+    @Override
+    public boolean isRateLimited(byte[] subject, Instant now, int maximum, long windowSeconds) {
+        Instant cutoff = now.minusSeconds(windowSeconds);
+        Number count = (Number) entityManager.createNativeQuery(
+                "SELECT count(*) FROM auth_rate_limits WHERE subject_hash=?1 AND window_started_at>=?2 AND attempts>=?3")
+                .setParameter(1, subject).setParameter(2, Timestamp.from(cutoff)).setParameter(3, maximum).getSingleResult();
+        return count.intValue() > 0;
+    }
+
+    @Override
+    @Transactional
+    public void clearRateLimit(byte[] subject) {
+        entityManager.createNativeQuery("DELETE FROM auth_rate_limits WHERE subject_hash=?1")
+                .setParameter(1, subject).executeUpdate();
+    }
+
+    @Override
+    public boolean sessionBelongsToUser(UUID sessionId, UUID userId) {
+        Number count = (Number) entityManager.createNativeQuery(
+                "SELECT count(*) FROM auth_sessions WHERE id=?1 AND user_id=?2 AND revoked_at IS NULL")
+                .setParameter(1, sessionId).setParameter(2, userId).getSingleResult();
+        return count.intValue() > 0;
+    }
+
+    @Override
+    public boolean hasPassword(UUID userId) {
+        User user = entityManager.find(User.class, userId);
+        return user != null && user.passwordHash != null && !user.passwordHash.isBlank();
     }
 
     @Override public void audit(UUID actor, String action, UUID target, Instant now) {

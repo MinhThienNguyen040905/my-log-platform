@@ -5,6 +5,7 @@ import com.mylog.platform.id.IdGenerator;
 import com.mylog.platform.web.ConflictException;
 import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.platform.web.ResourceNotFoundException;
+import com.mylog.selfcare.application.query.CompanionHabitCandidate;
 import com.mylog.selfcare.application.query.GoalView;
 import com.mylog.selfcare.application.query.HabitView;
 import com.mylog.selfcare.application.query.HabitCompletionView;
@@ -21,15 +22,18 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @ConditionalOnProperty(prefix = "mylog.identity", name = "enabled", havingValue = "true")
-public class SelfCareService {
+public class SelfCareService implements SelfCareCompanionQuery {
+    private static final Set<String> ALLOWED_TOOL_CODES = Set.of("BREATHING_2MIN", "AMBIENT", "VENT_PROMPT");
     private final SelfCareStore store;
     private final SensitiveDataCipher cipher;
     private final IdGenerator ids;
@@ -94,9 +98,16 @@ public class SelfCareService {
     @Transactional
     public HabitView createHabit(UUID userId, UUID goalId, String title, BigDecimal targetValue,
                                  String unit, String frequencyType, List<Integer> daysOfWeek) {
+        return createHabit(userId, goalId, title, targetValue, unit, frequencyType, daysOfWeek, null);
+    }
+
+    @Transactional
+    public HabitView createHabit(UUID userId, UUID goalId, String title, BigDecimal targetValue,
+                                 String unit, String frequencyType, List<Integer> daysOfWeek, String toolCode) {
         SelfCareStore.Goal goal = requireGoal(userId, goalId);
         if (!"ACTIVE".equals(goal.status())) throw new ConflictException("Goal không còn active.");
         String cleanTitle = wellnessText(title, 160, true);
+        String cleanToolCode = normalizeToolCode(toolCode);
         if (targetValue == null || targetValue.signum() <= 0 || targetValue.scale() > 2
                 || targetValue.precision() > 10 || unit == null || !unit.matches("[A-Za-z0-9_]{1,32}"))
             throw new InvalidRequestException();
@@ -106,9 +117,72 @@ public class SelfCareService {
         SelfCareStore.Habit habit = new SelfCareStore.Habit(id, goalId, userId,
                 cipher.encrypt("selfcare-habit-title", userId, id, cleanTitle), targetValue, unit,
                 schedule.type(), Map.of("daysOfWeek", schedule.daysOfWeek().stream().sorted().toList()),
-                timezone, "ACTIVE", now, now, 0);
+                timezone, cleanToolCode, "ACTIVE", now, now, 0);
         store.createHabit(habit);
         return view(habit);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<CompanionHabitCandidate> findUncompletedActiveHabitByToolCode(UUID userId, String toolCode) {
+        if (toolCode == null || !ALLOWED_TOOL_CODES.contains(toolCode)) return Optional.empty();
+        for (SelfCareStore.Goal goal : store.goals(userId)) {
+            if (!"ACTIVE".equals(goal.status())) continue;
+            for (SelfCareStore.Habit habit : store.habits(userId, goal.id())) {
+                if (!"ACTIVE".equals(habit.status()) || !toolCode.equals(habit.toolCode())) continue;
+                LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(habit.timezone())));
+                if (!schedule(habit).scheduled(today) || isCompletedOn(userId, habit, today)) continue;
+                String title = cipher.decrypt("selfcare-habit-title", habit.userId(), habit.id(), habit.title());
+                return Optional.of(new CompanionHabitCandidate(
+                        habit.id(), title, habit.targetValue(), habit.unit(), habit.toolCode(), today, null));
+            }
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<CompanionHabitCandidate> findUncompletedPositiveMoodAssociatedHabit(UUID userId) {
+        CompanionHabitCandidate best = null;
+        for (SelfCareStore.Goal goal : store.goals(userId)) {
+            if (!"ACTIVE".equals(goal.status())) continue;
+            for (SelfCareStore.Habit habit : store.habits(userId, goal.id())) {
+                if (!"ACTIVE".equals(habit.status())) continue;
+                LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(habit.timezone())));
+                HabitSchedule schedule = schedule(habit);
+                if (!schedule.scheduled(today)) continue;
+                LocalDate from = habit.createdAt().atZone(ZoneId.of(habit.timezone())).toLocalDate();
+                LocalDate sampleStart = today.minusDays(89).isAfter(from) ? today.minusDays(89) : from;
+                List<SelfCareStore.Completion> completions = store.completions(userId, habit.id(), sampleStart, today);
+                Set<LocalDate> achieved = completions.stream()
+                        .filter(c -> c.value().compareTo(habit.targetValue()) >= 0)
+                        .map(SelfCareStore.Completion::localDate)
+                        .collect(Collectors.toSet());
+                if (achieved.contains(today)) continue;
+                var moodDays = checkins.list(userId, sampleStart, today).stream()
+                        .map(c -> new HabitMoodAssociation.Day(c.localDate(), c.moodScore())).toList();
+                var association = HabitMoodAssociation.calculate(schedule, achieved, moodDays);
+                if (association == null || association.averageMoodDifference().signum() <= 0) continue;
+                if (best == null || association.averageMoodDifference().compareTo(best.moodDifference()) > 0) {
+                    String title = cipher.decrypt("selfcare-habit-title", habit.userId(), habit.id(), habit.title());
+                    best = new CompanionHabitCandidate(habit.id(), title, habit.targetValue(), habit.unit(),
+                            habit.toolCode(), today, association.averageMoodDifference());
+                }
+            }
+        }
+        return Optional.ofNullable(best);
+    }
+
+    private boolean isCompletedOn(UUID userId, SelfCareStore.Habit habit, LocalDate date) {
+        return store.completions(userId, habit.id(), date, date).stream()
+                .anyMatch(c -> c.value().compareTo(habit.targetValue()) >= 0);
+    }
+
+    private static String normalizeToolCode(String toolCode) {
+        if (toolCode == null || toolCode.isBlank()) return null;
+        String trimmed = toolCode.trim();
+        if (!ALLOWED_TOOL_CODES.contains(trimmed)) throw new InvalidRequestException("Mã công cụ không hợp lệ.");
+        return trimmed;
     }
 
     @Transactional
@@ -154,7 +228,7 @@ public class SelfCareService {
                 "Chỉ là mối liên hệ quan sát được, không chứng minh nguyên nhân.");
         return new HabitView(habit.id(), habit.goalId(), cipher.decrypt("selfcare-habit-title", habit.userId(), habit.id(), habit.title()),
                 habit.targetValue(), habit.unit(), habit.frequencyType(), schedule.daysOfWeek().stream().sorted().toList(),
-                habit.timezone(), habit.status(), habit.version(), schedule.streak(today, achieved),
+                habit.timezone(), habit.toolCode(), habit.status(), habit.version(), schedule.streak(today, achieved),
                 achieved.size(), achieved, moodAssociation);
     }
 

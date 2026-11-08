@@ -1,9 +1,10 @@
 import { apiJson, apiJsonBody, apiResponse } from '@/lib/api/client';
 
+export type HabitToolCode = 'BREATHING_2MIN' | 'AMBIENT' | 'VENT_PROMPT';
 export type MoodAssociation = { completedDays: number; otherDays: number; averageMoodDifference: number | null; interpretation: string | null };
 export type Habit = {
   id: string; goalId: string; title: string; targetValue: number; unit: string;
-  frequencyType: string; daysOfWeek: number[]; timezone: string; status: string;
+  frequencyType: string; daysOfWeek: number[]; timezone: string; toolCode?: HabitToolCode | null; status: string;
   version: number; streak: number; completionCount: number;
   completedDates: string[]; moodAssociation: MoodAssociation | null;
 };
@@ -14,7 +15,7 @@ export type Goal = {
 };
 export type CreateGoal = { category: string; title: string; description?: string | null; startDate?: string | null; targetDate?: string | null };
 export type UpdateGoal = { title?: string; description?: string | null; status?: string; startDate?: string | null; targetDate?: string | null };
-export type CreateHabit = { title: string; targetValue: number; unit: string; frequencyType: string; daysOfWeek?: number[] };
+export type CreateHabit = { title: string; targetValue: number; unit: string; frequencyType: string; daysOfWeek?: number[]; toolCode?: HabitToolCode | null };
 
 export function listGoals(): Promise<Goal[]> { return apiJson('self-care/goals'); }
 export function createGoal(input: CreateGoal): Promise<Goal> {

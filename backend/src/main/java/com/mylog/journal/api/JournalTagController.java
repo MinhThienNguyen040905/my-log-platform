@@ -40,6 +40,11 @@ public class JournalTagController {
         return tags.list(user()).stream().map(JournalTagResponse::from).toList();
     }
 
+    @GetMapping("/api/v1/journal-entries/{entryId}/tags")
+    public List<JournalTagResponse> listForEntry(@PathVariable UUID entryId) {
+        return tags.listForEntry(user(), entryId).stream().map(JournalTagResponse::from).toList();
+    }
+
     @PutMapping("/api/v1/journal-entries/{entryId}/tags/{tagId}")
     public ResponseEntity<Void> attach(@PathVariable UUID entryId, @PathVariable UUID tagId) {
         writeQuota();

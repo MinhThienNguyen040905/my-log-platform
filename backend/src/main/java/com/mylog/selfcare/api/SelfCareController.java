@@ -46,7 +46,7 @@ public class SelfCareController {
     @PostMapping("/goals/{goalId}/habits")
     public ResponseEntity<HabitResponse> createHabit(@PathVariable UUID goalId, @Valid @RequestBody CreateHabitRequest request) {
         var habit = service.createHabit(user(), goalId, request.title(), request.targetValue(), request.unit(),
-                request.frequencyType(), request.daysOfWeek());
+                request.frequencyType(), request.daysOfWeek(), request.toolCode());
         return ResponseEntity.created(URI.create("/api/v1/self-care/habits/" + habit.id()))
                 .eTag(etag(habit.version())).body(HabitResponse.from(habit));
     }

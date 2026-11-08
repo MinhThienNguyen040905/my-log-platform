@@ -13,7 +13,7 @@ import { createSlashCommandExtension } from '../extensions/slash-command';
 
 export interface JournalTipTapEditorRef {
   insertContent: (content: string) => void;
-  insertImage: (url: string, alt?: string) => void;
+  insertImage: (url: string, assetId: string, alt?: string) => void;
   focus: () => void;
   getText: () => string;
   getHTML: () => string;
@@ -26,6 +26,22 @@ interface JournalTipTapEditorProps {
   onOpenImageModal: () => void;
   editorRef?: React.Ref<JournalTipTapEditorRef>;
 }
+
+const CustomImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      'data-asset-id': {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-asset-id'),
+        renderHTML: (attributes) => {
+          if (!attributes['data-asset-id']) return {};
+          return { 'data-asset-id': attributes['data-asset-id'] };
+        },
+      },
+    };
+  },
+});
 
 export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTipTapEditorProps>(
   ({ initialContent, onChange, onOpenImageModal }, ref) => {
@@ -68,7 +84,7 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
           },
         }),
         Underline,
-        Image.configure({
+        CustomImage.configure({
           inline: false,
           allowBase64: true,
           HTMLAttributes: {
@@ -103,12 +119,15 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
         if (!editor) return;
         editor.chain().focus().insertContent(content).run();
       },
-      insertImage: (url: string, alt?: string) => {
+      insertImage: (url: string, assetId: string, alt?: string) => {
         if (!editor) return;
-        editor
-          .chain()
-          .focus()
-          .setImage({ src: url, alt: alt || 'Kỷ niệm nhật ký' })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (editor.chain().focus() as any)
+          .setImage({
+            src: url,
+            alt: alt || 'Kỷ niệm nhật ký',
+            'data-asset-id': assetId,
+          })
           .run();
       },
       focus: () => {

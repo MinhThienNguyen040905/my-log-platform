@@ -8,6 +8,9 @@ import com.mylog.identity.api.request.GoogleAuthRequest;
 import com.mylog.identity.api.request.LoginRequest;
 import com.mylog.identity.api.request.RefreshRequest;
 import com.mylog.identity.api.request.RegisterRequest;
+import com.mylog.identity.api.request.PasswordResetRequest;
+import com.mylog.identity.api.request.ConfirmPasswordResetRequest;
+import com.mylog.identity.api.request.ConfirmPasswordResetCodeRequest;
 import com.mylog.identity.api.response.AuthResponse;
 import com.mylog.identity.api.response.RegisterResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -21,6 +24,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -56,6 +60,32 @@ public class IdentityController {
     public ResponseEntity<Void> confirmCode(@Valid @RequestBody ConfirmEmailVerificationCodeRequest request,
                                              HttpServletRequest http) {
         identity.confirmVerificationCode(request.email(), request.code(), http.getRemoteAddr());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password-resets")
+    public ResponseEntity<Map<String, String>> requestPasswordReset(
+            @Valid @RequestBody PasswordResetRequest request,
+            HttpServletRequest http) {
+        identity.requestPasswordReset(request.email(), http.getRemoteAddr());
+        return ResponseEntity.accepted().body(Map.of(
+                "message", "Nếu tài khoản tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn."
+        ));
+    }
+
+    @PostMapping("/password-resets:confirm")
+    public ResponseEntity<Void> confirmPasswordReset(
+            @Valid @RequestBody ConfirmPasswordResetRequest request,
+            HttpServletRequest http) {
+        identity.resetPasswordWithToken(request.token(), request.newPassword(), http.getRemoteAddr());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password-resets:confirm-code")
+    public ResponseEntity<Void> confirmPasswordResetCode(
+            @Valid @RequestBody ConfirmPasswordResetCodeRequest request,
+            HttpServletRequest http) {
+        identity.resetPasswordWithCode(request.email(), request.code(), request.newPassword(), http.getRemoteAddr());
         return ResponseEntity.noContent().build();
     }
 

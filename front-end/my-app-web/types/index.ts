@@ -100,5 +100,6 @@ export interface UserProfile {
   journalingGoals?: string[];
   preferredTime?: string;
   isAdmin?: boolean;
+  canChangePassword?: boolean;
 }
 

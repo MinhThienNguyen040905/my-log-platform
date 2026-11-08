@@ -60,18 +60,23 @@ class SecurityConfiguration {
                         ).permitAll();
                     }
                     if (identityEnabled) {
+                        authorize.requestMatchers(HttpMethod.GET, "/api/v1/journal-assets/raw/*").permitAll();
                         authorize.requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
                                 "/api/v1/auth/google",
                                 "/api/v1/auth/email-verifications", "/api/v1/auth/email-verifications:confirm",
                                 "/api/v1/auth/email-verifications:confirm-code",
+                                "/api/v1/auth/password-resets", "/api/v1/auth/password-resets:confirm",
+                                "/api/v1/auth/password-resets:confirm-code",
                                 "/api/v1/account-deletion-requests/*:cancel",
                                 "/api/v1/account-deletion-requests/*:status")
                                 .permitAll();
                         authorize.requestMatchers("/api/v1/auth/logout", "/api/v1/me", "/api/v1/me/**",
                                         "/api/v1/journal-entries", "/api/v1/journal-entries/**",
                                         "/api/v1/journal-writing-suggestions",
+                                        "/api/v1/companion/habit-suggestions/dismiss",
                                         "/api/v1/journal-tags", "/api/v1/journal-tags/**",
+                                        "/api/v1/journal-assets", "/api/v1/journal-assets/**",
                                         "/api/v1/check-ins", "/api/v1/check-ins/**")
                                 .authenticated();
                         authorize.requestMatchers("/api/v1/exports", "/api/v1/exports/**",

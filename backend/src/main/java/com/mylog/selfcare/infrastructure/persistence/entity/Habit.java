@@ -24,6 +24,7 @@ public class Habit {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "frequency_config", nullable = false, columnDefinition = "jsonb") public Map<String, Object> frequencyConfig;
     @Column(nullable = false) public String timezone;
+    @Column(name = "tool_code") public String toolCode;
     @Column(nullable = false) public String status;
     @Column(name = "created_at", nullable = false) public Instant createdAt;
     @Column(name = "updated_at", nullable = false) public Instant updatedAt;

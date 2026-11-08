@@ -17,7 +17,13 @@ import com.mylog.identity.infrastructure.GoogleOAuthClient;
 import com.mylog.platform.config.MylogProperties;
 import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.user.application.UserProfileUseCase;
+import com.mylog.platform.security.UnauthenticatedUserException;
+import com.mylog.user.api.request.ChangePasswordRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -41,6 +47,8 @@ import java.util.UUID;
 @ConditionalOnProperty(prefix = "mylog.identity", name = "enabled", havingValue = "true")
 public class IdentityService {
     private static final String DUMMY_HASH = new BCryptPasswordEncoder(12).encode("dummy-password-never-used");
+    private static final byte[] DUMMY_CODE_HASH = new byte[32];
+    private static final UUID DUMMY_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
     private final IdentityStore store;
     private final SensitiveDataCipher cipher;
     private final AccessTokens accessTokens;
@@ -50,16 +58,21 @@ public class IdentityService {
     private final Clock clock;
     private final SecureRandom random;
     private final PasswordEncoder passwords = new BCryptPasswordEncoder(12);
+    private static final Logger log = LoggerFactory.getLogger(IdentityService.class);
     private final GoogleOAuthClient googleClient;
     private final GoogleAuthProvisioningService provisioningService;
     private final MylogProperties properties;
-
+    private final RateLimitService rateLimitService;
+    private final ApplicationEventPublisher eventPublisher;
+    @Autowired
     public IdentityService(IdentityStore store, SensitiveDataCipher cipher, AccessTokens accessTokens,
             VerificationDelivery delivery, UserProfileUseCase profiles, IdGenerator ids, Clock clock, SecureRandom random,
-            GoogleOAuthClient googleClient, GoogleAuthProvisioningService provisioningService, MylogProperties properties) {
+            GoogleOAuthClient googleClient, GoogleAuthProvisioningService provisioningService, MylogProperties properties,
+            RateLimitService rateLimitService, ApplicationEventPublisher eventPublisher) {
         this.store = store; this.cipher = cipher; this.accessTokens = accessTokens; this.delivery = delivery;
         this.profiles = profiles; this.ids = ids; this.clock = clock; this.random = random;
         this.googleClient = googleClient; this.provisioningService = provisioningService; this.properties = properties;
+        this.rateLimitService = rateLimitService; this.eventPublisher = eventPublisher;
     }
 
     public static String normalizeEmail(String value) {
@@ -311,6 +324,247 @@ public class IdentityService {
 
     private void rate(String subject, Instant now, int maximum) {
         if (!store.recordRateLimit(cipher.lookupHash(subject), now, maximum, 900)) throw new RateLimitExceededException();
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasPassword(UUID userId) {
+        return store.hasPassword(userId);
+    }
+
+    @Transactional
+    public void changePassword(UUID userId, UUID currentSessionId, ChangePasswordRequest request, String remoteAddress) {
+        Instant now = clock.instant();
+        byte[] rateSubject = cipher.lookupHash("change-password-attempt:" + userId);
+
+        // 1. Kiểm tra Rate Limiting (5 lần thử trong 15 phút = 900s)
+        if (store.isRateLimited(rateSubject, now, 5, 900)) {
+            throw new RateLimitExceededException();
+        }
+
+        // 2. Lấy Account và kiểm tra trạng thái
+        Account account = store.accountById(userId).orElseThrow(UnauthenticatedUserException::new);
+        if (account.passwordHash() == null) {
+            throw new PasswordChangeException("OAUTH_ONLY_ACCOUNT");
+        }
+        if (!"ACTIVE".equals(account.status())) {
+            throw new PasswordChangeException("ACCOUNT_NOT_ACTIVE");
+        }
+
+        // 3. Xác thực mật khẩu cũ
+        if (!passwords.matches(request.currentPassword(), account.passwordHash())) {
+            if (rateLimitService != null) {
+                rateLimitService.recordFailedAttempt(rateSubject, now, 5, 900);
+            }
+            throw new PasswordChangeException("CURRENT_PASSWORD_INCORRECT");
+        }
+
+        // 4. Kiểm tra mật khẩu mới (Chỉ chạy khi mật khẩu cũ đã được xác thực thành công)
+        if (request.currentPassword().equals(request.newPassword())) {
+            throw new PasswordChangeException("NEW_PASSWORD_SAME_AS_OLD");
+        }
+
+        byte[] newPasswordBytes = request.newPassword().getBytes(StandardCharsets.UTF_8);
+        if (newPasswordBytes.length < 12 || newPasswordBytes.length > 72) {
+            throw new PasswordChangeException("PASSWORD_LENGTH_INVALID");
+        }
+
+        String email = exportEmail(userId);
+        String emailLocalPart = email.split("@")[0].toLowerCase();
+        if (emailLocalPart.length() >= 4 && request.newPassword().toLowerCase().contains(emailLocalPart)) {
+            throw new PasswordChangeException("PASSWORD_CONTAINS_USER_INFO");
+        }
+
+        // 5. Cập nhật mật khẩu mới
+        String newHash = passwords.encode(request.newPassword());
+        store.changePassword(userId, newHash, now);
+
+        // 6. Xử lý thu hồi phiên (revoke)
+        if (currentSessionId != null && store.sessionBelongsToUser(currentSessionId, userId)) {
+            store.revokeOtherSessions(userId, currentSessionId, now);
+        } else {
+            log.warn("User {} changed password without valid current session id. Revoking all sessions.", userId);
+            store.revokeAllSessions(userId, "PASSWORD_CHANGED", now);
+        }
+
+        // 7. Reset counter Rate Limit & Ghi Audit Log
+        store.clearRateLimit(rateSubject);
+        store.audit(userId, "PASSWORD_CHANGED", userId, now);
+
+        // 8. Phát event gửi email thông báo bảo mật
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new PasswordChangedEvent(userId, email, now, remoteAddress));
+        }
+    }
+
+    @Transactional
+    public void requestPasswordReset(String email, String remoteAddress) {
+        Instant now = clock.instant();
+        String normalized = normalizeEmail(email);
+
+        // Rate limiting
+        rate("reset-req-ip:" + remoteAddress, now, 10);
+        byte[] emailLookupHash = cipher.lookupHash(normalized);
+        if (!store.recordRateLimit(cipher.lookupHash("reset-req-email:" + normalized), now, 5, 900)) {
+            throw new RateLimitExceededException();
+        }
+        if (!store.recordRateLimit(cipher.lookupHash("reset-req-email-daily:" + normalized), now, 10, 86400)) {
+            throw new RateLimitExceededException();
+        }
+
+        Account account = store.accountByEmailHash(emailLookupHash).orElse(null);
+
+        if (account == null || "SUSPENDED".equals(account.status()) || "DELETED".equals(account.status())) {
+            // Anti-enumeration dummy calculation
+            passwords.matches("dummy", DUMMY_HASH);
+            return;
+        }
+
+        // If user account is Google OAuth-only (no password hash)
+        if (account.passwordHash() == null) {
+            if (eventPublisher != null) {
+                eventPublisher.publishEvent(new OAuthPasswordResetAttemptEvent(account.id(), normalized, now));
+            }
+            return;
+        }
+
+        // Invalidate any existing unconsumed reset tokens for this user (Single Active Token)
+        store.revokeExistingActionTokens(account.id(), "RESET_PASSWORD", now);
+
+        // Generate token and OTP code
+        String token = randomToken();
+        String code = verificationCode();
+        byte[] tokenHash = cipher.tokenHash(token);
+        byte[] codeHash = cipher.tokenHash("RESET_PASSWORD_CODE:" + account.id() + ":" + code);
+
+        // Token: 1 hour, Code: 15 minutes
+        store.createActionToken(ids.next(), account.id(), tokenHash, codeHash, "RESET_PASSWORD",
+                now.plus(1, ChronoUnit.HOURS), now.plus(15, ChronoUnit.MINUTES), now);
+
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new PasswordResetRequestedEvent(account.id(), normalized, token, code, now));
+        }
+    }
+
+    @Transactional
+    public void resetPasswordWithToken(String token, String newPassword, String remoteAddress) {
+        Instant now = clock.instant();
+        rate("reset-confirm-ip:" + remoteAddress, now, 15);
+
+        // 1. Validate new password format & byte length (12-72 bytes UTF-8)
+        validateNewPasswordPolicy(newPassword);
+
+        // 2. Consume action token atomically
+        byte[] tokenHash = cipher.tokenHash(token);
+        UUID userId = store.consumeActionToken(tokenHash, "RESET_PASSWORD", now)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        // 3. Validate user account & business rules
+        Account account = store.accountById(userId).orElseThrow(InvalidCredentialsException::new);
+        if ("SUSPENDED".equals(account.status()) || "DELETED".equals(account.status())) {
+            throw new InvalidCredentialsException();
+        }
+
+        if (account.passwordHash() != null && passwords.matches(newPassword, account.passwordHash())) {
+            throw new PasswordChangeException("NEW_PASSWORD_SAME_AS_OLD");
+        }
+
+        String email = exportEmail(userId);
+        validatePasswordNotContainsUserPart(newPassword, email);
+
+        // 4. Update password
+        store.changePassword(userId, passwords.encode(newPassword), now);
+
+        // 5. If email was unverified, automatically verify it
+        if (account.emailVerifiedAt() == null) {
+            store.setEmailVerified(userId, now);
+        }
+
+        // 6. If user was temporarily locked out due to failed logins, reset lockout
+        if (account.failedLogins() > 0 || account.lockedUntil() != null) {
+            store.setLoginSuccess(userId, now);
+        }
+
+        // 7. Revoke ALL active sessions (invalidates all JWTs immediately)
+        store.revokeAllSessions(userId, "PASSWORD_RESET", now);
+
+        // 8. Audit log & Security notification event
+        store.audit(userId, "PASSWORD_RESET", userId, now);
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new PasswordChangedEvent(userId, email, now, remoteAddress));
+        }
+    }
+
+    @Transactional(noRollbackFor = InvalidCredentialsException.class)
+    public void resetPasswordWithCode(String email, String code, String newPassword, String remoteAddress) {
+        Instant now = clock.instant();
+        String normalized = normalizeEmail(email);
+
+        // Rate limiting
+        rate("reset-confirm-code-ip:" + remoteAddress, now, 15);
+        rate("reset-confirm-code-email:" + normalized, now, 5);
+
+        // 1. Validate new password format & byte length
+        validateNewPasswordPolicy(newPassword);
+
+        // 2. Tra cứu user theo email
+        byte[] emailLookupHash = cipher.lookupHash(normalized);
+        Account account = store.accountByEmailHash(emailLookupHash).orElse(null);
+
+        if (account == null || account.passwordHash() == null || "SUSPENDED".equals(account.status()) || "DELETED".equals(account.status())) {
+            // Constant-time dummy check to prevent timing attack
+            byte[] dummyCodeHash = cipher.tokenHash("RESET_PASSWORD_CODE:" + DUMMY_UUID + ":" + code);
+            MessageDigest.isEqual(DUMMY_CODE_HASH, dummyCodeHash);
+            throw new InvalidCredentialsException();
+        }
+
+        // 3. Consume OTP code atomically
+        byte[] codeHash = cipher.tokenHash("RESET_PASSWORD_CODE:" + account.id() + ":" + code);
+        UUID userId = store.consumeActionCode(account.id(), codeHash, "RESET_PASSWORD", now)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        // 4. Validate password business rules
+        if (passwords.matches(newPassword, account.passwordHash())) {
+            throw new PasswordChangeException("NEW_PASSWORD_SAME_AS_OLD");
+        }
+
+        validatePasswordNotContainsUserPart(newPassword, normalized);
+
+        // 5. Update password
+        store.changePassword(userId, passwords.encode(newPassword), now);
+
+        // 6. Auto-verify email if not verified
+        if (account.emailVerifiedAt() == null) {
+            store.setEmailVerified(userId, now);
+        }
+
+        // 7. Reset failed login lockout if present
+        if (account.failedLogins() > 0 || account.lockedUntil() != null) {
+            store.setLoginSuccess(userId, now);
+        }
+
+        // 8. Revoke all active sessions
+        store.revokeAllSessions(userId, "PASSWORD_RESET", now);
+
+        // 9. Audit log & Security notification event
+        store.audit(userId, "PASSWORD_RESET", userId, now);
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new PasswordChangedEvent(userId, normalized, now, remoteAddress));
+        }
+    }
+
+    private void validateNewPasswordPolicy(String newPassword) {
+        if (newPassword == null) throw new PasswordChangeException("PASSWORD_LENGTH_INVALID");
+        byte[] bytes = newPassword.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < 12 || bytes.length > 72) {
+            throw new PasswordChangeException("PASSWORD_LENGTH_INVALID");
+        }
+    }
+
+    private void validatePasswordNotContainsUserPart(String newPassword, String email) {
+        String emailLocalPart = email.split("@")[0].toLowerCase(Locale.ROOT);
+        if (emailLocalPart.length() >= 4 && newPassword.toLowerCase(Locale.ROOT).contains(emailLocalPart)) {
+            throw new PasswordChangeException("PASSWORD_CONTAINS_USER_INFO");
+        }
     }
 
     private String randomToken() {

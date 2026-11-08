@@ -32,7 +32,7 @@ public class WritingSuggestionController {
     @PostMapping
     public WritingSuggestionResponse suggest(@Valid @RequestBody WritingSuggestionRequest request) {
         var userId = current.requireCurrent().userId();
-        identity.checkWriteQuota(userId, "writing-suggestion", 20, 900);
-        return WritingSuggestionResponse.from(suggestions.suggest(userId, request.text()));
+        identity.checkWriteQuota(userId, "companion-turn", 40, 900);
+        return WritingSuggestionResponse.from(suggestions.suggest(userId, request.command()));
     }
 }

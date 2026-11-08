@@ -26,8 +26,17 @@ export function averageMoodScore(entries: JournalEntry[]): string | null {
     : null;
 }
 
+export function normalizeVietnamese(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase()
+    .trim();
+}
+
 export function filterEntries(entries: JournalEntry[], filters: HistoryFilters): JournalEntry[] {
-  const search = filters.search.toLowerCase();
+  const searchNormalized = normalizeVietnamese(filters.search);
   return entries.filter((entry) => {
     const matchesMood = filters.emotion === 'all'
       || (entry.emotion ? normalizeJournalEmotion(entry.emotion) === filters.emotion
@@ -37,9 +46,10 @@ export function filterEntries(entries: JournalEntry[], filters: HistoryFilters):
           || (filters.emotion === 'sad' && entry.mood === 'sadness-reflect'));
     const matchesFavorite = !filters.favorites || !!entry.isFavorite;
     const matchesDate = !filters.date || entry.date === filters.date;
-    const matchesSearch = entry.title.toLowerCase().includes(search)
-      || entry.content.replace(/<[^>]*>/g, ' ').toLowerCase().includes(search)
-      || entry.tags.some((tag) => tag.toLowerCase().includes(search));
+    const matchesSearch = !searchNormalized
+      || normalizeVietnamese(entry.title).includes(searchNormalized)
+      || normalizeVietnamese(entry.content.replace(/<[^>]*>/g, ' ')).includes(searchNormalized)
+      || entry.tags.some((tag) => normalizeVietnamese(tag).includes(searchNormalized));
     return matchesMood && matchesFavorite && matchesDate && matchesSearch;
   });
 }

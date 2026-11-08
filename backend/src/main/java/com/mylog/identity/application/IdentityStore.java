@@ -29,7 +29,7 @@ public interface IdentityStore {
     Optional<Account> accountByEmailHash(byte[] hash);
     Optional<Account> accountByEmailHashForUpdate(byte[] hash);
     Optional<Account> accountById(UUID id);
-    void setLoginFailure(UUID userId, int failures, Instant lockedUntil, Instant now);
+    void setLoginFailure(UUID userId, int failedAttempts, Instant lockedUntil, Instant now);
     void setLoginSuccess(UUID userId, Instant now);
     void setStatus(UUID userId, String status, Instant now);
     void changePassword(UUID userId, String hash, Instant now);
@@ -50,9 +50,17 @@ public interface IdentityStore {
     void revokeAllSessions(UUID userId, String reason, Instant now);
     void createActionToken(UUID id, UUID userId, byte[] hash, byte[] codeHash, String purpose,
                            Instant expiresAt, Instant codeExpiresAt, Instant now);
+    default void revokeExistingActionTokens(UUID userId, String purpose, Instant now) {}
     Optional<UUID> consumeActionToken(byte[] hash, String purpose, Instant now);
+    default Optional<UUID> consumeActionCode(UUID userId, byte[] codeHash, String purpose, Instant now) { return Optional.empty(); }
+    default void recordActionCodeFailure(UUID userId, String purpose, Instant now) {}
     boolean actionTokenAlreadyConsumed(byte[] hash, String purpose);
+    default void setEmailVerified(UUID userId, Instant now) {}
     boolean recordRateLimit(byte[] subjectHash, Instant now, int maxAttempts, long windowSeconds);
+    default boolean isRateLimited(byte[] subjectHash, Instant now, int maxAttempts, long windowSeconds) { return false; }
+    default void clearRateLimit(byte[] subjectHash) {}
+    default boolean sessionBelongsToUser(UUID sessionId, UUID userId) { return true; }
+    default boolean hasPassword(UUID userId) { return true; }
     void audit(UUID actorId, String action, UUID targetId, Instant now);
     void purgeExpired(Instant now);
 

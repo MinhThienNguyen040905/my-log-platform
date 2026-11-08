@@ -8,12 +8,12 @@ import java.util.List;
 import java.util.UUID;
 
 public record HabitResponse(UUID id, UUID goalId, String title, BigDecimal targetValue, String unit,
-                            String frequencyType, List<Integer> daysOfWeek, String timezone, String status,
+                            String frequencyType, List<Integer> daysOfWeek, String timezone, String toolCode, String status,
                             long version, int streak, int completionCount, List<LocalDate> completedDates,
                             MoodAssociationView moodAssociation) {
     public static HabitResponse from(HabitView view) {
         return new HabitResponse(view.id(), view.goalId(), view.title(), view.targetValue(), view.unit(),
-                view.frequencyType(), view.daysOfWeek(), view.timezone(), view.status(), view.version(),
+                view.frequencyType(), view.daysOfWeek(), view.timezone(), view.toolCode(), view.status(), view.version(),
                 view.streak(), view.completionCount(), view.completedDates(), view.moodAssociation());
     }
 }

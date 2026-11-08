@@ -6,6 +6,14 @@ import java.util.List;
 import java.util.UUID;
 
 public record HabitView(UUID id, UUID goalId, String title, BigDecimal targetValue, String unit,
-                        String frequencyType, List<Integer> daysOfWeek, String timezone, String status,
+                        String frequencyType, List<Integer> daysOfWeek, String timezone, String toolCode, String status,
                         long version, int streak, int completionCount, List<LocalDate> completedDates,
-                        MoodAssociationView moodAssociation) {}
+                        MoodAssociationView moodAssociation) {
+    public HabitView(UUID id, UUID goalId, String title, BigDecimal targetValue, String unit,
+                     String frequencyType, List<Integer> daysOfWeek, String timezone, String status,
+                     long version, int streak, int completionCount, List<LocalDate> completedDates,
+                     MoodAssociationView moodAssociation) {
+        this(id, goalId, title, targetValue, unit, frequencyType, daysOfWeek, timezone, null, status,
+                version, streak, completionCount, completedDates, moodAssociation);
+    }
+}

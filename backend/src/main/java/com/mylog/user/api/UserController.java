@@ -11,6 +11,8 @@ import com.mylog.user.api.request.UpdateProfileRequest;
 import com.mylog.user.api.response.ConsentResponse;
 import com.mylog.user.api.response.ProfileResponse;
 import com.mylog.user.api.response.SessionResponse;
+import com.mylog.user.api.request.ChangePasswordRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
@@ -79,6 +81,20 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/password")
+    public ResponseEntity<Void> changePassword(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody ChangePasswordRequest request,
+            HttpServletRequest http) {
+        UUID session = null;
+        if (jwt != null && jwt.hasClaim("sid")) {
+            try { session = UUID.fromString(jwt.getClaimAsString("sid")); }
+            catch (RuntimeException ignored) {}
+        }
+        identity.changePassword(user(), session, request, http.getRemoteAddr());
+        return ResponseEntity.noContent().build();
+    }
+
     private UUID user() { return current.requireCurrent().userId(); }
     private boolean isAdmin() {
         return current.findCurrent()
@@ -93,7 +109,7 @@ public class UserController {
         try { return Long.parseLong(ifMatch.replace("\"", "")); }
         catch (NumberFormatException e) { throw new InvalidRequestException(); }
     }
-    private static ResponseEntity<ProfileResponse> etag(ProfileView p, boolean isAdmin) {
-        return ResponseEntity.ok().eTag("\"" + p.version() + "\"").body(ProfileResponse.from(p, isAdmin));
+    private ResponseEntity<ProfileResponse> etag(ProfileView p, boolean isAdmin) {
+        return ResponseEntity.ok().eTag("\"" + p.version() + "\"").body(ProfileResponse.from(p, isAdmin, identity.hasPassword(user())));
     }
 }

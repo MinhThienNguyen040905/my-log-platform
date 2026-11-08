@@ -1,12 +1,17 @@
 import { generateHTML, type JSONContent } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
+import Image from '@tiptap/extension-image';
 import { type JournalEntry, type JournalEmotion, type MoodType } from '@/types';
+
+export type JournalTag = { id: string; name: string; color: string | null };
 
 export type JournalSummary = {
   id: string; title: string; occurredAt: string; localDate: string; moodCode: string | null;
   moodScore?: number | null; stressScore?: number | null; energyScore?: number | null; sleepMinutes?: number | null;
   favorite: boolean; riskLevel: string; analysisStatus: string; rowVersion: number;
+  tags?: JournalTag[];
+  photoUrl?: string | null;
 };
 export type JournalDetail = JournalSummary & {
   contentJson: JSONContent; location: string | null; timezone: string;
@@ -33,7 +38,21 @@ export async function getDetailedJournalPage({ date, cursor }: { date?: string; 
   return { items: details.map(toEntry), nextCursor: page.nextCursor };
 }
 
-export type JournalTag = { id: string; name: string; color: string | null };
+export async function getSearchJournalPage({ query, cursor, limit = JOURNAL_PAGE_SIZE }: {
+  query: string;
+  cursor?: string | null;
+  limit?: number;
+}): Promise<DetailedJournalPage> {
+  const trimmed = query.trim();
+  if (!trimmed) return { items: [], nextCursor: null };
+  const params = new URLSearchParams({ query: trimmed, limit: String(limit) });
+  if (cursor) params.set('cursor', cursor);
+  const page = await journalJson<JournalPage>(`journal-entries/search?${params.toString()}`);
+  const details = await Promise.all(page.items.map((entry) =>
+    journalJson<JournalDetail>(`journal-entries/${encodeURIComponent(entry.id)}`),
+  ));
+  return { items: details.map(toEntry), nextCursor: page.nextCursor };
+}
 
 const containers = new Set(['doc', 'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'listItem']);
 const marks = new Set(['bold', 'italic', 'underline', 'strike', 'code']);
@@ -46,6 +65,21 @@ export function prepareContent(node: JSONContent): JSONContent {
     return { type: 'text', text: node.text, ...(node.marks?.length ? { marks: node.marks.map((mark) => ({ type: mark.type })) } : {}) };
   }
   if (node.type === 'hardBreak') return { type: 'hardBreak' };
+  if (node.type === 'image') {
+    const assetId = (node.attrs?.['data-asset-id'] || node.attrs?.dataAssetId) as string | undefined;
+    if (!assetId || typeof assetId !== 'string') {
+      throw new Error('Ảnh chưa được tải lên hoặc thiếu mã định danh hợp lệ.');
+    }
+    return {
+      type: 'image',
+      attrs: {
+        'data-asset-id': assetId,
+        alt: typeof node.attrs?.alt === 'string' ? node.attrs.alt : '',
+        title: typeof node.attrs?.title === 'string' ? node.attrs.title : '',
+        src: '',
+      },
+    };
+  }
   if (!node.type || !containers.has(node.type)) throw new Error('Bài viết có ảnh hoặc khối nội dung chưa được hỗ trợ.');
   if (node.type === 'orderedList' && node.attrs?.start && node.attrs.start !== 1) {
     throw new Error('Danh sách đánh số bắt đầu khác 1 chưa được hỗ trợ.');
@@ -75,6 +109,26 @@ export function journalBody(body: unknown, headers: Record<string, string> = {})
   return { headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) };
 }
 
+export interface UploadedAsset {
+  id: string;
+  format: string;
+  mimeType: string;
+  width: number;
+  height: number;
+  sizeBytes: number;
+  url: string;
+}
+
+export async function uploadJournalAsset(file: File): Promise<UploadedAsset> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await journalRequest('journal-assets/upload', {
+    method: 'POST',
+    body: formData,
+  });
+  return res.json() as Promise<UploadedAsset>;
+}
+
 const emotions: JournalEmotion[] = ['neutral', 'happy', 'angry', 'sad', 'very_bad'];
 export function toEntry(value: JournalSummary | JournalDetail): JournalEntry {
   const code = value.moodCode === 'very-bad' ? 'very_bad' : value.moodCode;
@@ -84,7 +138,7 @@ export function toEntry(value: JournalSummary | JournalDetail): JournalEntry {
   const detail = 'contentJson' in value ? value : null;
   let content = '';
   if (detail?.contentJson) {
-    try { content = generateHTML(detail.contentJson, [StarterKit, Underline]); }
+    try { content = generateHTML(detail.contentJson, [StarterKit, Underline, Image]); }
     catch { content = ''; }
   }
   return {
@@ -93,7 +147,27 @@ export function toEntry(value: JournalSummary | JournalDetail): JournalEntry {
     date: value.localDate, time: new Date(value.occurredAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
     mood, emotion, moodScore: value.moodScore ?? null, stressScore: value.stressScore ?? null,
     energyScore: value.energyScore ?? null, sleepHours: value.sleepMinutes == null ? null : value.sleepMinutes / 60,
-    tags: [], isFavorite: value.favorite, status: value.analysisStatus as JournalEntry['status'], riskLevel: value.riskLevel,
+    tags: value.tags?.map((t) => t.name) || [], isFavorite: value.favorite, status: value.analysisStatus as JournalEntry['status'], riskLevel: value.riskLevel,
     updatedAt: detail?.updatedAt,
+    photoUrl: value.photoUrl ?? undefined,
   };
+}
+
+export async function getOrCreateTagIds(tagNames: string[]): Promise<string[]> {
+  const cleanNames = Array.from(new Set(tagNames.map((t) => t.trim()).filter(Boolean))).slice(0, 20);
+  if (cleanNames.length === 0) return [];
+  const existingTags = await journalJson<JournalTag[]>('journal-tags');
+  const tagIds: string[] = [];
+  for (const name of cleanNames) {
+    let tag = existingTags.find((t) => t.name.toLowerCase() === name.toLowerCase());
+    if (!tag) {
+      tag = await journalJson<JournalTag>('journal-tags', {
+        method: 'POST',
+        ...journalBody({ name }),
+      });
+      existingTags.push(tag);
+    }
+    tagIds.push(tag.id);
+  }
+  return tagIds;
 }
