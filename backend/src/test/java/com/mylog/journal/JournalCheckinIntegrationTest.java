@@ -187,6 +187,24 @@ class JournalCheckinIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UNAVAILABLE"));
     }
 
+    @Test void companionTitleSuggestionsAreStaticPerMoodAndNeedAuthentication() throws Exception {
+        UUID owner = user();
+        mvc.perform(get("/api/v1/companion/title-suggestions").param("mood", "sad"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/companion/title-suggestions").param("mood", "sad")
+                .with(jwt().jwt(jwt -> jwt.subject(owner.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.titles.length()").value(3))
+                .andExpect(jsonPath("$.titles[0]").value("Dịu dàng với bản thân trong một ngày trùng xuống"));
+        mvc.perform(get("/api/v1/companion/title-suggestions")
+                .with(jwt().jwt(jwt -> jwt.subject(owner.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.titles[0]").value("Vài dòng nhìn lại nhịp sống hôm nay"));
+        mvc.perform(get("/api/v1/companion/title-suggestions").param("mood", "<script>")
+                .with(jwt().jwt(jwt -> jwt.subject(owner.toString()))))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test void onlyVerifiedResourcesAndActiveApprovedPoliciesAreUsable() throws Exception {
         UUID approver = user();
         UUID resource = UUID.randomUUID();

@@ -79,6 +79,7 @@ class SecurityConfiguration {
                                         "/api/v1/journal-assets", "/api/v1/journal-assets/**",
                                         "/api/v1/check-ins", "/api/v1/check-ins/**")
                                 .authenticated();
+                        authorize.requestMatchers(HttpMethod.GET, "/api/v1/companion/title-suggestions").authenticated();
                         authorize.requestMatchers("/api/v1/exports", "/api/v1/exports/**",
                                 "/api/v1/account-deletion-requests", "/api/v1/account-deletion-requests/**",
                                 "/api/v1/feedback", "/api/v1/feedback/**").authenticated();

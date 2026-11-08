@@ -5,7 +5,6 @@ import type { JournalEmotion } from '@/types';
 import { ApiError } from '@/lib/api/client';
 import { dismissCompanionHabitSuggestion, grantCompanionConsent, postCompanionTurn } from '../api/companion';
 import { buildCompanionDraft } from '../utils/companion-draft';
-import { COMPANION_UNAVAILABLE_NOTICE } from '../constants/companion-fallback';
 import type {
   CompanionActionCode,
   CompanionChipOption,
@@ -26,17 +25,13 @@ interface MoodSnapshot {
   sleepHours: number;
 }
 
-export interface CompanionConversationEntry {
-  role: 'assistant' | 'user';
-  text: string;
-}
-
 interface UseCompanionConversationOptions {
   getDraft: () => { title: string; text: string };
   getMood: () => MoodSnapshot;
   onInsertQuestion: (question: string) => void;
   onApplyTitle: (title: string) => void;
-  onInsertConversation: (entries: CompanionConversationEntry[]) => void;
+  /** Chỉ các câu hỏi gợi ý chưa chèn — không bao giờ có câu chào/cảm ơn của trợ lý hay chữ trên chip. */
+  onInsertQuestions: (questions: string[]) => void;
   onRunAction: (code: CompanionActionCode) => void;
   onAcceptHabitSuggestion?: (suggestion: CompanionHabitSuggestion) => void;
   onSafetyTriggered: () => void;
@@ -68,6 +63,7 @@ export function useCompanionConversation(options: UseCompanionConversationOption
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [toolsOnlyReason, setToolsOnlyReason] = useState<'DECLINED' | 'UNAVAILABLE' | null>(null);
   const [habitSuggestion, setHabitSuggestion] = useState<CompanionHabitSuggestion | null>(null);
+  const [insertedQuestions, setInsertedQuestions] = useState<ReadonlySet<string>>(new Set());
 
   const historyRef = useRef<CompanionHistoryTurn[]>([]);
   const abortRef = useRef<AbortController | null>(null);
@@ -95,15 +91,14 @@ export function useCompanionConversation(options: UseCompanionConversationOption
     setClosingRating(null);
     setToolsOnlyReason(null);
     setHabitSuggestion(null);
+    setInsertedQuestions(new Set());
   }, []);
 
   const handleUnavailable = useCallback(() => {
     setPanelState('TOOLS_ONLY');
     setToolsOnlyReason('UNAVAILABLE');
     setChips([]);
-    setMessages((prev) =>
-      prev.length === 0 ? [{ id: nextId('assistant'), role: 'assistant', text: COMPANION_UNAVAILABLE_NOTICE }] : prev,
-    );
+    // Không thêm bong bóng chat: ô thông báo "tạm nghỉ" của CompanionPanel đã nói điều này (tránh hiện 2 lần).
   }, []);
 
   const handleResponse = useCallback(
@@ -231,8 +226,17 @@ export function useCompanionConversation(options: UseCompanionConversationOption
     [minimize, sendMessage],
   );
 
-  const insertQuestion = useCallback((question: string) => optionsRef.current.onInsertQuestion(question), []);
+  const insertQuestion = useCallback((question: string) => {
+    setInsertedQuestions((prev) => new Set(prev).add(question));
+    optionsRef.current.onInsertQuestion(question);
+  }, []);
+
+  /** Câu hỏi gợi ý trong cuộc trò chuyện chưa được chèn vào bài, theo thứ tự xuất hiện, không trùng. */
+  const pendingQuestions = Array.from(
+    new Set(messages.filter((m) => m.role === 'assistant').flatMap((m) => m.questions ?? [])),
+  ).filter((question) => !insertedQuestions.has(question));
   const applyTitle = useCallback((title: string) => optionsRef.current.onApplyTitle(title), []);
+  const getMoodCode = useCallback(() => optionsRef.current.getMood().selectedEmotion, []);
   const runAction = useCallback((code: CompanionActionCode) => optionsRef.current.onRunAction(code), []);
 
   /** JournalEditor gọi khi một tool bấm từ TRONG chat (không phải từ menu Công cụ dịu) kết thúc tự nhiên. */
@@ -268,9 +272,9 @@ export function useCompanionConversation(options: UseCompanionConversationOption
   }, [resetConversation]);
 
   const finishConversationIntoDraft = useCallback(() => {
-    optionsRef.current.onInsertConversation(messages.map((m) => ({ role: m.role, text: m.text })));
+    if (pendingQuestions.length > 0) optionsRef.current.onInsertQuestions(pendingQuestions);
     endConversation();
-  }, [messages, endConversation]);
+  }, [pendingQuestions, endConversation]);
 
   const justClose = endConversation;
 
@@ -307,6 +311,9 @@ export function useCompanionConversation(options: UseCompanionConversationOption
     sendMessage,
     sendChip,
     insertQuestion,
+    getMoodCode,
+    insertedQuestions,
+    pendingQuestionCount: pendingQuestions.length,
     applyTitle,
     runAction,
     notifyToolCompleted,

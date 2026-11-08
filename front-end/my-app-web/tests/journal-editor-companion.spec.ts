@@ -24,13 +24,23 @@ test('trợ lý: consent → trả lời → chèn câu hỏi → Esc thu nhỏ 
   await page.getByRole('button', { name: 'Trợ lý đồng hành' }).click();
   const panel = page.getByRole('complementary', { name: 'Trợ lý trang viết' });
   await expect(panel).toBeVisible();
+
+  // Gợi ý tựa đề luôn có, kể cả trước khi consent — tựa đề soạn sẵn, không qua AI.
+  await panel.getByRole('button', { name: 'Gợi ý tựa đề' }).click();
+  const firstTitle = panel.getByRole('list', { name: 'Tựa đề gợi ý' }).getByRole('listitem').first();
+  const titleText = (await firstTitle.innerText()).trim();
+  await firstTitle.click();
+  await expect(page.getByPlaceholder('Đặt một tựa đề cho hôm nay...')).toHaveValue(titleText);
+
   await panel.getByRole('button', { name: 'Đồng ý cho phép trợ lý đọc bài đang viết' }).click();
 
   // Sau consent: có câu mở và ít nhất một câu hỏi gợi ý.
   const insertQuestion = panel.getByRole('button', { name: /Chèn câu hỏi vào bài/ }).first();
   await expect(insertQuestion).toBeVisible();
   await insertQuestion.click();
-  await expect(page.locator('.ProseMirror blockquote')).toHaveCount(1);
+  // Chèn ra thẻ gợi ý (khối promptQuestion), không phải trích dẫn.
+  await expect(page.locator('.ProseMirror .prompt-question')).toHaveCount(1);
+  await expect(page.locator('.ProseMirror blockquote')).toHaveCount(0);
 
   // Nhắn tự do.
   await panel.getByLabel('Tin nhắn cho trợ lý').fill('Mình muốn viết tiếp về buổi họp');
@@ -54,7 +64,21 @@ test('trợ lý: consent → trả lời → chèn câu hỏi → Esc thu nhỏ 
   await panel.getByRole('button', { name: 'Không cảm ơn, tạm ẩn gợi ý thói quen 7 ngày' }).click();
   await expect(habitCard.first()).toBeHidden();
 
-  // Kết thúc, không lưu. Mở lại: cuộc trò chuyện mới, hội thoại cũ đã xóa, có ô nhắn.
+  // Đưa câu hỏi vào bài: chỉ các câu hỏi gợi ý chưa chèn, không có câu chào/cảm ơn của trợ lý hay chữ trên chip.
+  const promptsBefore = await page.locator('.ProseMirror .prompt-question').count();
+  await panel.getByRole('button', { name: 'Đưa các câu hỏi gợi ý vào bài nhật ký' }).click();
+  await expect(panel).toBeHidden();
+  expect(await page.locator('.ProseMirror .prompt-question').count()).toBeGreaterThan(promptsBefore);
+  const draftText = await page.locator('.ProseMirror').innerText();
+  expect(draftText).not.toContain('Mình nghe rồi');
+  expect(draftText).not.toContain('Cảm ơn bạn đã chia sẻ');
+  expect(draftText).not.toContain('Mình muốn viết tiếp về buổi họp');
+
+  // Mở lại: cuộc trò chuyện mới. Rồi khép và kết thúc không lưu cũng phải về trạng thái mới.
+  await openToolsDrawerIfNeeded(page);
+  await page.getByRole('button', { name: 'Trợ lý đồng hành' }).click();
+  await expect(panel.getByLabel('Tin nhắn cho trợ lý')).toBeVisible();
+  await panel.getByRole('button', { name: 'Khép lại' }).click();
   await panel.getByRole('button', { name: 'Kết thúc cuộc trò chuyện, không đưa vào bài' }).click();
   await expect(panel).toBeHidden();
   await openToolsDrawerIfNeeded(page);

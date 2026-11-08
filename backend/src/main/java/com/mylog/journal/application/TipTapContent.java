@@ -12,7 +12,8 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class TipTapContent {
-    private static final Set<String> CONTAINERS = Set.of("doc", "paragraph", "heading", "blockquote",
+    /** {@code promptQuestion}: a companion writing prompt the user chose to insert (see COMPANION_UI_PLAN.md). */
+    private static final Set<String> CONTAINERS = Set.of("doc", "paragraph", "heading", "blockquote", "promptQuestion",
             "bulletList", "orderedList", "listItem");
     private static final Set<String> MARKS = Set.of("bold", "italic", "underline", "strike", "code");
 
@@ -105,7 +106,7 @@ public final class TipTapContent {
             if (!children.isArray()) throw new InvalidRequestException();
             for (JsonNode child : children) visit(child, plain, depth + 1, count);
         }
-        if (Set.of("paragraph", "heading", "listItem", "blockquote").contains(type)) plain.append('\n');
+        if (Set.of("paragraph", "heading", "listItem", "blockquote", "promptQuestion").contains(type)) plain.append('\n');
     }
 
     private static void collectAssetIds(JsonNode node, List<UUID> list, int depth) {

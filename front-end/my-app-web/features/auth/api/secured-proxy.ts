@@ -19,6 +19,7 @@ const routes: AllowedRoute[] = [
   { methods: ['GET'], pattern: /^recommendations$/ },
   { methods: ['POST'], pattern: /^journal-writing-suggestions$/ },
   { methods: ['POST'], pattern: /^companion\/habit-suggestions\/dismiss$/ },
+  { methods: ['GET'], pattern: /^companion\/title-suggestions$/ },
   { methods: ['POST'], pattern: /^exports$/ },
   { methods: ['GET'], pattern: new RegExp(`^exports/${uuid}$`) },
   { methods: ['POST'], pattern: new RegExp(`^exports/${uuid}:authorize-download$`) },

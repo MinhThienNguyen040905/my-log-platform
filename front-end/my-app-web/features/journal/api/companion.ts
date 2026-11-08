@@ -1,4 +1,4 @@
-import { apiJson, apiJsonBody, apiResponse } from '@/lib/api/client';
+import { apiJson, apiJsonBody, apiQuery, apiResponse } from '@/lib/api/client';
 import { getConsents, setConsent } from '@/features/user';
 import type { CompanionTurnRequest, CompanionTurnResponse } from '../types/companion.types';
 
@@ -47,4 +47,18 @@ export async function dismissCompanionHabitSuggestion(): Promise<void> {
     return;
   }
   await apiResponse('companion/habit-suggestions/dismiss', { method: 'POST' });
+}
+
+/**
+ * Tựa đề soạn sẵn theo cảm xúc (không phải AI), luôn dùng được ở mọi phiên — không cần consent,
+ * không tốn lượt trò chuyện. Nội dung do backend `TitleSuggestionCatalog` quản lý.
+ */
+export async function getCompanionTitleSuggestions(mood: string | null): Promise<string[]> {
+  if (process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_COMPANION_MOCK === '1') {
+    const { mockTitleSuggestions } = await import('./companion.mock');
+    return mockTitleSuggestions(mood);
+  }
+  const query = apiQuery({ mood });
+  const response = await apiJson<{ titles: string[] }>(`companion/title-suggestions${query}`);
+  return response.titles;
 }

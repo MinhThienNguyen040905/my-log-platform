@@ -86,6 +86,10 @@ mylog:
       url: ${MYLOG_SAFETY_CLASSIFIER_URL:}
       token: ${MYLOG_SAFETY_CLASSIFIER_TOKEN:}
       timeout-ms: ${MYLOG_SAFETY_CLASSIFIER_TIMEOUT_MS:2000}
+    # Local-only stand-in for the classifier while no trained model exists. Synthetic data only.
+    # Refuses to start outside the `local` profile or together with MYLOG_JOBS_ENABLED=true.
+    dev-allow:
+      enabled: ${MYLOG_SAFETY_DEV_ALLOW:false}
   writing-suggestions:
     enabled: ${MYLOG_WRITING_SUGGESTIONS_ENABLED:false}
   companion:

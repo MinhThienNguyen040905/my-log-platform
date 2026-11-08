@@ -5,13 +5,14 @@ import { Check } from 'lucide-react';
 interface CompanionClosingCardProps {
   rating: number | null;
   onRate: (value: number) => void;
-  hasMessages: boolean;
-  onInsertConversation: () => void;
+  /** Số câu hỏi gợi ý chưa chèn; 0 thì ẩn nút. */
+  pendingQuestionCount: number;
+  onInsertQuestions: () => void;
   onJustClose: () => void;
 }
 
 /** Điểm 1–5 chỉ để người dùng tự nhìn lại — không gửi đi, không lưu ở đâu cả. */
-export function CompanionClosingCard({ rating, onRate, hasMessages, onInsertConversation, onJustClose }: CompanionClosingCardProps) {
+export function CompanionClosingCard({ rating, onRate, pendingQuestionCount, onInsertQuestions, onJustClose }: CompanionClosingCardProps) {
   return (
     <div className="m-3 flex flex-col gap-2.5 rounded-2xl border-2 border-black bg-lime-50 p-3 text-xs shadow-neo-xs">
       <p className="font-space font-extrabold text-black">Giờ trong lòng bạn thấy thế nào?</p>
@@ -32,15 +33,15 @@ export function CompanionClosingCard({ rating, onRate, hasMessages, onInsertConv
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2 pt-1">
-        {hasMessages && (
+        {pendingQuestionCount > 0 && (
           <button
             type="button"
-            onClick={onInsertConversation}
-            aria-label="Đưa cuộc trò chuyện vào bài nhật ký"
+            onClick={onInsertQuestions}
+            aria-label="Đưa các câu hỏi gợi ý vào bài nhật ký"
             className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl border border-black bg-primary-container px-2.5 py-1.5 font-space text-[11px] font-extrabold shadow-neo-xs hover:bg-lime-200"
           >
             <Check className="h-3.5 w-3.5" />
-            <span>Đưa vào bài nhật ký</span>
+            <span>Đưa câu hỏi vào bài ({pendingQuestionCount})</span>
           </button>
         )}
         <button

@@ -195,3 +195,16 @@ function empty(status: CompanionTurnResponse['status']): CompanionTurnResponse {
     promptVersion: null,
   };
 }
+
+/** Dev-only mirror of backend `TitleSuggestionCatalog` (only 2 items per mood — enough for UI checks). */
+export async function mockTitleSuggestions(mood: string | null): Promise<string[]> {
+  await delay(150);
+  const byMood: Record<string, string[]> = {
+    happy: ['Một điều nhỏ khiến mình vui hôm nay', 'Khoảnh khắc hôm nay mình muốn giữ lại mãi'],
+    angry: ['Tháo gỡ những bức bối trong lòng hôm nay', 'Viết ra hết để ngày mai nhẹ đầu hơn'],
+    sad: ['Dịu dàng với bản thân trong một ngày trùng xuống', 'Điều đang làm lòng mình nặng trĩu hôm nay'],
+    very_bad: ['Cho phép mình nghỉ ngơi khi mọi thứ hơi quá tải', 'Thở chậm lại qua một ngày nhiều mệt mỏi'],
+    neutral: ['Vài dòng nhìn lại nhịp sống hôm nay', 'Một suy nghĩ chợt đến lúc cuối ngày'],
+  };
+  return byMood[mood ?? 'neutral'] ?? byMood.neutral;
+}

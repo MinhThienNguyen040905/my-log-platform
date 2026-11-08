@@ -645,7 +645,7 @@ export function CalendarView() {
                   </div>
 
                   {/* Entry Snippet Content */}
-                  {showPreviews && entry.content && <p className="font-serif text-sm sm:text-base text-on-surface leading-relaxed line-clamp-3 italic">&ldquo;{entry.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}&rdquo;</p>}
+                  {showPreviews && entry.content && <p className="font-sans text-sm sm:text-base text-on-surface leading-relaxed line-clamp-3 italic">&ldquo;{entry.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}&rdquo;</p>}
 
                   {/* Optional Polaroid thumbnail preview */}
                   {showPreviews && entry.photoUrl && (
@@ -785,11 +785,11 @@ export function CalendarView() {
               <div className="p-4 sm:p-6 bg-white rounded-2xl border-2 border-black shadow-inner min-w-0 break-words [overflow-wrap:anywhere] overflow-hidden">
                 {selectedEntry.content.includes('<') ? (
                   <div
-                    className="font-serif text-base sm:text-lg text-on-surface leading-loose tiptap break-words [overflow-wrap:anywhere]"
+                    className="font-sans text-base sm:text-lg text-on-surface leading-loose tiptap break-words [overflow-wrap:anywhere]"
                     dangerouslySetInnerHTML={{ __html: selectedEntry.content }}
                   />
                 ) : (
-                  <p className="font-serif text-base sm:text-lg text-on-surface leading-loose italic whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                  <p className="font-sans text-base sm:text-lg text-on-surface leading-loose italic whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                     {selectedEntry.content}
                   </p>
                 )}

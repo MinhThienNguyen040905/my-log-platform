@@ -15,6 +15,25 @@ class TipTapContentTest {
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Test
+    void acceptsPromptQuestionBlockAndKeepsItInPlainText() throws Exception {
+        JsonNode doc = mapper.readTree("""
+                {"type":"doc","content":[
+                  {"type":"promptQuestion","content":[{"type":"text","text":"Điều gì còn đọng lại nhất?"}]},
+                  {"type":"paragraph","content":[{"type":"text","text":"Câu trả lời của mình."}]}
+                ]}""");
+        assertEquals("Điều gì còn đọng lại nhất?\nCâu trả lời của mình.", TipTapContent.plainText(doc));
+    }
+
+    @Test
+    void rejectsPromptQuestionWithAttributes() throws Exception {
+        JsonNode doc = mapper.readTree("""
+                {"type":"doc","content":[
+                  {"type":"promptQuestion","attrs":{"class":"x"},"content":[{"type":"text","text":"Câu hỏi"}]}
+                ]}""");
+        assertThrows(InvalidRequestException.class, () -> TipTapContent.plainText(doc));
+    }
+
+    @Test
     void extractsAssetIdsInOrder() throws Exception {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();

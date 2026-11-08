@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { generateJSON } from '@tiptap/core';
+import { PromptQuestion } from '../extensions/prompt-question';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import type { JournalEntry } from '@/types';
@@ -50,7 +51,7 @@ export function LegacyJournalImport() {
       for (const [index, entry] of selected.entries.entries()) {
         if (!entry.content || /<\s*(img|mark)\b/i.test(entry.content)) { skipped++; continue; }
         try {
-          const contentJson = prepareContent(generateJSON(entry.content, [StarterKit, Underline]));
+          const contentJson = prepareContent(generateJSON(entry.content, [StarterKit, Underline, PromptQuestion]));
           const time = entry.time || '12:00';
           const occurredAt = new Date(`${entry.date}T${time.length === 5 ? `${time}:00` : time}`).toISOString();
           const key = `legacy-account-${index}-${String(entry.id || entry.date).replace(/[^A-Za-z0-9._:-]/g, '').slice(0, 110)}`;

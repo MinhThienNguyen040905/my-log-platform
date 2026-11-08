@@ -23,7 +23,8 @@ class SmtpVerificationDeliveryTest {
         MimeMessage message = new MimeMessage(Session.getInstance(new Properties()));
         when(sender.createMimeMessage()).thenReturn(message);
         var env = new MockEnvironment().withProperty("MYLOG_MAIL_FROM", "sender@example.com")
-                .withProperty("MYLOG_VERIFICATION_URL", "https://example.test/auth/verify-email");
+                .withProperty("MYLOG_VERIFICATION_URL", "https://example.test/auth/verify-email")
+                .withProperty("MYLOG_PASSWORD_RESET_URL", "https://example.test/auth/reset-password");
 
         new SmtpVerificationDelivery(sender, env).send("recipient@example.com", "test-token", "01234567");
         message.saveChanges();

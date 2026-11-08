@@ -132,6 +132,16 @@ function JournalEditorContent() {
     Math.abs(candidate.score - moodScore) < Math.abs(closest - moodScore) ? candidate.score : closest,
     MOOD_ICONS[0].score);
 
+  /** Mỗi câu hỏi thành một thẻ gợi ý (khối promptQuestion) kèm một dòng trống bên dưới để trả lời. */
+  const insertPromptQuestions = (questions: string[]) => {
+    if (questions.length === 0) return;
+    const html = questions
+      .map((question) => `<div data-prompt-question>${escapeHtml(question)}</div><p></p>`)
+      .join('');
+    editorRef.current?.insertContent(html);
+    editorRef.current?.focus();
+  };
+
   const insertVentPrompt = () => {
     editorRef.current?.insertContent(`<p>${escapeHtml(VENT_PROMPT_TEXT)}</p>`);
     editorRef.current?.focus();
@@ -168,8 +178,7 @@ function JournalEditorContent() {
     getDraft: () => ({ title, text: editorRef.current?.getText() ?? '' }),
     getMood: () => ({ selectedEmotion, stressScore, energyScore, sleepHours }),
     onInsertQuestion: (question) => {
-      editorRef.current?.insertContent(`<blockquote><p>${escapeHtml(question)}</p></blockquote><p></p>`);
-      editorRef.current?.focus();
+      insertPromptQuestions([question]);
       showToast({
         title: 'Đã chèn câu hỏi gợi mở',
         message: 'Câu hỏi đã được đưa vào trang viết của bạn.',
@@ -180,21 +189,11 @@ function JournalEditorContent() {
       setTitle(newTitle);
       showToast({ title: 'Đã điền tựa đề gợi ý', message: `“${newTitle}”`, type: 'info' });
     },
-    onInsertConversation: (entries) => {
-      const blocks = entries
-        .map((entry) =>
-          entry.role === 'assistant'
-            ? `<blockquote><p>${escapeHtml(entry.text)}</p></blockquote>`
-            : `<p>${escapeHtml(entry.text)}</p>`,
-        )
-        .join('');
-      if (blocks) {
-        editorRef.current?.insertContent(`${blocks}<p></p>`);
-        editorRef.current?.focus();
-      }
+    onInsertQuestions: (questions) => {
+      insertPromptQuestions(questions);
       showToast({
-        title: 'Đã đưa cuộc trò chuyện vào bài viết',
-        message: 'Bạn có thể chỉnh sửa thêm trước khi bấm Lưu.',
+        title: questions.length > 1 ? `Đã đưa ${questions.length} câu hỏi vào bài` : 'Đã đưa câu hỏi vào bài',
+        message: 'Viết câu trả lời ngay bên dưới từng câu hỏi nhé.',
         type: 'success',
       });
     },

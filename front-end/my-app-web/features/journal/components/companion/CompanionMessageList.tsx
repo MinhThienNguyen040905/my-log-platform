@@ -14,20 +14,19 @@ const ACTION_ICON: Record<CompanionActionCode, React.ComponentType<{ className?:
 interface CompanionMessageListProps {
   messages: CompanionMessage[];
   isTyping: boolean;
+  insertedQuestions: ReadonlySet<string>;
   onInsertQuestion: (question: string) => void;
   onApplyTitle: (title: string) => void;
   onRunAction: (code: CompanionActionCode) => void;
 }
 
-export function CompanionMessageList({ messages, isTyping, onInsertQuestion, onApplyTitle, onRunAction }: CompanionMessageListProps) {
-  const [insertedKeys, setInsertedKeys] = React.useState<Set<string>>(new Set());
+export function CompanionMessageList({ messages, isTyping, insertedQuestions, onInsertQuestion, onApplyTitle, onRunAction }: CompanionMessageListProps) {
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, isTyping]);
 
-  const markInserted = (key: string) => setInsertedKeys((prev) => new Set(prev).add(key));
 
   return (
     <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto p-3" aria-live="polite" aria-label="Hội thoại với trợ lý">
@@ -57,7 +56,7 @@ export function CompanionMessageList({ messages, isTyping, onInsertQuestion, onA
 
             {message.questions?.map((question, index) => {
               const key = `${message.id}:${index}`;
-              const done = insertedKeys.has(key);
+              const done = insertedQuestions.has(question);
               return (
                 <div key={key} className="mt-2 border-t border-black/10 pt-2">
                   <p className="font-medium text-black">“{question}”</p>
@@ -67,7 +66,6 @@ export function CompanionMessageList({ messages, isTyping, onInsertQuestion, onA
                       disabled={done}
                       aria-label={done ? 'Đã chèn câu hỏi vào bài' : `Chèn câu hỏi vào bài: ${question}`}
                       onClick={() => {
-                        markInserted(key);
                         onInsertQuestion(question);
                       }}
                       className="inline-flex items-center gap-1 rounded-lg border border-black bg-paper-warm px-2 py-0.5 font-space text-[10px] font-bold transition-colors hover:bg-lime-100 disabled:opacity-60"

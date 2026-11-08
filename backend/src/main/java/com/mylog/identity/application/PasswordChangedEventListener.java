@@ -2,12 +2,15 @@ package com.mylog.identity.application;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+/** Same condition as {@code SmtpVerificationDelivery}: without identity there is no delivery bean to inject. */
 @Component
+@ConditionalOnProperty(prefix = "mylog.identity", name = "enabled", havingValue = "true")
 public class PasswordChangedEventListener {
     private static final Logger log = LoggerFactory.getLogger(PasswordChangedEventListener.class);
     private final VerificationDelivery delivery;

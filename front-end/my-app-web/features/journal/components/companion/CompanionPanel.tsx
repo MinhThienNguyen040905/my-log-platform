@@ -8,6 +8,7 @@ import { CompanionConsentCard } from './CompanionConsentCard';
 import { CompanionClosingCard } from './CompanionClosingCard';
 import { CompanionHabitCard } from './CompanionHabitCard';
 import { CompanionComposer } from './CompanionComposer';
+import { CompanionTitleSuggestions } from './CompanionTitleSuggestions';
 
 interface CompanionPanelProps {
   conversation: UseCompanionConversationReturn;
@@ -89,8 +90,11 @@ export function CompanionPanel({ conversation }: CompanionPanelProps) {
         </div>
       </div>
 
+      <CompanionTitleSuggestions getMood={conversation.getMoodCode} onApply={conversation.applyTitle} />
+
       <CompanionMessageList
         messages={messages}
+        insertedQuestions={conversation.insertedQuestions}
         isTyping={isTyping}
         onInsertQuestion={conversation.insertQuestion}
         onApplyTitle={conversation.applyTitle}
@@ -113,8 +117,8 @@ export function CompanionPanel({ conversation }: CompanionPanelProps) {
         <CompanionClosingCard
           rating={closingRating}
           onRate={setClosingRating}
-          hasMessages={messages.length > 0}
-          onInsertConversation={conversation.finishConversationIntoDraft}
+          pendingQuestionCount={conversation.pendingQuestionCount}
+          onInsertQuestions={conversation.finishConversationIntoDraft}
           onJustClose={conversation.justClose}
         />
       )}

@@ -159,6 +159,13 @@ Nếu backend trả `SAFETY_FLOW`, toàn bộ nhịp 1 bị xóa.
 
 ---
 
+## 4.2 Cải thiện tựa đề và câu hỏi chèn vào bài — ✅ Đã triển khai
+
+- **Nút "Gợi ý tựa đề" luôn có** ở đầu khung chat ([`CompanionTitleSuggestions.tsx`](features/journal/components/companion/CompanionTitleSuggestions.tsx)), ở mọi phiên và mọi trạng thái, kể cả trước consent và khi trợ lý tạm nghỉ. Tựa đề soạn sẵn theo cảm xúc, không phải AI, do backend quản lý (`TitleSuggestionCatalog`, `GET /api/v1/companion/title-suggestions?mood=`). Endpoint này không cần consent, không tốn lượt trò chuyện, không gửi nội dung bài đi. Trường `suggestedTitle` trên phản hồi vẫn giữ để sau này AI gợi ý tựa đề theo nội dung.
+- **"Đưa câu hỏi vào bài (N)"** thay cho "Đưa vào bài nhật ký": chỉ chèn câu hỏi gợi ý chưa chèn, không chèn câu chào/cảm ơn của trợ lý hay chữ trên chip. Ẩn nút khi không còn câu nào.
+- **Thẻ gợi ý `promptQuestion`** thay cho `blockquote` khi chèn câu hỏi ([`extensions/prompt-question.ts`](features/journal/extensions/prompt-question.ts), CSS `.prompt-question` trong `globals.css`): nhãn "✦ Gợi ý viết", nền lime nhạt, viền mảnh, chữ đứng, kèm dòng trống bên dưới để trả lời. Backend `TipTapContent` chấp nhận khối này (không thuộc tính). Đã thêm vào mọi chỗ dựng nội dung: editor, `generateHTML` khi mở bài đã lưu, `prepareContent` khi lưu, `LegacyJournalImport`.
+- Kiểm tra: backend 25/25 (gồm test `promptQuestion` và endpoint tựa đề), Playwright khung chat 4/4 desktop + điện thoại.
+
 ## 4.1 Dọn dẹp: gỡ icon bóng đèn gợi ý chủ đề — ✅ Đã triển khai
 
 Icon `Lightbulb` cạnh ô Tag mở popover 3 gợi ý tựa đề theo cảm xúc (`TOPIC_SUGGESTIONS_BY_EMOTION`) — tính năng độc lập, không thuộc trợ lý, đã bỏ khỏi dự án **cùng với chính mảng dữ liệu đó** (quyết định cuối: không giữ lại gì ở client).

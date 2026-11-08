@@ -10,6 +10,7 @@ import Underline from '@tiptap/extension-underline';
 import Image from '@tiptap/extension-image';
 import { JournalBubbleMenu } from './JournalBubbleMenu';
 import { createSlashCommandExtension } from '../extensions/slash-command';
+import { PromptQuestion } from '../extensions/prompt-question';
 
 export interface JournalTipTapEditorRef {
   insertContent: (content: string) => void;
@@ -58,7 +59,7 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
           },
           blockquote: {
             HTMLAttributes: {
-              class: 'border-l-4 border-black pl-4 py-1.5 my-3 italic bg-black/5 rounded-r-xl font-serif text-on-surface',
+              class: 'border-l-4 border-black pl-4 py-1.5 my-3 italic bg-black/5 rounded-r-xl font-sans text-on-surface',
             },
           },
           bulletList: {
@@ -92,6 +93,7 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
               'max-h-96 w-auto mx-auto rounded-2xl border-2 border-black shadow-neo-sm p-1.5 bg-white my-4 object-contain transition-transform hover:scale-[1.01]',
           },
         }),
+        PromptQuestion,
         slashCommandExtension,
       ],
       content: initialContent || '',
@@ -99,7 +101,7 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
       editorProps: {
         attributes: {
           class:
-            'w-full min-h-[380px] bg-transparent font-serif text-base sm:text-lg text-on-surface focus:outline-none leading-relaxed tracking-wide p-1 cursor-text select-text',
+            'w-full min-h-[380px] bg-transparent font-sans text-base sm:text-lg text-on-surface focus:outline-none leading-relaxed p-1 cursor-text select-text',
         },
       },
       onUpdate: ({ editor: ed }) => {

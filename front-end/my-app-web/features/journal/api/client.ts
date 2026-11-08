@@ -2,6 +2,7 @@ import { generateHTML, type JSONContent } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Image from '@tiptap/extension-image';
+import { PromptQuestion } from '../extensions/prompt-question';
 import { type JournalEntry, type JournalEmotion, type MoodType } from '@/types';
 
 export type JournalTag = { id: string; name: string; color: string | null };
@@ -54,7 +55,7 @@ export async function getSearchJournalPage({ query, cursor, limit = JOURNAL_PAGE
   return { items: details.map(toEntry), nextCursor: page.nextCursor };
 }
 
-const containers = new Set(['doc', 'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList', 'listItem']);
+const containers = new Set(['doc', 'paragraph', 'heading', 'blockquote', 'promptQuestion', 'bulletList', 'orderedList', 'listItem']);
 const marks = new Set(['bold', 'italic', 'underline', 'strike', 'code']);
 
 export function prepareContent(node: JSONContent): JSONContent {
@@ -138,7 +139,7 @@ export function toEntry(value: JournalSummary | JournalDetail): JournalEntry {
   const detail = 'contentJson' in value ? value : null;
   let content = '';
   if (detail?.contentJson) {
-    try { content = generateHTML(detail.contentJson, [StarterKit, Underline, Image]); }
+    try { content = generateHTML(detail.contentJson, [StarterKit, Underline, Image, PromptQuestion]); }
     catch { content = ''; }
   }
   return {

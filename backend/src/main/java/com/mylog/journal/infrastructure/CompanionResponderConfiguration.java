@@ -3,6 +3,7 @@ package com.mylog.journal.infrastructure;
 import com.mylog.journal.application.CompanionResponder;
 import com.mylog.safety.application.SafetyScreeningUseCase;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +12,7 @@ import tools.jackson.databind.ObjectMapper;
 
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(prefix = "mylog.companion.generation", name = "enabled", havingValue = "true")
+@ConditionalOnBooleanProperty("mylog.identity.enabled")
 class CompanionResponderConfiguration {
     @Bean
     @Primary
