@@ -215,6 +215,16 @@
   border-radius: 1rem;
 }
 
+/* Ambient player equalizer bars (features/journal/components/ambient-player/Equalizer.tsx). */
+@keyframes mylog-equalizer {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+.mylog-equalizer-bar {
+  transform-origin: bottom;
+  animation: mylog-equalizer 0.9s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

@@ -3,27 +3,21 @@
 import { X } from 'lucide-react';
 import type { BreathPhase } from '../../hooks/useBreathingTimer';
 import { BreathingWidget } from './BreathingWidget';
-import { AmbientSoundWidget } from './AmbientSoundWidget';
 
 interface CalmingToolsStatusBarProps {
-  tool: 'BREATHING' | 'AMBIENT';
   breathingPhase: BreathPhase;
   breathingLabel: string;
   onStop: () => void;
 }
 
-/** Thin status bar shown above the writing area while a calming tool is running. */
-export function CalmingToolsStatusBar({ tool, breathingPhase, breathingLabel, onStop }: CalmingToolsStatusBarProps) {
+/** Thin status bar shown above the writing area while "Thở chậm" is running. */
+export function CalmingToolsStatusBar({ breathingPhase, breathingLabel, onStop }: CalmingToolsStatusBarProps) {
   return (
     <div
       role="status"
       className="flex items-center gap-3 rounded-2xl border-2 border-black bg-blue-50 px-4 py-3 shadow-neo-sm animate-in fade-in"
     >
-      {tool === 'BREATHING' ? (
-        <BreathingWidget phase={breathingPhase} label={breathingLabel} />
-      ) : (
-        <AmbientSoundWidget />
-      )}
+      <BreathingWidget phase={breathingPhase} label={breathingLabel} />
       <button
         type="button"
         onClick={onStop}
