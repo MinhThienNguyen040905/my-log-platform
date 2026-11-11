@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useJournal } from '@/features/journal';
 import { getDashboard } from '@/features/dashboard';
-import { useSelfCareGoals } from '@/features/selfcare';
+import { HabitTrackerCard, SelfCareGoalsChecklist } from '@/features/selfcare';
 import { listInsights } from '../api/insights';
 import { listReports } from '@/features/reporting';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
@@ -14,19 +14,16 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import {
   Sparkles,
-  CheckSquare,
   ShieldCheck,
   Sprout,
   BarChart3,
   Layers,
-  Lightbulb,
   FileText,
 } from 'lucide-react';
 
 export function InsightView() {
   const { t } = useTranslation();
   const { userId } = useJournal();
-  const { goals, loading: goalsLoading, error: goalsError, toggleGoal, refetch: refetchGoals } = useSelfCareGoals();
 
   const [activeTab, setActiveTab] = useState<'weekly-report' | 'evidence-matrix'>('weekly-report');
   const insightsQuery = useQuery({ queryKey: ['insights', userId, 20], queryFn: () => listInsights({ limit: 20 }) });
@@ -103,8 +100,8 @@ export function InsightView() {
         </div>
       </div>
 
-      {/* [BR-08] & [FR-INSIGHT-01]: Insufficient Data Empty State */}
-      {effectiveDistinctDays < 3 && reports.length === 0 && insights.length === 0 && !historyQuery.isPending && !historyQuery.isError && !reportsLoading && !insightsLoading && !reportsError && !insightsError ? (
+      {/* [BR-08] & [FR-INSIGHT-01]: Insufficient Data Empty State on Weekly Report Tab */}
+      {activeTab === 'weekly-report' && effectiveDistinctDays < 3 && reports.length === 0 && insights.length === 0 && !historyQuery.isPending && !historyQuery.isError && !reportsLoading && !insightsLoading && !reportsError && !insightsError ? (
         <div className="bg-surface-card border-neo rounded-3xl p-8 sm:p-12 shadow-neo relative flex flex-col items-center text-center gap-6 max-w-3xl mx-auto my-6">
           <WashiTape color="lime" rotate={-2} className="absolute -top-3 left-12 w-36" />
           <div className="w-20 h-20 rounded-3xl bg-paper-warm border-2 border-black flex items-center justify-center shadow-neo">
@@ -209,6 +206,11 @@ export function InsightView() {
           transition={{ duration: 0.22, ease: 'easeOut' }}
           className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
         >
+          {/* STANDALONE HABIT TRACKER CARD (1..15 / 16..31) */}
+          <div className="lg:col-span-12">
+            <HabitTrackerCard />
+          </div>
+
           {/* LEFT COLUMN: Evidence-Based Insights (7 cols) */}
           <div className="lg:col-span-7 flex flex-col gap-6">
             {/* EVIDENCE MATRIX HEADER CARD */}
@@ -255,72 +257,7 @@ export function InsightView() {
 
           {/* RIGHT COLUMN: Micro-Action & Wellness Habit Checklist (5 cols) */}
           <div className="lg:col-span-5 flex flex-col gap-6">
-            <div className="bg-surface-card border-neo rounded-3xl p-6 shadow-neo relative">
-              <WashiTape color="lavender" rotate={-2} className="absolute -top-3 left-6 w-28" />
-
-              <div className="flex items-center justify-between pb-3 border-b-2 border-black mb-4">
-                <div className="flex items-center gap-2">
-                  <Sprout className="w-5 h-5 text-primary" />
-                  <h2 className="font-space text-lg font-extrabold text-on-surface">
-                    {t('insight.goals')}
-                  </h2>
-                </div>
-                <span className="font-space text-xs font-bold text-gray-500">
-                  {t('insight.achieved', { done: goals.filter((g) => g.status === 'COMPLETED').length, total: goals.length })}
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                {goalsLoading && <p role="status" className="text-sm">{t('status.loadingGoals')}</p>}
-                {goalsError && <p role="alert" className="text-sm text-red-700">{t('status.goalsError')} <button type="button" className="underline" onClick={() => void refetchGoals()}>{t('common.retry')}</button></p>}
-                {!goalsLoading && !goalsError && goals.length === 0 && <p className="text-sm">{t('status.noGoals')}</p>}
-                {goals.map((goal) => (
-                  <button
-                    key={goal.id}
-                    type="button"
-                    onClick={() => void toggleGoal(goal)}
-                    className={`w-full text-left p-3.5 rounded-2xl border-neo-sm shadow-neo-sm flex items-start gap-3 transition-all cursor-pointer ${
-                      goal.status === 'COMPLETED' ? 'bg-paper-warm opacity-85' : 'bg-surface-container-lowest hover:bg-white'
-                    }`}
-                  >
-                    <div
-                      className={`w-5 h-5 rounded border-2 border-black flex items-center justify-center shrink-0 mt-0.5 ${
-                        goal.status === 'COMPLETED' ? 'bg-primary-container' : 'bg-white'
-                      }`}
-                    >
-                      {goal.status === 'COMPLETED' && <CheckSquare className="w-3.5 h-3.5 text-black" />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4
-                          className={`font-space text-xs sm:text-sm font-bold text-black ${
-                            goal.status === 'COMPLETED' ? 'line-through opacity-70' : ''
-                          }`}
-                        >
-                          {goal.title}
-                        </h4>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/10 font-bold">
-                          {goal.status}
-                        </span>
-                      </div>
-                      <p className="font-sans text-xs text-gray-600 mt-1">
-                        {goal.description}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-5 p-3.5 bg-paper-warm rounded-2xl border-neo-sm">
-                <span className="font-space text-xs font-extrabold uppercase tracking-wider text-black mb-1 flex items-center gap-1.5">
-                  <Lightbulb className="w-3.5 h-3.5 text-amber-600 fill-amber-300 stroke-[2.3]" />
-                  {t('insight.microAction')}
-                </span>
-                <p className="font-sans text-xs text-gray-700 leading-relaxed">
-                  {t('insight.microActionDescription')}
-                </p>
-              </div>
-            </div>
+            <SelfCareGoalsChecklist />
           </div>
         </motion.div>
       )}

@@ -10,6 +10,8 @@ const routes: AllowedRoute[] = [
   { methods: ['GET'], pattern: new RegExp(`^journal-entries/${uuid}/analysis$`) },
   { methods: ['POST'], pattern: new RegExp(`^journal-entries/${uuid}/analysis:retry$`) },
   { methods: ['GET'], pattern: /^(dashboard|insights|reports)$/ },
+  { methods: ['GET'], pattern: /^check-ins$/ },
+  { methods: ['GET', 'PUT'], pattern: new RegExp(`^check-ins/${date}$`) },
   { methods: ['GET'], pattern: new RegExp(`^reports/${uuid}$`) },
   { methods: ['GET', 'POST'], pattern: /^self-care\/goals$/ },
   { methods: ['PATCH'], pattern: new RegExp(`^self-care/goals/${uuid}$`) },

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useJournal, SafetyModal, getRecentEntries } from '@/features/journal';
 import { useAccount } from '@/features/user';
+import { DailyCheckinCard } from '@/features/checkin';
 import { getDashboard, type Dashboard } from '../api/dashboard';
 import { MoodStressTrendChart } from './MoodStressTrendChart';
 import { EmotionDistributionChart } from './EmotionDistributionChart';
@@ -197,6 +198,9 @@ export function DashboardView() {
           {dashboardError && <p role="alert" className="mt-3 text-sm text-red-700">{t('dashboard.metricsError')} <button type="button" className="underline" onClick={() => void dashboardQuery.refetch()}>{t('common.retry')}</button></p>}
         </div>
       </motion.section>
+
+      {/* Daily check-in: the day's primary data point for insight/dashboard (backend AGENTS.md §7). */}
+      <DailyCheckinCard userId={userId} timezone={accountProfile.timezone} />
 
       {/* 2. CORE COLLAGE BENTO GRID (FR-10, FR-06, FR-07) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

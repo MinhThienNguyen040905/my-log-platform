@@ -42,4 +42,4 @@ Kiểm tra trên trình duyệt: đăng nhập/đăng ký với dữ liệu hợ
 
 Build dùng `next/font/google` cho Playfair Display, Plus Jakarta Sans và Space Grotesk. Môi trường không truy cập được `fonts.googleapis.com` sẽ dừng build khi tải font; trường hợp đó chưa được tính là build đạt.
 
-Trang nhật ký lưu bài viết trên backend; `localStorage` chỉ dùng cho bản nháp chưa lưu và dữ liệu cũ để nhập lại. Backend sở hữu kiểm tra an toàn bản nháp và gợi ý viết tại `POST /api/v1/journal-writing-suggestions`; web chưa gọi endpoint gợi ý viết đó. Xem [AI Analysis Guide](../../backend/docs/AI_ANALYSIS_GUIDE.md).
+Trang nhật ký lưu bài viết trên backend; `localStorage` chỉ dùng cho bản nháp chưa lưu và dữ liệu cũ để nhập lại. Backend sở hữu kiểm tra an toàn bản nháp và trợ lý trang viết tại `POST /api/v1/journal-writing-suggestions`; web gọi endpoint này qua BFF (`secured-proxy.ts`) khi người dùng mở khung chat Trợ lý. Xem [AI Analysis Guide](../../backend/docs/AI_ANALYSIS_GUIDE.md) và [COMPANION_UI_PLAN.md](COMPANION_UI_PLAN.md).

@@ -1,6 +1,7 @@
 import { generateHTML, type JSONContent } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
+import Highlight from '@tiptap/extension-highlight';
 import Image from '@tiptap/extension-image';
 import { PromptQuestion } from '../extensions/prompt-question';
 import { type JournalEntry, type JournalEmotion, type MoodType } from '@/types';
@@ -139,7 +140,9 @@ export function toEntry(value: JournalSummary | JournalDetail): JournalEntry {
   const detail = 'contentJson' in value ? value : null;
   let content = '';
   if (detail?.contentJson) {
-    try { content = generateHTML(detail.contentJson, [StarterKit, Underline, Image, PromptQuestion]); }
+    // Must list every node/mark the editor can produce: an unknown one makes generateHTML throw, and the
+    // entry would then open empty. Keep in sync with JournalTipTapEditor and backend TipTapContent.
+    try { content = generateHTML(detail.contentJson, [StarterKit, Underline, Highlight.configure({ multicolor: false }), Image, PromptQuestion]); }
     catch { content = ''; }
   }
   return {

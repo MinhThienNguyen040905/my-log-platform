@@ -2,16 +2,6 @@
 
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import type { Editor } from '@tiptap/core';
-import {
-  Heading2,
-  Heading3,
-  Quote,
-  List,
-  ListOrdered,
-  ImagePlus,
-  Type,
-  Highlighter,
-} from 'lucide-react';
 
 export interface CommandItem {
   title: string;

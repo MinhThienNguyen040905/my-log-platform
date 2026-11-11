@@ -14,15 +14,16 @@ import {
   Sparkles,
   Lock,
   BookOpen,
-  FileText,
   AlertCircle,
 } from 'lucide-react';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useSettings, AVATAR_OPTIONS } from '../hooks/useSettings';
 import { AccountAccessPanel } from './AccountAccessPanel';
+import { AccountDeletionCard } from './AccountDeletionCard';
 import { ChangePasswordForm } from './ChangePasswordForm';
 import { AccountDataExport } from '@/features/export';
+import { UserFeedbackCard } from '@/features/feedback';
 import { useAccount } from '../context/AccountContext';
 import { useTranslation } from 'react-i18next';
 
@@ -36,8 +37,6 @@ export function SettingsView({ entryCount, draftStorageKey }: { entryCount: numb
     setName,
     penName,
     setPenName,
-    bio,
-    setBio,
     avatarUrl,
     setAvatarUrl,
     selectedAvatarId,
@@ -207,24 +206,6 @@ export function SettingsView({ entryCount, draftStorageKey }: { entryCount: numb
                 </div>
               </div>
 
-              {/* Bio / Book Inscription */}
-              <div className="flex flex-col gap-1.5">
-                <label className="font-space text-xs font-bold text-black flex items-center gap-1.5" htmlFor="author-bio">
-                  <FileText className="w-3.5 h-3.5" />
-                  {t('settingsExtra.bio')}:
-                </label>
-                <input
-                  id="author-bio"
-                  type="text"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  disabled
-                  title={t('settingsExtra.bioTitle')}
-                  placeholder={t('settingsExtra.bioPlaceholder')}
-                  className="w-full p-2.5 bg-paper-warm/30 border-2 border-black rounded-xl font-serif text-sm italic shadow-neo-xs focus:outline-none focus:bg-white transition-all"
-                />
-                <p className="text-xs text-gray-600">{t('settingsExtra.bioUnavailable')}</p>
-              </div>
             </div>
           </section>
 
@@ -358,6 +339,8 @@ export function SettingsView({ entryCount, draftStorageKey }: { entryCount: numb
 
           <AccountAccessPanel />
           <AccountDataExport userId={userId} />
+          <UserFeedbackCard />
+          <AccountDeletionCard userEmail={userProfile.email} />
 
           {/* SECTION 5: ACTION FOOTER */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t-2 border-black">

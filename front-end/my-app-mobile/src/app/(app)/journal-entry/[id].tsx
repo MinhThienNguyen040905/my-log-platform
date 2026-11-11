@@ -5,11 +5,15 @@ import { AppButton, AppText, PaperCard, Screen, StatusView, TextField } from '@/
 import { useProtectedProfile } from '@/features/auth/use-protected-profile';
 import { createTag, deleteEntry, documentText, favoriteEntry, getEntry, listTags, setEntryTag,
   type JournalEntry, type JournalTag } from '@/features/journal/api';
+import { AnalysisCard } from '@/features/journal/analysis-card';
+import { needsSafetySupport } from '@/features/safety/api';
+import { SafetySupportModal } from '@/features/safety/safety-support-modal';
 import { Palette, Spacing } from '@/constants/theme';
 
 export default function JournalDetailScreen() {
   useProtectedProfile();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, safety } = useLocalSearchParams<{ id: string; safety?: string }>();
+  const [safetyOpen, setSafetyOpen] = useState(safety === '1');
   const [entry, setEntry] = useState<JournalEntry | null>(null);
   const [tags, setTags] = useState<JournalTag[]>([]);
   const [tagName, setTagName] = useState('');
@@ -39,8 +43,11 @@ export default function JournalDetailScreen() {
       <AppText variant="eyebrow">{entry.localDate}</AppText><AppText variant="display">{entry.title || 'Trang không tiêu đề'}</AppText></View>
     <PaperCard style={styles.paper}><AppText>{documentText(entry.contentJson)}</AppText></PaperCard>
     {entry.moodCode ? <AppText>Tâm trạng: {entry.moodCode}</AppText> : null}
-    {entry.analysisStatus ? <AppText variant="caption">Phân tích: {entry.analysisStatus}</AppText> : null}
-    {entry.riskLevel && entry.riskLevel !== 'NONE' ? <AppText variant="caption">Trạng thái an toàn: {entry.riskLevel}</AppText> : null}
+    {needsSafetySupport(entry.riskLevel)
+      ? <AppButton title="Xem hỗ trợ an toàn" variant="secondary" onPress={() => setSafetyOpen(true)} /> : null}
+    <AnalysisCard entryId={entry.id} initialStatus={entry.analysisStatus}
+      showSafety={needsSafetySupport(entry.riskLevel)} onSafety={() => setSafetyOpen(true)} />
+    <SafetySupportModal visible={safetyOpen} onClose={() => setSafetyOpen(false)} onGoHome={() => router.replace('/home')} />
     {error ? <AppText accessibilityRole="alert" style={styles.error}>{error}</AppText> : null}
     <View style={styles.actions}>
       <AppButton title="Chỉnh sửa" disabled={busy} onPress={() => router.push({ pathname: '/journal-editor', params: { id: entry.id } })} />

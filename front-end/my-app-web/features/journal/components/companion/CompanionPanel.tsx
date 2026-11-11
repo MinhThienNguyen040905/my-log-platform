@@ -20,9 +20,9 @@ const TOOLS_ONLY_NOTICE: Record<'DECLINED' | 'UNAVAILABLE', string> = {
 };
 
 /**
- * Khung chat của trợ lý. Responsive theo COMPANION_UI_PLAN.md mục 2.3, rút gọn còn 2 biến thể
- * (dưới 768px: bottom sheet; từ 768px trở lên: panel nổi bên phải) thay vì 3, vì khác biệt giữa
- * "sticky cột thứ 3" và "fixed nổi" ở ≥1360px chỉ là hình thức, không đổi hành vi cho người dùng.
+ * Khung chat của trợ lý. Responsive theo COMPANION_UI_PLAN.md mục 2.3: dưới 640px là bottom sheet;
+ * 640–1279px là panel nổi bên phải; từ 1280px panel nằm trong lưới của trang viết (cột thứ hai,
+ * sticky dưới header) nên không đè lên trang viết.
  */
 export function CompanionPanel({ conversation }: CompanionPanelProps) {
   const {
@@ -56,7 +56,7 @@ export function CompanionPanel({ conversation }: CompanionPanelProps) {
     <div
       role="complementary"
       aria-label="Trợ lý trang viết"
-      className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-40 flex h-[min(70dvh,640px)] flex-col overflow-hidden rounded-3xl border-2 border-black bg-paper-warm shadow-neo-lg animate-in fade-in slide-in-from-bottom-4 sm:inset-x-auto sm:bottom-4 sm:left-auto sm:right-4 sm:top-24 sm:h-auto sm:w-[380px] sm:rounded-2xl sm:slide-in-from-bottom-0"
+      className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-40 flex h-[min(70dvh,640px)] flex-col overflow-hidden rounded-3xl border-2 border-black bg-paper-warm shadow-neo-lg animate-in fade-in slide-in-from-bottom-4 sm:inset-x-auto sm:bottom-4 sm:left-auto sm:right-4 sm:top-20 sm:h-auto sm:w-[380px] sm:rounded-2xl sm:slide-in-from-bottom-0 xl:sticky xl:top-20 xl:bottom-auto xl:right-auto xl:z-auto xl:h-[min(720px,calc(100dvh-6rem))] xl:w-auto xl:self-start xl:shadow-neo"
     >
       <div className="flex items-center justify-between border-b border-black/15 p-3">
         <div className="flex items-center gap-2">

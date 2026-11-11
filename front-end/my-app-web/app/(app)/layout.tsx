@@ -8,5 +8,5 @@ export default async function AppLayout({
   children: React.ReactNode;
 }>) {
   if (!(await cookies()).has('mylog_refresh')) redirect('/auth/login');
-  return <AuthGate><main className='flex-1 pt-20 w-full'>{children}</main></AuthGate>;
+  return <AuthGate><main className='flex-1 pt-16 w-full'>{children}</main></AuthGate>;
 }

@@ -28,6 +28,11 @@ logging:
 mylog:
   identity:
     enabled: true
+    # Local only: every local browser/test run shares 127.0.0.1, so raise the per-IP reset limits.
+    # Per-email limits keep their production values (they protect the 8-digit code).
+    password-reset:
+      requests-per-ip: ${MYLOG_PASSWORD_RESET_REQUESTS_PER_IP:100}
+      confirms-per-ip: ${MYLOG_PASSWORD_RESET_CONFIRMS_PER_IP:100}
     oauth:
       google:
         enabled: ${MYLOG_GOOGLE_OAUTH_ENABLED:true}

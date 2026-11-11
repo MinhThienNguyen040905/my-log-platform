@@ -15,7 +15,8 @@ public final class TipTapContent {
     /** {@code promptQuestion}: a companion writing prompt the user chose to insert (see COMPANION_UI_PLAN.md). */
     private static final Set<String> CONTAINERS = Set.of("doc", "paragraph", "heading", "blockquote", "promptQuestion",
             "bulletList", "orderedList", "listItem");
-    private static final Set<String> MARKS = Set.of("bold", "italic", "underline", "strike", "code");
+    /** {@code highlight}: single-colour only — marks carrying attrs (e.g. a colour) are rejected below. */
+    private static final Set<String> MARKS = Set.of("bold", "italic", "underline", "strike", "code", "highlight");
 
     private TipTapContent() {}
 

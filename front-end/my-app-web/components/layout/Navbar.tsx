@@ -95,21 +95,21 @@ export function Navbar({ onLogout, penName, streakCount, userProfile, updateProf
     <>
       {/* Desktop & Top Sticky Header */}
       <header className="fixed top-0 left-0 right-0 w-full z-50 bg-bg-canvas/95 backdrop-blur-md border-b-2 border-on-background">
-        <div className="h-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sm:gap-4">
+        <div className="h-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 sm:gap-4">
           {/* Brand Logo Container */}
           <Link
             href="/dashboard"
             onNavigate={(event) => { if (!confirmLeave('/dashboard')) event.preventDefault(); }}
             className="flex items-center shrink-0 group focus:outline-none"
           >
-            <div className="relative flex items-center justify-center h-10 sm:h-11 w-auto max-w-[130px] sm:max-w-[160px] overflow-hidden">
+            <div className="relative flex items-center justify-center h-9 sm:h-10 w-auto max-w-[130px] sm:max-w-[160px] overflow-hidden">
               <Image
                 src="/logo.png"
                 alt="MyLog Logo"
                 width={140}
                 height={44}
                 priority
-                className="h-10 sm:h-11 w-auto object-contain transition-transform duration-150 group-hover:scale-105"
+                className="h-9 sm:h-10 w-auto object-contain transition-transform duration-150 group-hover:scale-105"
               />
             </div>
           </Link>

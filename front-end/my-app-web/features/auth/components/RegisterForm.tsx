@@ -2,11 +2,9 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Eye, EyeOff, Mail, Key, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Key, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
-import { NeoButton } from '@/components/ui/NeoButton';
 import { useToast } from '@/providers/ToastProvider';
 import { authError, authPost } from '../api/client';
 import { useForm, useWatch } from 'react-hook-form';
@@ -15,10 +13,10 @@ import { z } from 'zod';
 import { createAuthSchemas, registerSchema } from '../schemas/auth-forms';
 import { useAppLanguage } from '@/providers/AppLanguageProvider';
 import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { motion } from 'motion/react';
 import { rememberVerificationEmail } from '../verification-email';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
+import { AuthHeader } from './AuthHeader';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -64,49 +62,24 @@ export function RegisterForm() {
   });
 
   return (
-    <div className='min-h-screen bg-bg-canvas flex flex-col justify-between selection:bg-brand-lime selection:text-black overflow-x-hidden'>
-      {/* Header Bar */}
-      <header className='w-full border-b-2 border-on-background bg-bg-canvas/90 backdrop-blur-md px-4 sm:px-8 py-4 flex items-center justify-between'>
-        <Link href='/' className='flex items-center gap-2 group'>
-          <div className='relative flex items-center justify-center h-9 sm:h-10 w-auto max-w-[130px] overflow-hidden'>
-            <Image
-              src='/logo.png'
-              alt='MyLog Logo'
-              width={130}
-              height={40}
-              priority
-              className='h-9 sm:h-10 w-auto object-contain transition-transform duration-150 group-hover:scale-105'
-            />
-          </div>
-        </Link>
-        <LanguageSwitcher />
-        <Link href='/'>
-          <NeoButton variant='paper' size='sm' className='font-space font-bold gap-1.5 text-xs'>
-            <ArrowLeft className='w-4 h-4' />
-          </NeoButton>
-        </Link>
-      </header>
+    <div className='min-h-dvh bg-bg-canvas flex flex-col justify-between selection:bg-brand-lime selection:text-black overflow-x-hidden'>
+      <AuthHeader exitLabel={t('auth.exitAuth')} />
 
       {/* Main Register Container */}
-      <main className='flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 flex items-center justify-center'>
+      <main className='flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-4 lg:py-5 flex items-center justify-center'>
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.28, ease: 'easeOut' }}
           className='w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch'
         >
-          
+
           {/* Left / Feature Highlight Banner */}
-          <div className='lg:col-span-5 bg-paper-warm border-neo rounded-3xl p-6 sm:p-8 shadow-neo-lg flex flex-col justify-between relative overflow-visible'>
+          <div className='order-2 lg:order-1 lg:col-span-5 bg-paper-warm border-neo rounded-3xl p-6 sm:p-7 shadow-neo-lg flex flex-col justify-between relative overflow-visible'>
             <WashiTape color='peach' rotate={-2} className='absolute -top-3 left-8 w-32 z-10' />
 
-            <div className='flex flex-col gap-4'>
-              <div className='inline-flex items-center gap-1.5 bg-white border border-black px-3 py-1 rounded-full text-xs font-space font-bold shadow-neo-sm w-fit'>
-                <span className='w-2 h-2 rounded-full bg-brand-lime border border-black animate-pulse'></span>
-                SIGN UP SANCTUARY
-              </div>
-
-              <h2 className='font-space text-2xl sm:text-3xl font-extrabold text-on-surface leading-tight'>
+            <div className='flex flex-col gap-2'>
+              <h2 className='font-space text-2xl font-extrabold text-on-surface leading-tight'>
                 {t('auth.registerWelcome')}
               </h2>
               <p className='font-sans text-xs sm:text-sm text-on-surface-variant leading-relaxed'>
@@ -115,7 +88,7 @@ export function RegisterForm() {
             </div>
 
             {/* Benefit Checklist */}
-            <div className='my-6 flex flex-col gap-3 bg-white border-neo-sm rounded-2xl p-4 shadow-neo-sm'>
+            <div className='my-4 flex flex-col gap-2 bg-white border-neo-sm rounded-2xl p-4 shadow-neo-sm'>
               <span className='font-space text-xs font-bold uppercase text-gray-500'>{t('auth.benefits')}</span>
               
               <div className='flex items-start gap-2 text-xs font-sans text-on-surface'>
@@ -133,30 +106,23 @@ export function RegisterForm() {
             </div>
 
             {/* Trust Footer */}
-            <div className='pt-4 border-t border-border-soft flex items-center gap-2 text-xs font-space font-bold text-gray-600'>
+            <div className='pt-3 border-t border-border-soft flex items-center gap-2 text-xs font-space font-bold text-gray-600'>
               <ShieldCheck className='w-4 h-4 text-primary shrink-0' />
               <span>{t('auth.free')}</span>
             </div>
           </div>
 
           {/* Right / Register Form */}
-          <div className='lg:col-span-7 bg-surface-card border-neo rounded-3xl p-6 sm:p-10 shadow-neo-lg flex flex-col justify-between relative overflow-visible'>
+          <div className='order-1 lg:order-2 lg:col-span-7 bg-surface-card border-neo rounded-3xl p-6 sm:p-8 shadow-neo-lg flex flex-col justify-between relative overflow-visible'>
             <WashiTape color='lime' rotate={2} className='absolute -top-3 right-8 w-32 z-10 hidden sm:block' />
 
             <div>
-              <div className='flex items-start justify-between gap-4 sm:gap-6 mb-6'>
-                <div className='flex-1 min-w-0'>
-                  <h1 className='font-space text-2xl sm:text-3xl font-extrabold text-on-surface'>
-                    {t('auth.registerTitle')}
-                  </h1>
-                  <p className='font-sans text-xs sm:text-sm text-on-surface-variant mt-1 leading-relaxed'>
-                    {t('auth.registerSubtitle')}
-                  </p>
-                </div>
-                <div className='w-10 h-10 rounded-xl bg-secondary-container text-white border-neo-sm shadow-neo-sm flex items-center justify-center font-bold shrink-0 mt-0.5'>
-                  <Sparkles className='w-5 h-5 text-white stroke-[2.3]' />
-                </div>
-              </div>
+              <h1 className='font-space text-2xl sm:text-3xl font-extrabold text-on-surface'>
+                {t('auth.registerTitle')}
+              </h1>
+              <p className='font-sans text-xs sm:text-sm text-on-surface-variant mt-1 mb-4 leading-relaxed'>
+                {t('auth.registerSubtitle')}
+              </p>
 
               {/* Google 1-Tap Sign Up */}
               <button
@@ -175,8 +141,8 @@ export function RegisterForm() {
               </button>
 
               {/* Neo-Brutalist Divider */}
-              <div className='relative flex items-center justify-center my-6'>
-                <div className='w-full h-0.5 bg-border-hard'></div>
+              <div className='relative flex items-center justify-center my-4'>
+                <div className='w-full h-0.5 bg-on-background'></div>
                 <span className='absolute bg-surface-card px-3 font-space text-[11px] font-bold uppercase tracking-widest text-on-surface-variant'>
                   {t('auth.byEmail')}
                 </span>
@@ -233,16 +199,14 @@ export function RegisterForm() {
 
                   {/* Password Strength Indicator */}
                   {password && (
-                    <div className='flex flex-col gap-1 mt-1'>
-                      <div className='flex items-center justify-between text-[11px] font-space font-bold uppercase'>
-                        <span className='text-gray-500'>{t('auth.passwordStrength')}</span>
-                        <span className='px-1.5 py-0.5 bg-paper-warm border border-black rounded text-[10px]'>
-                          {strength.label}
-                        </span>
-                      </div>
-                      <div className='h-1.5 w-full bg-gray-200 rounded-full overflow-hidden border border-black/30'>
+                    <div className='flex items-center gap-2 mt-0.5 text-[11px] font-space font-bold uppercase'>
+                      <span className='text-gray-500 shrink-0'>{t('auth.passwordStrength')}</span>
+                      <div className='h-1.5 flex-1 bg-gray-200 rounded-full overflow-hidden border border-black/30'>
                         <div className={`h-full ${strength.width} ${strength.color} transition-all duration-300`}></div>
                       </div>
+                      <span className='shrink-0 px-1.5 py-0.5 bg-paper-warm border border-black rounded text-[10px]'>
+                        {strength.label}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -301,7 +265,7 @@ export function RegisterForm() {
             </div>
 
             {/* Bottom Redirect to Login */}
-            <div className='mt-8 pt-4 border-t border-border-soft text-center font-space text-xs font-bold text-gray-600'>
+            <div className='mt-4 pt-3 border-t border-border-soft text-center font-space text-xs font-bold text-gray-600'>
               {t('auth.hasAccount')}{' '}
               <Link href='/auth/login' className='text-black underline hover:text-primary font-extrabold'>
                 {t('auth.loginNow')}
@@ -311,10 +275,6 @@ export function RegisterForm() {
         </motion.div>
       </main>
 
-      {/* Mini Footer */}
-      <footer className='py-4 px-4 border-t-2 border-on-background bg-bg-canvas text-center font-space text-xs text-gray-500'>
-        {t('auth.footer')}
-      </footer>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
-const featureNames = ["admin", "auth", "calendar", "dashboard", "export", "feedback", "insights", "journal", "knowledge", "landing", "onboarding", "reporting", "selfcare", "user"];
+const featureNames = ["admin", "auth", "calendar", "checkin", "dashboard", "export", "feedback", "insights", "journal", "knowledge", "landing", "onboarding", "reporting", "selfcare", "user"];
 
 const eslintConfig = defineConfig([
   ...nextVitals,
