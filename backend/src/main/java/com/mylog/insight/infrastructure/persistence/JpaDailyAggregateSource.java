@@ -1,7 +1,9 @@
 package com.mylog.insight.infrastructure.persistence;
 
 import com.mylog.insight.application.DailyAggregateSource;
+import com.mylog.insight.application.query.ActivitySignal;
 import com.mylog.insight.application.query.DailyMetric;
+import com.mylog.insight.application.query.EntrySignal;
 import com.mylog.insight.application.query.TopCode;
 import com.mylog.platform.web.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
@@ -123,6 +125,61 @@ class JpaDailyAggregateSource implements DailyAggregateSource {
         for (Object[] row : rows)
             codes.add(new TopCode(row[0].toString(), ((Number) row[1]).longValue(), decimal(row[2])));
         return codes;
+    }
+
+    @Override @Transactional(readOnly = true)
+    public List<EntrySignal> entrySignals(UUID userId, LocalDate from, LocalDate to) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery("""
+                SELECT j.id, j.local_date, j.mood_score, j.stress_score,
+                    (SELECT string_agg(e.emotion_code, ',' ORDER BY e.rank) FROM analysis_emotions e
+                        WHERE e.analysis_id=a.id),
+                    (SELECT string_agg(t.topic_code, ',' ORDER BY t.rank) FROM analysis_topics t
+                        WHERE t.analysis_id=a.id),
+                    (SELECT string_agg(g.tag_id::text, ',') FROM journal_entry_tags g
+                        WHERE g.journal_entry_id=j.id)
+                FROM journal_entries j
+                LEFT JOIN ai_analyses a ON a.id=j.latest_analysis_id AND j.analysis_status='ANALYZED'
+                    AND a.user_id=j.user_id AND a.journal_entry_id=j.id
+                    AND a.status='SUCCEEDED' AND a.content_version=j.content_version
+                WHERE j.user_id=?1 AND j.local_date BETWEEN ?2 AND ?3
+                    AND j.deleted_at IS NULL AND j.entry_status='SAVED'
+                ORDER BY j.local_date, j.occurred_at, j.id
+                """).setParameter(1, userId).setParameter(2, from).setParameter(3, to).getResultList();
+        List<EntrySignal> signals = new ArrayList<>(rows.size());
+        for (Object[] row : rows) {
+            signals.add(new EntrySignal((UUID) row[0], (LocalDate) row[1], decimal(row[2]), decimal(row[3]),
+                    split(row[4]), split(row[5]), split(row[6]).stream().map(UUID::fromString).toList()));
+        }
+        return signals;
+    }
+
+    @Override @Transactional(readOnly = true)
+    public List<ActivitySignal> activities(UUID userId, LocalDate from, LocalDate to) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery("""
+                SELECT c.local_date, a.activity_code
+                FROM daily_checkins c JOIN checkin_activities a ON a.checkin_id=c.id
+                WHERE c.user_id=?1 AND c.local_date BETWEEN ?2 AND ?3
+                ORDER BY c.local_date, a.activity_code
+                """).setParameter(1, userId).setParameter(2, from).setParameter(3, to).getResultList();
+        List<ActivitySignal> signals = new ArrayList<>(rows.size());
+        for (Object[] row : rows) signals.add(new ActivitySignal((LocalDate) row[0], (String) row[1]));
+        return signals;
+    }
+
+    @Override @Transactional(readOnly = true)
+    public boolean hasElevatedRisk(UUID userId, LocalDate from, LocalDate to) {
+        Number count = (Number) em.createNativeQuery("""
+                SELECT count(*) FROM journal_entries
+                WHERE user_id=?1 AND local_date BETWEEN ?2 AND ?3 AND deleted_at IS NULL
+                    AND risk_level IN ('HIGH','CRITICAL')
+                """).setParameter(1, userId).setParameter(2, from).setParameter(3, to).getSingleResult();
+        return count.longValue() > 0;
+    }
+
+    private static List<String> split(Object value) {
+        return value == null ? List.of() : List.of(((String) value).split(","));
     }
 
     private static BigDecimal decimal(Object value) { return value == null ? null : (BigDecimal) value; }

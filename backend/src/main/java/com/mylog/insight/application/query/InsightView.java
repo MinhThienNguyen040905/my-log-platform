@@ -7,5 +7,5 @@ import java.util.UUID;
 
 public record InsightView(UUID id, String type, LocalDate from, LocalDate to, String timezone,
                           String direction, BigDecimal strength, int sampleSize,
-                          String algorithmVersion, String narrative,
+                          String algorithmVersion, String generatedBy, String narrative,
                           List<InsightEvidenceView> evidence) {}

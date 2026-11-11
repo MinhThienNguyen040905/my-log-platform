@@ -7,6 +7,8 @@ import { useJournal } from '@/features/journal';
 import { getDashboard } from '@/features/dashboard';
 import { HabitTrackerCard, SelfCareGoalsChecklist } from '@/features/selfcare';
 import { listInsights } from '../api/insights';
+import { isPatternInsight } from '../utils/pattern-insights';
+import { PatternInsightsPanel } from './PatternInsightsPanel';
 import { listReports } from '@/features/reporting';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
@@ -30,6 +32,8 @@ export function InsightView() {
   const reportsQuery = useQuery({ queryKey: ['reports', userId, 'WEEKLY', 20], queryFn: () => listReports({ type: 'WEEKLY', limit: 20 }) });
   const historyQuery = useQuery({ queryKey: ['dashboard', userId, '90d'], queryFn: () => getDashboard('90d') });
   const insights = insightsQuery.data?.items ?? [];
+  const patternInsights = insights.filter(isPatternInsight);
+  const reportInsights = insights.filter((insight) => !isPatternInsight(insight));
   const reports = reportsQuery.data?.items ?? [];
   const insightsLoading = insightsQuery.isPending;
   const reportsLoading = reportsQuery.isPending;
@@ -213,6 +217,8 @@ export function InsightView() {
 
           {/* LEFT COLUMN: Evidence-Based Insights (7 cols) */}
           <div className="lg:col-span-7 flex flex-col gap-6">
+            <PatternInsightsPanel insights={patternInsights} loading={insightsLoading} error={insightsError}
+              onRetry={() => void insightsQuery.refetch()} />
             {/* EVIDENCE MATRIX HEADER CARD */}
             <div className="bg-surface-card border-neo rounded-3xl p-6 shadow-neo relative">
               <WashiTape color="peach" rotate={2} className="absolute -top-3 right-8 w-28" />
@@ -241,10 +247,10 @@ export function InsightView() {
               <div className="flex flex-col gap-4">
                 {insightsLoading && <p role="status">{t('status.loadingAnalysis')}</p>}
                 {insightsError && <p role="alert">{t('insight.insightError')} <button type="button" className="underline" onClick={() => void insightsQuery.refetch()}>{t('common.retry')}</button></p>}
-                {!insightsLoading && !insightsError && insights.length === 0 && (
+                {!insightsLoading && !insightsError && reportInsights.length === 0 && (
                   <p>{t('insight.noInsights')}</p>
                 )}
-                {insights.map((insight) => (
+                {reportInsights.map((insight) => (
                   <article key={insight.id} className="p-4 bg-paper-warm rounded-2xl border-neo-sm shadow-neo-sm flex flex-col gap-3">
                     <h3 className="font-space text-sm font-bold">{insight.type}</h3>
                     <p className="font-sans text-sm">{insight.narrative}</p>

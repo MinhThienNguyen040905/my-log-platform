@@ -492,6 +492,13 @@ enqueue chưa được đo; AI narrative qua output safety còn phụ thuộc pr
 Hiện report chỉ dùng narrative RULE từ structured metrics. `MYLOG_REPORTS_ENABLED` mặc định false,
 cần bật rõ khi muốn chạy scheduler/worker.
 
+Bổ sung 2026-11-11: pattern insight 30 ngày (`POST /api/v1/insights:refresh`, `PATCH /api/v1/insights/{id}`)
+với sáu detector thống kê, evidence, ẩn insight và AI diễn đạt lại tùy chọn (facts only, validator + output
+screening, fallback câu mẫu). Có unit test detector/validator/adapter, PostgreSQL integration test
+(`InsightPatternIntegrationTest`) và Playwright cho trang Insight. Còn mở: job hằng đêm tự refresh, đánh giá
+chất lượng/safety câu AI trên tập mẫu lớn, analyzer cảm xúc được duyệt cho production (local đang dùng dev
+seeder `LOCAL_FAKE`).
+
 - Dashboard không gọi LLM trong request path.
 - Mọi insight hiển thị được evidence/sample size.
 - Weekly report chạy idempotent qua scheduler.

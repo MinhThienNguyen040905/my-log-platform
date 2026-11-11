@@ -14,6 +14,7 @@ import com.mylog.platform.web.InvalidRequestException;
 import jakarta.persistence.EntityManager;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -21,6 +22,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -87,6 +89,96 @@ class JpaInsightStore implements InsightStore {
         }
     }
 
+    @Override @Transactional
+    public void replacePatterns(UUID userId, LocalDate from, LocalDate to, String timezone, String algorithmVersion,
+                                List<PatternInsight> insights, Instant now) {
+        em.createNativeQuery("SELECT pg_advisory_xact_lock(hashtextextended(?1,0))")
+                .setParameter(1, userId + ":patterns:" + algorithmVersion).getSingleResult();
+        // A type the user hid for an overlapping window stays hidden after a refresh.
+        @SuppressWarnings("unchecked")
+        List<String> hiddenTypes = em.createNativeQuery("""
+                SELECT DISTINCT insight_type FROM insights
+                WHERE user_id=?1 AND algorithm_version=?2 AND status='HIDDEN' AND period_end>=?3
+                """, String.class).setParameter(1, userId).setParameter(2, algorithmVersion).setParameter(3, from)
+                .getResultList();
+        // A second refresh on the same day replaces that day's rows (unique user/type/period/version).
+        em.createNativeQuery("""
+                DELETE FROM insights WHERE user_id=?1 AND algorithm_version=?2 AND period_start=?3 AND period_end=?4
+                """).setParameter(1, userId).setParameter(2, algorithmVersion).setParameter(3, from)
+                .setParameter(4, to).executeUpdate();
+        em.createNativeQuery("""
+                UPDATE insights SET status='SUPERSEDED', superseded_at=?3
+                WHERE user_id=?1 AND algorithm_version=?2 AND status='ACTIVE'
+                """).setParameter(1, userId).setParameter(2, algorithmVersion).setParameter(3, now).executeUpdate();
+        for (PatternInsight item : insights) {
+            var finding = item.finding();
+            Insight insight = new Insight();
+            insight.id = ids.next();
+            insight.userId = userId;
+            insight.insightType = finding.type();
+            insight.periodStart = from;
+            insight.periodEnd = to;
+            insight.timezone = timezone;
+            insight.status = hiddenTypes.contains(finding.type()) ? "HIDDEN" : "ACTIVE";
+            insight.direction = finding.direction();
+            insight.strength = finding.strength();
+            insight.sampleSize = finding.sampleSize();
+            insight.algorithmVersion = algorithmVersion;
+            Map<String, Object> snapshot = new LinkedHashMap<>(finding.facts());
+            if (item.narrativeModel() != null) snapshot.put("narrativeModel", item.narrativeModel());
+            insight.metricsSnapshot = snapshot;
+            encryptNarrative(insight, userId, item.narrative());
+            insight.generatedBy = item.generatedBy();
+            insight.createdAt = now;
+            em.persist(insight);
+            for (var point : finding.evidence()) {
+                InsightEvidence evidence = new InsightEvidence();
+                evidence.id = ids.next();
+                evidence.insightId = insight.id;
+                evidence.sourceType = point.sourceType();
+                evidence.sourceId = point.sourceId();
+                evidence.evidenceDate = point.date();
+                evidence.metricName = point.metric();
+                evidence.metricValue = point.value();
+                evidence.weight = BigDecimal.ONE;
+                evidence.metadata = Map.of();
+                evidence.createdAt = now;
+                em.persist(evidence);
+            }
+        }
+        em.flush();
+    }
+
+    @Override @Transactional
+    public boolean hide(UUID userId, UUID insightId) {
+        return em.createNativeQuery("""
+                UPDATE insights SET status='HIDDEN' WHERE id=?1 AND user_id=?2 AND status<>'HIDDEN'
+                """).setParameter(1, insightId).setParameter(2, userId).executeUpdate() > 0
+                || ((Number) em.createNativeQuery("SELECT count(*) FROM insights WHERE id=?1 AND user_id=?2")
+                .setParameter(1, insightId).setParameter(2, userId).getSingleResult()).longValue() > 0;
+    }
+
+    @Override @Transactional
+    public void recordNarrationUsage(NarrationUsage usage, Instant now) {
+        em.createNativeQuery("""
+                INSERT INTO ai_usage_records(id, job_id, analysis_id, provider, model, operation, input_tokens,
+                    output_tokens, estimated_cost_usd, latency_ms, request_status, created_at)
+                VALUES (?1, NULL, NULL, ?2, ?3, 'INSIGHT_NARRATIVE', ?4, ?5, ?6, ?7, ?8, ?9)
+                """).setParameter(1, ids.next()).setParameter(2, usage.provider()).setParameter(3, usage.model())
+                .setParameter(4, usage.inputTokens()).setParameter(5, usage.outputTokens())
+                .setParameter(6, usage.estimatedCostUsd())
+                .setParameter(7, (int) Math.min(Integer.MAX_VALUE, Math.max(0, usage.latencyMs())))
+                .setParameter(8, usage.succeeded() ? "SUCCEEDED" : "FAILED").setParameter(9, now).executeUpdate();
+    }
+
+    private void encryptNarrative(Insight insight, UUID userId, String narrative) {
+        var encrypted = cipher.encrypt("insights.narrative", userId, insight.id, narrative);
+        insight.encryptedNarrative = encrypted.ciphertext();
+        insight.narrativeIv = encrypted.iv();
+        insight.narrativeWrappedKey = encrypted.wrappedKey();
+        insight.narrativeKeyVersion = encrypted.keyVersion();
+    }
+
     private void evidence(UUID insightId, LocalDate date, String source, UUID sourceId,
                           String metric, BigDecimal value, Instant now) {
         InsightEvidence evidence = new InsightEvidence();
@@ -131,7 +223,7 @@ class JpaInsightStore implements InsightStore {
                             insight.narrativeWrappedKey, insight.narrativeKeyVersion));
             items.add(new InsightView(insight.id, insight.insightType, insight.periodStart,
                     insight.periodEnd, insight.timezone, insight.direction, insight.strength,
-                    insight.sampleSize, insight.algorithmVersion, narrative, evidence));
+                    insight.sampleSize, insight.algorithmVersion, insight.generatedBy, narrative, evidence));
         }
         String next = more ? encode(page.getLast()) : null;
         return new InsightPage(items, next);
