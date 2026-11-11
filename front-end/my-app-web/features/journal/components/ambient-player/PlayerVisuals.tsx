@@ -1,5 +1,3 @@
-import { Disc3 } from 'lucide-react';
-
 /** Vinyl that turns while music plays. Global reduced-motion CSS stops the spin. */
 export function SpinningDisc({ playing, className = 'h-11 w-11' }: { playing: boolean; className?: string }) {
   return (
@@ -28,9 +26,4 @@ export function Equalizer({ playing }: { playing: boolean }) {
       ))}
     </span>
   );
-}
-
-/** Small disc icon for the tool rail; spins while playing. */
-export function RailDiscIcon({ playing }: { playing: boolean }) {
-  return <Disc3 className={`h-5 w-5 ${playing ? 'animate-[spin_3s_linear_infinite]' : ''}`} />;
 }

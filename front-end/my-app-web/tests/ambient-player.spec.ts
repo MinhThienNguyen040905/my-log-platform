@@ -28,7 +28,13 @@ async function openEditor(page: Page) {
     ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PROFILE) })
     : route.fulfill({ status: 503, body: '' }));
   await page.goto('/journal-editor', { waitUntil: 'networkidle' });
-  await expect(page.getByRole('button', { name: 'Mở nhạc nền' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Công cụ dịu', exact: true })).toBeVisible();
+}
+
+/** The player has no button of its own: it opens from "Công cụ dịu" → "Nghe âm thanh dịu". */
+async function openPlayer(page: Page) {
+  await page.getByRole('button', { name: 'Công cụ dịu', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Nghe âm thanh dịu' }).click();
 }
 
 const contextStates = (page: Page) =>
@@ -44,11 +50,15 @@ test.describe('ambient music player', () => {
   test('AP-01/12: open, play, pause and resume — also by keyboard', async ({ page }) => {
     await openEditor(page);
     expect(await contextStates(page)).toEqual([]); // nothing plays before a click
-    await page.getByRole('button', { name: 'Mở nhạc nền' }).click();
+    await openPlayer(page);
     await expect(player(page)).toBeVisible();
     await expect(trackTitle(page)).toHaveText(TRACK_ORDER[0]);
     await expect.poll(() => contextStates(page)).toEqual(['running']);
-    await expect(page.getByRole('button', { name: 'Tắt nhạc nền' })).toHaveAttribute('aria-pressed', 'true');
+    // No separate music button on the rail; "Công cụ dịu" stays lit while the player is open.
+    const rail = page.getByRole('complementary', { name: 'Công cụ trang viết' });
+    await expect(rail.getByRole('button', { name: /nhạc nền/i })).toHaveCount(0);
+    await expect(rail.getByRole('button')).toHaveCount(5);
+    await expect(page.getByRole('button', { name: 'Công cụ dịu', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
     const pause = player(page).getByRole('button', { name: 'Tạm dừng' });
     await pause.focus();
@@ -61,7 +71,7 @@ test.describe('ambient music player', () => {
 
   test('AP-02/03: next and previous wrap around; the list selects and marks the current track', async ({ page }) => {
     await openEditor(page);
-    await page.getByRole('button', { name: 'Mở nhạc nền' }).click();
+    await openPlayer(page);
     for (const title of TRACK_ORDER.slice(1)) {
       await player(page).getByRole('button', { name: 'Bài sau' }).click();
       await expect(trackTitle(page)).toHaveText(title);
@@ -82,7 +92,7 @@ test.describe('ambient music player', () => {
 
   test('AP-04: volume and mute; volume and last track are remembered after a reload', async ({ page }) => {
     await openEditor(page);
-    await page.getByRole('button', { name: 'Mở nhạc nền' }).click();
+    await openPlayer(page);
     await player(page).getByRole('slider', { name: 'Âm lượng' }).fill('30');
     await player(page).getByRole('button', { name: 'Bài sau' }).click();
     await player(page).getByRole('button', { name: 'Tắt tiếng' }).click();
@@ -90,7 +100,7 @@ test.describe('ambient music player', () => {
     await player(page).getByRole('button', { name: 'Bật tiếng' }).click();
 
     await page.reload({ waitUntil: 'networkidle' });
-    await page.getByRole('button', { name: 'Mở nhạc nền' }).click();
+    await openPlayer(page);
     await expect(player(page).getByRole('slider', { name: 'Âm lượng' })).toHaveValue('30');
     await expect(trackTitle(page)).toHaveText(TRACK_ORDER[1]);
   });
@@ -98,7 +108,7 @@ test.describe('ambient music player', () => {
   test('AP-05: the sleep timer fades out, stops and says why', async ({ page }) => {
     await page.clock.install();
     await openEditor(page);
-    await page.getByRole('button', { name: 'Mở nhạc nền' }).click();
+    await openPlayer(page);
     await player(page).getByRole('combobox', { name: 'Hẹn giờ tắt nhạc nền' }).selectOption('15');
     await expect(player(page)).toContainText('tắt sau 15 phút');
     await page.clock.runFor('15:00');
@@ -120,7 +130,7 @@ test.describe('ambient music player', () => {
     await expect(trackTitle(page)).toHaveText('Tiếng mưa rơi êm dịu');
     await expect.poll(() => contextStates(page)).toEqual(['running']);
 
-    await page.getByRole('button', { name: 'Tắt nhạc nền' }).click();
+    await player(page).getByRole('button', { name: 'Tắt và đóng nhạc nền' }).click();
     await page.getByRole('button', { name: 'Buồn', exact: true }).click();
     await page.getByRole('button', { name: 'Ẩn gợi ý nhạc nền' }).click();
     await expect(page.getByRole('button', { name: /Gợi ý nghe/ })).toHaveCount(0);
@@ -142,7 +152,7 @@ test.describe('ambient music player', () => {
 
   test('AP-10: leaving the editor closes the audio', async ({ page }) => {
     await openEditor(page);
-    await page.getByRole('button', { name: 'Mở nhạc nền' }).click();
+    await openPlayer(page);
     await expect.poll(() => contextStates(page)).toEqual(['running']);
     await page.getByRole('link', { name: 'Tổng quan' }).first().click();
     await page.waitForURL(/\/dashboard/);
@@ -152,20 +162,21 @@ test.describe('ambient music player', () => {
   test('AP-11: reduced motion freezes the spinning disc', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openEditor(page);
-    await page.getByRole('button', { name: 'Mở nhạc nền' }).click();
+    await openPlayer(page);
     const disc = player(page).locator('span.rounded-full.bg-neutral-900');
     await expect(disc).toHaveCSS('animation-iteration-count', '1');
   });
 
-  test('AP-13: phone layout — no horizontal scroll, the drawer shows all six tools', async ({ page }) => {
+  test('AP-13: phone layout — no horizontal scroll, the drawer shows the five tools', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await openEditor(page).catch(() => { /* on phones the rail is a hidden drawer until opened */ });
     // On phones the tools live in a drawer opened by the floating wrench button.
     await page.getByRole('button', { name: 'Mở công cụ' }).click();
     const drawer = page.getByRole('complementary', { name: 'Công cụ trang viết' });
-    await expect(drawer.getByRole('button')).toHaveCount(7); // 6 tools + close
-    await drawer.getByRole('button', { name: 'Mở nhạc nền' }).click();
-    await drawer.getByRole('button', { name: 'Đóng công cụ' }).click();
+    await expect(drawer.getByRole('button')).toHaveCount(6); // 5 tools + close
+    await drawer.getByRole('button', { name: 'Công cụ dịu', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Nghe âm thanh dịu' }).click();
+    if (await drawer.isVisible()) await drawer.getByRole('button', { name: 'Đóng công cụ' }).click();
     await expect(player(page)).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
