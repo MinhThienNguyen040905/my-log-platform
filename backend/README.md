@@ -178,6 +178,55 @@ regenerate tạo version mới. `MYLOG_REPORTS_ENABLED` mặc định false; b�
 Narrative hiện là template từ metric, chưa dùng provider AI. Testcontainers local đo dashboard 30 ngày
 trên 10.000 journal synthetic/user p95 45 ms (30 lần gọi sau warmup); cần đo lại trên staging.
 
+### Seed dữ liệu demo cho dashboard (chỉ local)
+
+`scripts/seed-demo-journal.mjs` (Node 18+, không cần dependency) tạo một tài khoản test synthetic rồi
+seed khoảng 120 ngày journal, tag và check-in qua API công khai, nên dữ liệu đi đúng luồng mã hóa,
+safety và quota như người dùng thật. Cần backend profile `local` với `MYLOG_SAFETY_DEV_ALLOW=true`,
+PostgreSQL, Redis và Mailpit (`docker compose up -d`). Chạy từ thư mục gốc repository:
+
+```powershell
+node backend/scripts/seed-demo-journal.mjs                    # tạo tài khoản mới + seed 120 ngày
+node backend/scripts/seed-demo-journal.mjs --days 90 --seed 7 # độ dài/kịch bản khác
+node backend/scripts/seed-demo-journal.mjs --email <email> --password <mật khẩu> [--reset]
+node backend/scripts/seed-demo-journal.mjs --email <email> --password <mật khẩu> --rewrite-content
+```
+
+Mỗi nhật ký buổi tối dài khoảng 200 chữ (4 đoạn: mở đầu, sự việc theo chủ đề, suy ngẫm, dự định),
+ghi chú buổi sáng khoảng 110 chữ. `--rewrite-content` thay nội dung các nhật ký ngắn đã có trong khoảng
+ngày bằng văn bản dài, giữ nguyên ngày, điểm số và tag.
+
+Script đăng ký, đọc mã xác minh từ Mailpit và in email/mật khẩu (lưu thêm ở
+`scratch/seed-demo-account.txt`, đã gitignore). Dữ liệu có kịch bản: stress cao đầu tuần, ngủ ít thì
+mood hôm sau thấp hơn, một giai đoạn 2 tuần đi xuống rồi hồi phục, vài khoảng trống làm ngắt streak.
+Quota journal là 60 lượt ghi/15 phút mỗi user, nên script tự chờ khi gặp `429`; seed 120 ngày mất khoảng
+30 phút, ngày gần nhất được tạo trước. Script từ chối chạy với host khác localhost. Entry ở trạng thái
+`PENDING` vì không có worker phân tích.
+
+`--analyze` (sau khi seed) hoặc `--analyze-only` (tài khoản đã có dữ liệu) làm thêm ba việc cho tài khoản
+synthetic: bật consent `AI_PROCESSING`, gọi `POST /api/v1/dev/analyses:seed` để gán cảm xúc/chủ đề mẫu cho
+30 ngày gần nhất, rồi `POST /api/v1/insights:refresh` và in các insight.
+
+### Pattern insight 30 ngày
+
+- `POST /api/v1/insights:refresh` tính lại insight cho 30 ngày gần nhất theo timezone của user (tối đa
+  20 lần/giờ). Các detector thống kê ở `insight/domain/PatternDetectors` (nhịp theo thứ, xu hướng hai nửa
+  tháng, cảm xúc–chủ đề, thẻ–mood, activity–mood, giấc ngủ–mood) quyết định nội dung; mỗi detector có
+  ngưỡng mẫu/hiệu ứng và trả về không có gì khi dữ liệu chưa đủ. Giữ tối đa 5 insight mạnh nhất, kèm evidence;
+  `algorithmVersion = pattern-30d-v1`.
+- Câu chữ mặc định là mẫu câu đã duyệt (`InsightTemplates`, `generatedBy = STATISTICAL`). Khi
+  `MYLOG_INSIGHTS_AI_NARRATIVE_ENABLED=true`, cấu hình `mylog.ai.*` đã được duyệt và user có consent
+  `AI_PROCESSING`, `LlmInsightNarrator` viết lại câu cho gần gũi hơn (`AI_ASSISTED`). Chỉ gửi số liệu đã tính
+  và câu mẫu; tên thẻ do user đặt được thay bằng `[THẺ]`. Câu AI phải qua `InsightNarrativeValidator`
+  (không thêm số, không nói nguyên nhân/chẩn đoán/liên hệ) và safety screening đầu ra, nếu không dùng câu
+  mẫu. Xu hướng mood đi xuống và cửa sổ có bài risk `HIGH`/`CRITICAL` luôn dùng câu mẫu. Token/chi phí ghi
+  vào `ai_usage_records` với `operation = INSIGHT_NARRATIVE`.
+- `PATCH /api/v1/insights/{id}` với `{"status":"HIDDEN"}` ẩn insight; loại insight đã ẩn vẫn ẩn khi refresh
+  trong cùng cửa sổ.
+- `POST /api/v1/dev/analyses:seed` chỉ có ở profile `local`: gán cảm xúc/chủ đề **mẫu** (`provider =
+  LOCAL_FAKE`) cho bài 30 ngày gần nhất của user hiện tại, suy ra từ icon mood, điểm số, giấc ngủ và thẻ;
+  không đọc hay gửi nội dung nhật ký. Không phải AI phân tích thật.
+
 ## Supabase PostgreSQL
 
 Project `mylog` dùng Supabase PostgreSQL 17 và kết nối qua IPv4 session pooler với SSL. Flyway vẫn là nguồn quản lý schema; không sửa schema production trực tiếp bằng Table Editor.

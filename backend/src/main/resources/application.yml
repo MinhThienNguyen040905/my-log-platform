@@ -99,6 +99,11 @@ mylog:
       outbound-safety-hard-block: ${MYLOG_COMPANION_OUTBOUND_SAFETY_HARD_BLOCK:true}
   insights:
     minimum-samples: ${MYLOG_INSIGHTS_MINIMUM_SAMPLES:7}
+    # AI rewording of pattern insight sentences (facts only, never journal text). Needs mylog.ai.* with
+    # provider/output-safety approval and the user's AI_PROCESSING consent; templates are the fallback.
+    ai-narrative:
+      enabled: ${MYLOG_INSIGHTS_AI_NARRATIVE_ENABLED:false}
+      timeout-ms: ${MYLOG_INSIGHTS_AI_NARRATIVE_TIMEOUT_MS:10000}
   reports:
     enabled: ${MYLOG_REPORTS_ENABLED:false}
     poll-delay-ms: ${MYLOG_REPORTS_POLL_DELAY_MS:5000}

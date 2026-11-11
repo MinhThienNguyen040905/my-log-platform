@@ -22,6 +22,9 @@ mylog:
   companion:
     generation:
       enabled: false
+  insights:
+    ai-narrative:
+      enabled: false
   safety:
     classifier:
       url: ""

@@ -158,6 +158,28 @@ Response thật còn có `entryId`, `contentVersion`, `analysisId`, `sentimentSc
 
 Phân tích một **bài** nhật ký và insight từ **nhiều ngày** là hai bước khác nhau: bài viết có thể chưa có AI analysis nhưng check-in vẫn là điểm dữ liệu cho dashboard. Xem thêm M4 trong [kế hoạch](BACKEND_DEVELOPMENT_PLAN.md).
 
+### Pattern insight 30 ngày và AI diễn đạt lại
+
+```text
+POST /insights:refresh
+  → PatternDetectors (SQL + Java, 30 ngày): điểm số, check-in activity, thẻ, mã cảm xúc/chủ đề đã lưu
+  → tối đa 5 finding có sample size + evidence
+  → InsightTemplates: câu mẫu đã duyệt (STATISTICAL)
+  → [tùy chọn] LlmInsightNarrator: chỉ gửi facts + câu mẫu, không gửi nhật ký/ID/tên thẻ
+  → InsightNarrativeValidator + safety screening đầu ra → AI_ASSISTED, lỗi thì giữ câu mẫu
+  → lưu insight (narrative mã hóa) + evidence
+```
+
+Thống kê quyết định insight có hay không và các con số; AI chỉ được viết lại câu. Bước AI cần
+`MYLOG_INSIGHTS_AI_NARRATIVE_ENABLED=true`, provider `mylog.ai.*` có hai cờ phê duyệt và consent
+`AI_PROCESSING` của user tại thời điểm refresh. Insight xu hướng mood đi xuống và cửa sổ có bài risk cao luôn
+dùng câu mẫu. Validator là baseline (số liệu, từ cấm, link/số điện thoại), chưa phải đánh giá chất lượng câu
+chữ đầy đủ; cần đánh giá với nhiều mẫu trước production.
+
+Ở local, cảm xúc/chủ đề của từng bài có thể đến từ `POST /api/v1/dev/analyses:seed` (profile `local`,
+`provider = LOCAL_FAKE`, suy từ điểm số và thẻ, không đọc nội dung). Đây là dữ liệu mẫu để phát triển, không
+phải kết quả của analyzer được duyệt; production vẫn cần analyzer theo mục 8.
+
 ### Các trải nghiệm self-compassion đang được đề xuất
 
 [Thư gửi tương lai, Micro-Wins Vault và bản chuẩn bị buổi tham vấn](SELF_COMPASSION_FEATURE_PROPOSALS.md) là **ý tưởng sản phẩm chưa triển khai**, không phải ba loại kết quả AI hiện có. Thư do người dùng viết và chỉ được mời xem theo lựa chọn của họ; điểm năng lượng thấp không tự động mở thư hoặc thay thế safety response. Micro-win có thể nhập thủ công; nếu trích xuất từ journal bằng AI sau này, phải có consent, safety, kiểm tra `contentVersion`, xác nhận/sửa của người dùng trước khi lưu. Bản chuẩn bị tham vấn lấy metrics có nguồn và đủ mẫu, cho người dùng xem trước/loại mục trước khi xuất; không tự gửi ra ngoài hoặc tạo nhãn chẩn đoán. Cả ba cần đánh giá riêng về privacy, nội dung có thể gây khó chịu và quyền xóa/export.
