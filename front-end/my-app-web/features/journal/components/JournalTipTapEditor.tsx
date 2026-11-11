@@ -78,8 +78,10 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
             "Hôm nay điều gì làm bạn bận tâm hay mỉm cười? Gõ '/' để chọn kiểu khối hoặc chèn ảnh...",
           emptyEditorClass: 'is-editor-empty',
         }),
+        // Single colour: with `multicolor` the mark always carries `attrs` (even `color: null`), and the
+        // backend allowlist (TipTapContent) only accepts attribute-free marks.
         Highlight.configure({
-          multicolor: true,
+          multicolor: false,
           HTMLAttributes: {
             class: 'bg-primary-container text-black px-1 rounded font-semibold',
           },

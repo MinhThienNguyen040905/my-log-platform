@@ -5,3 +5,6 @@ scratch/
 # Node.js dependencies and TypeScript build caches across web/mobile projects.
 **/node_modules/
 **/*.tsbuildinfo
+
+# User-uploaded images from local asset storage (backend/data/assets), whatever the working directory.
+**/data/assets/

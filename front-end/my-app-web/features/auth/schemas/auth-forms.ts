@@ -8,14 +8,19 @@ function messages(locale: AppLocale) {
     passwordRequired: 'Enter your password.', confirm: 'Confirm your password.',
     mismatch: 'Passwords do not match.', terms: 'Accept the terms and privacy policy.',
     code: 'Enter the 8-digit verification code.',
+    passwordBytes: 'Use at most 72 bytes (accented letters count as 2).',
   } : {
     email: 'Email không hợp lệ.', emailLong: 'Email quá dài.',
     passwordShort: 'Mật khẩu cần ít nhất 12 ký tự.', passwordLong: 'Mật khẩu tối đa 128 ký tự.',
     passwordRequired: 'Vui lòng nhập mật khẩu.', confirm: 'Vui lòng xác nhận mật khẩu.',
     mismatch: 'Mật khẩu xác nhận chưa khớp.', terms: 'Bạn cần đồng ý điều khoản và chính sách riêng tư.',
     code: 'Vui lòng nhập mã xác minh gồm 8 chữ số.',
+    passwordBytes: 'Mật khẩu tối đa 72 byte (chữ có dấu tính 2 byte).',
   };
 }
+
+/** Backend chỉ chấp nhận mật khẩu đặt lại dài 12–72 byte UTF-8 (IdentityService.validateNewPasswordPolicy). */
+const utf8Length = (value: string) => new TextEncoder().encode(value).length;
 
 export function createAuthSchemas(locale: AppLocale) {
   const m = messages(locale);
@@ -30,7 +35,18 @@ export function createAuthSchemas(locale: AppLocale) {
     login: z.object({ email, password: z.string().min(1, m.passwordRequired), rememberMe: z.boolean() }),
     verification: z.object({ email, code: z.string().trim().regex(/^[0-9]{8}$/, m.code) }),
     resendVerification: z.object({ email }),
+    forgotPassword: z.object({ email }),
+    resetWithToken: resetPassword(m),
+    resetWithCode: z.object({ email, code: z.string().trim().regex(/^[0-9]{8}$/, m.code) })
+      .and(resetPassword(m)),
   };
+}
+
+function resetPassword(m: ReturnType<typeof messages>) {
+  return z.object({
+    newPassword: z.string().min(12, m.passwordShort).refine((value) => utf8Length(value) <= 72, m.passwordBytes),
+    confirmPassword: z.string().min(1, m.confirm),
+  }).refine((value) => value.newPassword === value.confirmPassword, { path: ['confirmPassword'], message: m.mismatch });
 }
 
 export const registerSchema = createAuthSchemas('vi').register;

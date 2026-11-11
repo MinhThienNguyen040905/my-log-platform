@@ -1,8 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { LayoutDashboard, PenLine, Home, ArrowLeft } from 'lucide-react';
-import { NeoButton } from '@/components/ui/NeoButton';
+import { Home } from 'lucide-react';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 
 export const metadata = {

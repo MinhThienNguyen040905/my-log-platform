@@ -32,7 +32,6 @@ export function useSettings({ entryCount, draftStorageKey }: { entryCount: numbe
   // Personal info state
   const [name, setName] = useState(userProfile.name || '');
   const [penName, setPenName] = useState(userProfile.penName || '');
-  const [bio, setBio] = useState(userProfile.bio || 'Mỗi ngày là một trang sách mới.');
   const [avatarUrl, setAvatarUrl] = useState(userProfile.avatarUrl || '/avatar.png');
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>('sprout');
   const [timezone, setTimezone] = useState(userProfile.timezone || 'Asia/Ho_Chi_Minh');
@@ -67,8 +66,6 @@ export function useSettings({ entryCount, draftStorageKey }: { entryCount: numbe
     setName,
     penName,
     setPenName,
-    bio,
-    setBio,
     avatarUrl,
     setAvatarUrl,
     selectedAvatarId,

@@ -4,6 +4,7 @@ export { updateProfile, completeOnboarding, getProfile, getConsents, setConsent,
 export type { Profile, Consent } from './api/client';
 export { requestAccountDeletion, getAccountDeletionStatus, cancelAccountDeletion } from './api/account-deletion';
 export type { DeletionRequest } from './api/account-deletion';
+export { AccountDeletionCard } from './components/AccountDeletionCard';
 export { useAccountProfile } from './hooks/useAccountProfile';
 export { AccountProvider, useAccount } from './context/AccountContext';
 export { checkPasswordContainsUserInfo, resolvePasswordErrorMessage, PASSWORD_ERROR_MAP } from './utils/password-rules';

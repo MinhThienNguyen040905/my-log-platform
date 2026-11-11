@@ -23,7 +23,7 @@ public class LocalFileAssetStorage implements JournalAssetStorage {
     private final byte[] secretKey;
 
     public LocalFileAssetStorage(
-            @Value("${mylog.assets.local-dir:backend/data/assets}") String localDir,
+            @Value("${mylog.assets.local-dir:data/assets}") String localDir,
             @Value("${mylog.assets.local-raw-secret:dev-asset-secret-key-must-be-changed-in-prod}") String secret
     ) {
         this.rootPath = Paths.get(localDir).toAbsolutePath().normalize();

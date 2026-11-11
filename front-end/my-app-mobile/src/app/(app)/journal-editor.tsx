@@ -7,6 +7,7 @@ import { useProtectedProfile } from '@/features/auth/use-protected-profile';
 import { ApiError } from '@/lib/api/client';
 import { createEntry, documentText, getEntry, textDocument, updateEntry, type JournalEntry } from '@/features/journal/api';
 import { readDraft, removeDraft, writeDraft, type JournalDraft } from '@/features/journal/drafts';
+import { needsSafetySupport } from '@/features/safety/api';
 
 const moods = [{ code: 'calm', label: 'Bình yên' }, { code: 'happy', label: 'Vui' },
   { code: 'sad', label: 'Buồn' }, { code: 'anxious', label: 'Lo lắng' }];
@@ -60,7 +61,9 @@ export default function JournalEditorScreen() {
       const saved = entry ? await updateEntry(entry.id, entry.rowVersion, input) : await createEntry(input, draft.key);
       skipSave.current = true;
       await removeDraft(userId, draftId);
-      router.replace({ pathname: '/journal-entry/[id]', params: { id: saved.id } });
+      // Backend đánh giá rủi ro khi lưu; HIGH/CRITICAL thì mở màn hỗ trợ ngay ở trang chi tiết.
+      router.replace({ pathname: '/journal-entry/[id]',
+        params: { id: saved.id, ...(needsSafetySupport(saved.riskLevel) ? { safety: '1' } : {}) } });
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 409) setConflict(true);
       setError(cause instanceof Error ? cause.message : 'Không thể lưu trang. Bản nháp vẫn còn trên thiết bị.');

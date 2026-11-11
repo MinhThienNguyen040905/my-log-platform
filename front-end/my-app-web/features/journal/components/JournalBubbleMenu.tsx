@@ -91,13 +91,15 @@ export const JournalBubbleMenu: React.FC<JournalBubbleMenuProps> = ({ editor }) 
       {/* Highlight */}
       <button
         type="button"
-        disabled
+        onClick={() => editor.chain().focus().toggleHighlight().run()}
+        aria-label="Tô sáng"
+        aria-pressed={editor.isActive('highlight')}
         className={`p-1.5 rounded-lg border border-transparent transition-all flex items-center justify-center ${
           editor.isActive('highlight')
             ? 'bg-primary-container text-black font-bold border-black shadow-neo-xs'
             : 'text-neutral-700 hover:bg-neutral-100 hover:text-black'
         }`}
-        title="Tô sáng chưa được backend hỗ trợ"
+        title="Tô sáng"
       >
         <Highlighter className="w-4 h-4 text-lime-600" />
       </button>

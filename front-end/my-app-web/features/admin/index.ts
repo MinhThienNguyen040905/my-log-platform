@@ -6,4 +6,4 @@ export * from './components/AdminUserTable';
 export * from './components/AdminUserActionModal';
 export * from './components/AdminUserMetadataDrawer';
 export * from './components/AdminJobTable';
-
+export * from './components/AdminFeedbackTable';

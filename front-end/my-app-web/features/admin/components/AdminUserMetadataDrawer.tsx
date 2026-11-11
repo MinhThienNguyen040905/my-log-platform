@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
-import { X, Shield, Clock, Hash, CheckCircle2, Ban } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { X, Shield, Clock, Hash, CheckCircle2, Ban, RefreshCw } from 'lucide-react';
 import { AdminUserItem } from '../api/types';
+import { fetchAdminUserMetadata } from '../api/admin-api';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 
 interface AdminUserMetadataDrawerProps {
@@ -12,7 +14,14 @@ interface AdminUserMetadataDrawerProps {
 }
 
 export function AdminUserMetadataDrawer({ user, isOpen, onClose }: AdminUserMetadataDrawerProps) {
+  const metadataQuery = useQuery({
+    queryKey: ['admin', 'user-metadata', user?.id],
+    queryFn: () => fetchAdminUserMetadata(user!.id),
+    enabled: isOpen && !!user?.id,
+  });
+
   if (!isOpen || !user) return null;
+  const activeUser = metadataQuery.data ?? user;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
@@ -31,14 +40,26 @@ export function AdminUserMetadataDrawer({ user, isOpen, onClose }: AdminUserMeta
                 Metadata Người Dùng
               </h2>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-xl border border-black bg-white hover:bg-gray-100 transition-colors cursor-pointer shadow-neo-xs"
-              title="Đóng bảng chi tiết"
-            >
-              <X className="w-4 h-4 text-black stroke-[2.5]" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => void metadataQuery.refetch()}
+                disabled={metadataQuery.isFetching}
+                className="p-1.5 rounded-xl border border-black bg-white hover:bg-gray-100 transition-colors cursor-pointer shadow-neo-xs"
+                title="Làm mới metadata từ máy chủ"
+                aria-label="Làm mới metadata từ máy chủ"
+              >
+                <RefreshCw className={`w-4 h-4 text-black ${metadataQuery.isFetching ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 rounded-xl border border-black bg-white hover:bg-gray-100 transition-colors cursor-pointer shadow-neo-xs"
+                title="Đóng bảng chi tiết"
+              >
+                <X className="w-4 h-4 text-black stroke-[2.5]" />
+              </button>
+            </div>
           </div>
 
           {/* User ID Section */}
@@ -47,7 +68,7 @@ export function AdminUserMetadataDrawer({ user, isOpen, onClose }: AdminUserMeta
               Định Danh UUID v7
             </span>
             <code className="font-mono text-xs font-bold text-black break-all bg-gray-50 p-2 rounded-lg border border-black/20">
-              {user.id}
+              {activeUser.id}
             </code>
           </div>
 
@@ -56,7 +77,7 @@ export function AdminUserMetadataDrawer({ user, isOpen, onClose }: AdminUserMeta
             <span className="font-space text-xs font-extrabold uppercase text-gray-600">
               Trạng thái tài khoản
             </span>
-            {user.status === 'ACTIVE' ? (
+            {activeUser.status === 'ACTIVE' ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-primary-container text-black font-space text-xs font-extrabold border border-black shadow-neo-xs">
                 <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
                 Hoạt động (ACTIVE)
@@ -81,7 +102,7 @@ export function AdminUserMetadataDrawer({ user, isOpen, onClose }: AdminUserMeta
                 Thời điểm tạo tài khoản:
               </span>
               <span className="font-mono font-bold text-black">
-                {new Date(user.createdAt).toLocaleString('vi-VN')}
+                {new Date(activeUser.createdAt).toLocaleString('vi-VN')}
               </span>
             </div>
 
@@ -91,7 +112,7 @@ export function AdminUserMetadataDrawer({ user, isOpen, onClose }: AdminUserMeta
                 Đăng nhập gần nhất:
               </span>
               <span className="font-mono font-bold text-black">
-                {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('vi-VN') : 'Chưa có thông tin'}
+                {activeUser.lastLoginAt ? new Date(activeUser.lastLoginAt).toLocaleString('vi-VN') : 'Chưa có thông tin'}
               </span>
             </div>
 
@@ -101,7 +122,7 @@ export function AdminUserMetadataDrawer({ user, isOpen, onClose }: AdminUserMeta
                 Optimistic Lock Version:
               </span>
               <span className="font-mono font-bold bg-paper-warm px-2 py-0.5 rounded border border-black">
-                v{user.version}
+                v{activeUser.version}
               </span>
             </div>
           </div>

@@ -13,6 +13,8 @@ Verified against the current backend controllers and request/response records on
 | `POST /login` | `{email, password, deviceName?}` | `200` `{userId, accessToken, refreshToken, expiresInSeconds}` | Tokens are returned in JSON for native storage. |
 | `POST /refresh` | `{refreshToken}` | `200` same token shape | Refresh token rotates; replace stored token atomically. |
 | `POST /logout` | Bearer access token | `204` | Clear local credentials even when network logout cannot complete. |
+| `POST /password-resets` | `{email}` | `202` | Same generic message whether or not the email exists. Added 2026-11-11. |
+| `POST /password-resets:confirm-code` | `{email, code, newPassword}`; code has 8 digits, password 12–72 UTF-8 bytes | `204` | `401` invalid/expired code; `400` with `detail` `NEW_PASSWORD_SAME_AS_OLD`, `PASSWORD_CONTAINS_USER_INFO` or `PASSWORD_LENGTH_INVALID`; `429` rate limited. Success revokes every session, so mobile clears its stored token. The email link (`#token=`) opens the web page until Universal/App Links exist. |
 
 ## Account — `/api/v1/me` (Bearer)
 
@@ -39,8 +41,11 @@ Verified against the current backend controllers and request/response records on
 | `PUT/DELETE /journal-entries/{id}/favorite` | — | `200` detail and `ETag` | Toggle favorite. |
 | `GET/POST /journal-tags` | POST `{name, color?}` | `200` list / `201` tag | Tag metadata. |
 | `PUT/DELETE /journal-entries/{id}/tags/{tagId}` | — | `204` | Attach/detach. |
+| `GET /journal-entries/{id}/analysis` | — | `200` `{entryId, contentVersion, status, analysisId, sentiment, sentimentScore, emotions, topics, reflection}` | `status` is `journal_entries.analysis_status`: `NOT_REQUESTED`, `PENDING`, `ANALYZING`, `ANALYZED`, `ANALYSIS_FAILED`, `ANALYSIS_OUTDATED`, `BLOCKED_BY_SAFETY`. Content fields are set only when `ANALYZED`. Mobile polls with backoff (2→4→8→16→30 s, about 2 minutes) and never shows score, IDs or raw status. Added 2026-11-11. |
+| `POST /journal-entries/{id}/analysis:retry` | — | `200` `{status}` | `409` without `AI_PROCESSING` consent or when safety does not permit analysis; `429` when retried too soon. |
+| `GET /safety/resources?locale=vi-VN&country=VN` | Public, no token | `200` array of approved resources | Only approved, verified resources with an HTTPS source. Mobile opens the safety screen when a saved entry has `riskLevel` `HIGH`/`CRITICAL`; no phone number is hard-coded in the app. Added 2026-11-11. |
 
-Backend journal create/update DTOs accept `title`, `contentJson`, `location`, `occurredAt`, `timezone`, `moodCode`, `moodScore`, `stressScore`, `energyScore`, and `sleepMinutes`; create requires `contentJson` and `timezone`. The current mobile editor sends plain paragraph Tiptap JSON. Web's editor, storage, and proxy code are not shared with native. Journal detail does not expose attached tag IDs, so the mobile UI cannot display each tag's attachment state yet.
+Backend journal create/update DTOs accept `title`, `contentJson`, `location`, `occurredAt`, `timezone`, `moodCode`, `moodScore`, `stressScore`, `energyScore`, and `sleepMinutes`; create requires `contentJson` and `timezone`. The current mobile editor sends plain paragraph Tiptap JSON. Web's editor, storage, and proxy code are not shared with native. Journal detail does not expose attached tag IDs; the backend now has `GET /journal-entries/{id}/tags` for that (planned as M1 in `backend/docs/WEB_MOBILE_GAP_IMPLEMENTATION_PLAN.md`).
 
 ## Overview, self-care and data export — `/api/v1` (Bearer)
 

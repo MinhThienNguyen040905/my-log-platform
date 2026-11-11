@@ -36,4 +36,6 @@ build/
 ### VS Code ###
 .vscode/
 
-data/assets/
+# User-uploaded images (local asset storage) — never commit, wherever the backend was started from.
+**/data/assets/
+/backend/

@@ -86,7 +86,10 @@ class PasswordResetUnitTest {
         }
         @Override public boolean actionTokenAlreadyConsumed(byte[] hash, String purpose) { return false; }
         @Override public void setEmailVerified(UUID userId, Instant now) { this.emailVerified = true; }
+        /** Max attempts passed for each rate-limit check, in call order (window seconds alongside). */
+        final java.util.List<long[]> rateLimitCalls = new java.util.ArrayList<>();
         @Override public boolean recordRateLimit(byte[] subjectHash, Instant now, int maxAttempts, long windowSeconds) {
+            rateLimitCalls.add(new long[]{maxAttempts, windowSeconds});
             return !rateLimitExceeded;
         }
         @Override public void audit(UUID actorId, String action, UUID targetId, Instant now) { this.auditAction = action; }
@@ -198,6 +201,37 @@ class PasswordResetUnitTest {
         assertThat(store.actionTokenCreatedCount).isEqualTo(0);
         assertThat(eventPublisher.publishedEvents).hasSize(1);
         assertThat(eventPublisher.publishedEvents.get(0)).isInstanceOf(OAuthPasswordResetAttemptEvent.class);
+    }
+
+    @Test
+    @DisplayName("requestPasswordReset - mặc định dùng đúng giới hạn production (10/IP, 5/email, 10/email/ngày)")
+    void requestPasswordReset_usesProductionLimitsByDefault() {
+        identityService.requestPasswordReset("user@mylog.vn", "127.0.0.1");
+
+        assertThat(store.rateLimitCalls).extracting(call -> call[0] + "/" + call[1])
+                .containsExactly("10/900", "5/900", "10/86400");
+    }
+
+    @Test
+    @DisplayName("Giới hạn đặt lại mật khẩu đọc từ cấu hình (profile local nâng giới hạn theo IP)")
+    void passwordResetLimits_comeFromConfiguration() {
+        MylogProperties local = new MylogProperties(
+                "all",
+                new MylogProperties.Web(List.of("http://localhost:3000")),
+                new MylogProperties.OpenApi(false),
+                new MylogProperties.Identity(true,
+                        new MylogProperties.Identity.OAuth(new MylogProperties.Identity.OAuth.Google(false, null, null)),
+                        new MylogProperties.Identity.PasswordReset(100, null, null, 100, null)));
+        IdentityService service = new IdentityService(
+                store, cipher, (u, s) -> "jwt", null, null,
+                UUID::randomUUID, Clock.fixed(Instant.parse("2026-03-31T10:00:00Z"), ZoneOffset.UTC), new SecureRandom(),
+                null, null, local, null, eventPublisher);
+
+        service.requestPasswordReset("user@mylog.vn", "127.0.0.1");
+
+        // Per-IP raised, per-email limits keep their production defaults.
+        assertThat(store.rateLimitCalls).extracting(call -> call[0] + "/" + call[1])
+                .containsExactly("100/900", "5/900", "10/86400");
     }
 
     @Test

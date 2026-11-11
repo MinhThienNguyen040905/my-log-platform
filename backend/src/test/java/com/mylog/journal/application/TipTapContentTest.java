@@ -25,6 +25,30 @@ class TipTapContentTest {
     }
 
     @Test
+    void acceptsSingleColourHighlightAndKeepsTextUnchanged() throws Exception {
+        JsonNode doc = mapper.readTree("""
+                {"type":"doc","content":[{"type":"paragraph","content":[
+                  {"type":"text","text":"Hôm nay "},
+                  {"type":"text","marks":[{"type":"highlight"},{"type":"bold"}],"text":"đáng nhớ"}
+                ]}]}""");
+        assertEquals("Hôm nay đáng nhớ", TipTapContent.plainText(doc));
+    }
+
+    @Test
+    void rejectsHighlightWithColourAttributeAndUnknownMarks() throws Exception {
+        JsonNode coloured = mapper.readTree("""
+                {"type":"doc","content":[{"type":"paragraph","content":[
+                  {"type":"text","marks":[{"type":"highlight","attrs":{"color":"#ff0000"}}],"text":"màu"}
+                ]}]}""");
+        JsonNode unknown = mapper.readTree("""
+                {"type":"doc","content":[{"type":"paragraph","content":[
+                  {"type":"text","marks":[{"type":"textStyle"}],"text":"lạ"}
+                ]}]}""");
+        assertThrows(InvalidRequestException.class, () -> TipTapContent.plainText(coloured));
+        assertThrows(InvalidRequestException.class, () -> TipTapContent.plainText(unknown));
+    }
+
+    @Test
     void rejectsPromptQuestionWithAttributes() throws Exception {
         JsonNode doc = mapper.readTree("""
                 {"type":"doc","content":[

@@ -113,6 +113,13 @@ mylog:
     retention-delay-ms: ${MYLOG_FEEDBACK_RETENTION_DELAY_MS:86400000}
   identity:
     enabled: ${MYLOG_IDENTITY_ENABLED:false}
+    # Password reset rate limits (15-minute window, except the daily one). These are the production values.
+    password-reset:
+      requests-per-ip: ${MYLOG_PASSWORD_RESET_REQUESTS_PER_IP:10}
+      requests-per-email: ${MYLOG_PASSWORD_RESET_REQUESTS_PER_EMAIL:5}
+      requests-per-email-daily: ${MYLOG_PASSWORD_RESET_REQUESTS_PER_EMAIL_DAILY:10}
+      confirms-per-ip: ${MYLOG_PASSWORD_RESET_CONFIRMS_PER_IP:15}
+      code-confirms-per-email: ${MYLOG_PASSWORD_RESET_CODE_CONFIRMS_PER_EMAIL:5}
     oauth:
       google:
         enabled: ${MYLOG_GOOGLE_OAUTH_ENABLED:false}
@@ -129,6 +136,9 @@ mylog:
     api-secret: ${MYLOG_CLOUDINARY_API_SECRET:}
     folder: ${MYLOG_CLOUDINARY_FOLDER:mylog}
   assets:
+    # Local image storage (dev, when Cloudinary is disabled). Relative to the working directory —
+    # run the backend from backend/ as the README says, so files land in backend/data/assets (gitignored).
+    local-dir: ${MYLOG_ASSETS_LOCAL_DIR:data/assets}
     max-images-per-entry: 20
     max-user-quota-bytes: 209715200
     local-raw-secret: ${MYLOG_ASSETS_LOCAL_RAW_SECRET:dev-asset-secret-key-must-be-changed-in-prod}

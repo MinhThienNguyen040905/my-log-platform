@@ -2,7 +2,16 @@ import { tokenStorage } from '@/lib/storage/token-storage';
 
 export type AuthTokens = { userId: string; accessToken: string; refreshToken: string; expiresInSeconds: number };
 export class ApiError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  /** `detail` của problem+json khi backend trả mã ổn định (ví dụ `NEW_PASSWORD_SAME_AS_OLD`). */
+  constructor(public status: number, message: string, public detail?: string) { super(message); }
+}
+
+async function problemDetail(response: Response): Promise<string | undefined> {
+  try {
+    const problem: unknown = await response.clone().json();
+    const detail = problem && typeof problem === 'object' && 'detail' in problem ? problem.detail : undefined;
+    return typeof detail === 'string' && detail.length <= 200 ? detail : undefined;
+  } catch { return undefined; }
 }
 
 const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
@@ -70,7 +79,7 @@ export async function apiRequest(path: string, init: RequestInit = {}, authentic
     response = await send(path, init, token);
   }
   if (response.status === 401 && authenticated) await clearSession();
-  if (!response.ok) throw new ApiError(response.status, errorMessage(response.status));
+  if (!response.ok) throw new ApiError(response.status, errorMessage(response.status), await problemDetail(response));
   return response;
 }
 

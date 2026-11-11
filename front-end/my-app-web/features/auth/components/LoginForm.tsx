@@ -2,11 +2,9 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Eye, EyeOff, Mail, Key, ShieldCheck, BookOpen } from 'lucide-react';
+import { Eye, EyeOff, Mail, Key, ShieldCheck } from 'lucide-react';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
-import { NeoButton } from '@/components/ui/NeoButton';
 import { useToast } from '@/providers/ToastProvider';
 import { authError, authPost } from '../api/client';
 import { useForm } from 'react-hook-form';
@@ -15,10 +13,11 @@ import { z } from 'zod';
 import { createAuthSchemas, loginSchema } from '../schemas/auth-forms';
 import { useAppLanguage } from '@/providers/AppLanguageProvider';
 import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { motion } from 'motion/react';
 import { forgetVerificationEmail, rememberVerificationEmail } from '../verification-email';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
+import { AuthHeader } from './AuthHeader';
+import { LoginPhotoCarousel } from './LoginPhotoCarousel';
 
 export function LoginForm() {
   const router = useRouter();
@@ -47,49 +46,24 @@ export function LoginForm() {
   });
 
   return (
-    <div className='min-h-screen bg-bg-canvas flex flex-col justify-between selection:bg-brand-lime selection:text-black overflow-x-hidden'>
-      {/* Header Bar */}
-      <header className='w-full border-b-2 border-on-background bg-bg-canvas/90 backdrop-blur-md px-4 sm:px-8 py-4 flex items-center justify-between'>
-        <Link href='/' className='flex items-center gap-2 group'>
-          <div className='relative flex items-center justify-center h-9 sm:h-10 w-auto max-w-[130px] overflow-hidden'>
-            <Image
-              src='/logo.png'
-              alt='MyLog Logo'
-              width={130}
-              height={40}
-              priority
-              className='h-9 sm:h-10 w-auto object-contain transition-transform duration-150 group-hover:scale-105'
-            />
-          </div>
-        </Link>
-        <LanguageSwitcher />
-        <Link href='/'>
-          <NeoButton variant='paper' size='sm' className='font-space font-bold gap-1.5 text-xs'>
-            <ArrowLeft className='w-4 h-4' />
-          </NeoButton>
-        </Link>
-      </header>
+    <div className='min-h-dvh bg-bg-canvas flex flex-col justify-between selection:bg-brand-lime selection:text-black overflow-x-hidden'>
+      <AuthHeader exitLabel={t('auth.exitAuth')} />
 
       {/* Main Login Container */}
-      <main className='flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 flex items-center justify-center'>
+      <main className='flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-4 lg:py-5 flex items-center justify-center'>
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.28, ease: 'easeOut' }}
           className='w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch'
         >
-          
-          {/* Left / Top Sanctuary Polaroid Banner (Scrapbook Cozy Desk) */}
-          <div className='lg:col-span-5 bg-paper-warm border-neo rounded-3xl p-6 sm:p-8 shadow-neo-lg flex flex-col justify-between relative overflow-visible'>
-            <WashiTape color='lime' rotate={-3} className='absolute -top-3 left-8 w-32 z-10' />
-            
-            <div className='flex flex-col gap-4'>
-              <div className='inline-flex items-center gap-1.5 bg-white border border-black px-3 py-1 rounded-full text-xs font-space font-bold shadow-neo-sm w-fit'>
-                <span className='w-2 h-2 rounded-full bg-brand-lime border border-black animate-pulse'></span>
-                LOGIN SANCTUARY
-              </div>
 
-              <h2 className='font-space text-2xl sm:text-3xl font-extrabold text-on-surface leading-tight'>
+          {/* Left / Top Polaroid Banner (Scrapbook Cozy Desk) */}
+          <div className='order-2 lg:order-1 lg:col-span-5 bg-paper-warm border-neo rounded-3xl p-6 sm:p-7 shadow-neo-lg flex flex-col justify-between relative overflow-visible'>
+            <WashiTape color='lime' rotate={-3} className='absolute -top-3 left-8 w-32 z-10' />
+
+            <div className='flex flex-col gap-2'>
+              <h2 className='font-space text-2xl font-extrabold text-on-surface leading-tight'>
                 {t('auth.welcome')}
               </h2>
               <p className='font-sans text-xs sm:text-sm text-on-surface-variant leading-relaxed'>
@@ -97,51 +71,26 @@ export function LoginForm() {
               </p>
             </div>
 
-            {/* Cozy Desk Polaroid Micro Card */}
-            <div className='mt-6 bg-white border-neo rounded-2xl p-3 shadow-neo rotate-[1.5deg] relative'>
-              <WashiTape color='peach' rotate={2} className='absolute -top-2.5 right-6 w-24 z-10' />
-              <div className='w-full aspect-[4/3] rounded-xl overflow-hidden border border-black/20 relative bg-gray-100'>
-                <img
-                  src='https://images.unsplash.com/photo-1517842645767-c639042777db?w=600&auto=format&fit=crop&q=80'
-                  alt='Cozy Desk and Journal'
-                  className='w-full h-full object-cover'
-                />
-              </div>
-              <div className='mt-3 flex flex-col'>
-                <p className='font-serif italic text-xs sm:text-sm font-semibold text-on-surface'>
-                  &ldquo;{t('auth.quote')}&rdquo;
-                </p>
-                <span className='font-mono text-[11px] text-gray-500 font-bold mt-1'>
-                  {t('auth.quoteCaption')}
-                </span>
-              </div>
-            </div>
+            <LoginPhotoCarousel />
 
             {/* Privacy Promise Badge */}
-            <div className='mt-6 pt-4 border-t border-border-soft flex items-center gap-2 text-xs font-space font-bold text-gray-600'>
+            <div className='mt-4 pt-3 border-t border-border-soft flex items-center gap-2 text-xs font-space font-bold text-gray-600'>
               <ShieldCheck className='w-4 h-4 text-primary shrink-0' />
               <span>{t('auth.privacyPromise')}</span>
             </div>
           </div>
 
           {/* Right / Form Box */}
-          <div className='lg:col-span-7 bg-surface-card border-neo rounded-3xl p-6 sm:p-10 shadow-neo-lg flex flex-col justify-between relative overflow-visible'>
+          <div className='order-1 lg:order-2 lg:col-span-7 bg-surface-card border-neo rounded-3xl p-6 sm:p-8 shadow-neo-lg flex flex-col justify-between relative overflow-visible'>
             <WashiTape color='blue' rotate={2} className='absolute -top-3 right-8 w-32 z-10 hidden sm:block' />
 
             <div>
-              <div className='flex items-start justify-between gap-4 sm:gap-6 mb-6'>
-                <div className='flex-1 min-w-0'>
-                  <h1 className='font-space text-2xl sm:text-3xl font-extrabold text-on-surface'>
-                    {t('auth.loginTitle')}
-                  </h1>
-                  <p className='font-sans text-xs sm:text-sm text-on-surface-variant mt-1 leading-relaxed'>
-                    {t('auth.loginSubtitle')}
-                  </p>
-                </div>
-                <div className='w-10 h-10 rounded-xl bg-primary-container border-neo-sm shadow-neo-sm flex items-center justify-center font-bold shrink-0 mt-0.5'>
-                  <BookOpen className='w-5 h-5 text-black stroke-[2.3]' />
-                </div>
-              </div>
+              <h1 className='font-space text-2xl sm:text-3xl font-extrabold text-on-surface'>
+                {t('auth.loginTitle')}
+              </h1>
+              <p className='font-sans text-xs sm:text-sm text-on-surface-variant mt-1 mb-4 leading-relaxed'>
+                {t('auth.loginSubtitle')}
+              </p>
 
               {/* Google 1-Tap Login */}
               <button
@@ -161,8 +110,8 @@ export function LoginForm() {
               </button>
 
               {/* Neo-Brutalist Divider */}
-              <div className='relative flex items-center justify-center my-6'>
-                <div className='w-full h-0.5 bg-border-hard'></div>
+              <div className='relative flex items-center justify-center my-4'>
+                <div className='w-full h-0.5 bg-on-background'></div>
                 <span className='absolute bg-surface-card px-3 font-space text-[11px] font-bold uppercase tracking-widest text-on-surface-variant'>
                   {t('auth.byEmail')}
                 </span>
@@ -252,7 +201,7 @@ export function LoginForm() {
             </div>
 
             {/* Bottom Redirect to Register */}
-            <div className='mt-8 pt-4 border-t border-border-soft text-center font-space text-xs font-bold text-gray-600'>
+            <div className='mt-4 pt-3 border-t border-border-soft text-center font-space text-xs font-bold text-gray-600'>
               {t('auth.noAccount')}{' '}
               <Link href='/auth/register' className='text-black underline hover:text-primary font-extrabold'>
                 {t('auth.registerAction')}
@@ -262,10 +211,6 @@ export function LoginForm() {
         </motion.div>
       </main>
 
-      {/* Mini Footer */}
-      <footer className='py-4 px-4 border-t-2 border-on-background bg-bg-canvas text-center font-space text-xs text-gray-500'>
-        {t('auth.footer')}
-      </footer>
     </div>
   );
 }

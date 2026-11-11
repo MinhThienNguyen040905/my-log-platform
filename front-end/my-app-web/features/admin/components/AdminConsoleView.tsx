@@ -8,19 +8,23 @@ import {
   ShieldCheck,
   Users,
   Cpu,
+  MessageSquare,
+  BookOpen,
   ArrowLeft,
   RefreshCw,
   Lock,
 } from 'lucide-react';
 import { ApiError } from '@/lib/api/client';
+import { AdminKnowledgePanel } from '@/features/knowledge';
 import { AdminDashboardMetrics } from './AdminDashboardMetrics';
 import { AdminUserTable } from './AdminUserTable';
 import { AdminJobTable } from './AdminJobTable';
+import { AdminFeedbackTable } from './AdminFeedbackTable';
 import { fetchAdminDashboard, fetchAdminUsers, fetchAdminJobs } from '../api/admin-api';
 
 export function AdminConsoleView() {
   const { userId } = useJournal();
-  const [activeTab, setActiveTab] = useState<'users' | 'jobs'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'jobs' | 'feedback' | 'knowledge'>('users');
   const dashboardQuery = useQuery({ queryKey: ['admin', userId, 'dashboard'], queryFn: fetchAdminDashboard });
   const usersQuery = useQuery({ queryKey: ['admin', userId, 'users'], queryFn: () => fetchAdminUsers(), enabled: activeTab === 'users' });
   const jobsQuery = useQuery({ queryKey: ['admin', userId, 'jobs'], queryFn: () => fetchAdminJobs(), enabled: activeTab === 'jobs' });
@@ -140,10 +144,42 @@ export function AdminConsoleView() {
               <Cpu className="w-4 h-4 stroke-[2.3]" />
               <span>Hàng Đợi AI Jobs ({jobs.length})</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('feedback')}
+              className={`px-4 py-2 rounded-xl font-space text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'feedback'
+                  ? 'bg-primary-container text-black border border-black shadow-neo-sm'
+                  : 'text-gray-600 hover:text-black hover:bg-paper-warm'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4 stroke-[2.3]" />
+              <span>Góp Ý Người Dùng</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('knowledge')}
+              className={`px-4 py-2 rounded-xl font-space text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'knowledge'
+                  ? 'bg-primary-container text-black border border-black shadow-neo-sm'
+                  : 'text-gray-600 hover:text-black hover:bg-paper-warm'
+              }`}
+            >
+              <BookOpen className="w-4 h-4 stroke-[2.3]" />
+              <span>Kho Kiến Thức</span>
+            </button>
           </div>
 
           <div className="text-xs font-space text-gray-500 font-bold hidden sm:block">
-            {activeTab === 'users' ? 'Quyền hạn: users:read-metadata, users:suspend' : 'Quyền hạn: jobs:read, jobs:retry'}
+            {activeTab === 'users'
+              ? 'Quyền hạn: users:read-metadata, users:suspend'
+              : activeTab === 'jobs'
+                ? 'Quyền hạn: jobs:read, jobs:retry'
+                : activeTab === 'feedback'
+                  ? 'Quyền hạn: feedback:read, feedback:manage'
+                  : 'Quyền hạn: knowledge:write, knowledge:approve'}
           </div>
         </div>
 
@@ -166,6 +202,20 @@ export function AdminConsoleView() {
               loading={loadingJobs}
               onRefresh={loadJobs}
             />
+          </div>
+        )}
+
+        {/* Tab 3: User Feedback Management */}
+        {activeTab === 'feedback' && (
+          <div className="animate-in fade-in duration-200">
+            <AdminFeedbackTable userId={userId} />
+          </div>
+        )}
+
+        {/* Tab 4: Knowledge Base Management */}
+        {activeTab === 'knowledge' && (
+          <div className="animate-in fade-in duration-200">
+            <AdminKnowledgePanel />
           </div>
         )}
       </section>

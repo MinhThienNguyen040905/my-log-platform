@@ -1,12 +1,14 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppButton, AppText, PaperCard, Screen, TextField } from '@/components/ui';
 import { useSession } from '@/providers/SessionProvider';
+import { rememberResetEmail } from '@/features/auth/password-reset';
 import { Spacing } from '@/constants/theme';
 
 export default function LoginScreen() {
   const { signIn } = useSession();
+  const { notice } = useLocalSearchParams<{ notice?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,12 +29,17 @@ export default function LoginScreen() {
       <AppText variant="display">Mở sổ của bạn.</AppText>
     </View>
     <PaperCard style={styles.form}>
+      {notice === 'password-reset' ? <AppText accessibilityRole="alert">
+        Đã đặt lại mật khẩu. Mọi thiết bị đã được đăng xuất; hãy đăng nhập bằng mật khẩu mới.
+      </AppText> : null}
       <TextField label="Email" value={email} onChangeText={setEmail} keyboardType="email-address"
         autoCapitalize="none" autoComplete="email" placeholder="ten@example.com" />
       <TextField label="Mật khẩu" value={password} onChangeText={setPassword}
         secureTextEntry autoComplete="password" placeholder="Nhập mật khẩu" />
       {error ? <AppText accessibilityRole="alert" style={styles.error}>{error}</AppText> : null}
       <AppButton title="Đăng nhập" loading={busy} onPress={() => void submit()} />
+      <AppButton title="Quên mật khẩu?" variant="secondary" disabled={busy}
+        onPress={() => { if (email.includes('@')) rememberResetEmail(email); router.push('/forgot-password'); }} />
       <AppButton title="Tạo tài khoản" variant="secondary" onPress={() => router.push('/register')} />
     </PaperCard>
   </Screen>;

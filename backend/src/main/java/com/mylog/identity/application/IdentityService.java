@@ -402,12 +402,13 @@ public class IdentityService {
         String normalized = normalizeEmail(email);
 
         // Rate limiting
-        rate("reset-req-ip:" + remoteAddress, now, 10);
+        var limits = resetLimits();
+        rate("reset-req-ip:" + remoteAddress, now, limits.requestsPerIp());
         byte[] emailLookupHash = cipher.lookupHash(normalized);
-        if (!store.recordRateLimit(cipher.lookupHash("reset-req-email:" + normalized), now, 5, 900)) {
+        if (!store.recordRateLimit(cipher.lookupHash("reset-req-email:" + normalized), now, limits.requestsPerEmail(), 900)) {
             throw new RateLimitExceededException();
         }
-        if (!store.recordRateLimit(cipher.lookupHash("reset-req-email-daily:" + normalized), now, 10, 86400)) {
+        if (!store.recordRateLimit(cipher.lookupHash("reset-req-email-daily:" + normalized), now, limits.requestsPerEmailDaily(), 86400)) {
             throw new RateLimitExceededException();
         }
 
@@ -448,7 +449,7 @@ public class IdentityService {
     @Transactional
     public void resetPasswordWithToken(String token, String newPassword, String remoteAddress) {
         Instant now = clock.instant();
-        rate("reset-confirm-ip:" + remoteAddress, now, 15);
+        rate("reset-confirm-ip:" + remoteAddress, now, resetLimits().confirmsPerIp());
 
         // 1. Validate new password format & byte length (12-72 bytes UTF-8)
         validateNewPasswordPolicy(newPassword);
@@ -500,8 +501,9 @@ public class IdentityService {
         String normalized = normalizeEmail(email);
 
         // Rate limiting
-        rate("reset-confirm-code-ip:" + remoteAddress, now, 15);
-        rate("reset-confirm-code-email:" + normalized, now, 5);
+        var limits = resetLimits();
+        rate("reset-confirm-code-ip:" + remoteAddress, now, limits.confirmsPerIp());
+        rate("reset-confirm-code-email:" + normalized, now, limits.codeConfirmsPerEmail());
 
         // 1. Validate new password format & byte length
         validateNewPasswordPolicy(newPassword);
@@ -550,6 +552,13 @@ public class IdentityService {
         if (eventPublisher != null) {
             eventPublisher.publishEvent(new PasswordChangedEvent(userId, normalized, now, remoteAddress));
         }
+    }
+
+    /** Production defaults unless configured (see MylogProperties.Identity.PasswordReset). */
+    private MylogProperties.Identity.PasswordReset resetLimits() {
+        return properties == null || properties.identity() == null
+                ? MylogProperties.Identity.PasswordReset.DEFAULTS
+                : properties.identity().passwordReset();
     }
 
     private void validateNewPasswordPolicy(String newPassword) {

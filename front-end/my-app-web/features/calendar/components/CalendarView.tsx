@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { DayPicker, type DayButtonProps } from 'react-day-picker';
-import { getDetailedJournalPage, getSearchJournalPage, JOURNAL_PAGE_SIZE, useJournal, LegacyJournalImport, journalEmotionLabel, JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, normalizeJournalEmotion } from '@/features/journal';
+import { getDetailedJournalPage, getSearchJournalPage, JOURNAL_PAGE_SIZE, useJournal, LegacyJournalImport, journalEmotionLabel, JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, normalizeJournalEmotion, EntryAnalysisPanel } from '@/features/journal';
 import { useToast } from '@/providers/ToastProvider';
 import { JournalEntry, JournalEmotion, MoodType } from '@/types';
 import { WashiTape, PolaroidCard } from '@/components/ui/ScrapbookDecorations';
@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Calendar,
   Clock,
-  Bot,
   X,
   Search,
   BookOpen,
@@ -406,7 +405,7 @@ export function CalendarView() {
         {/* ========================================================== */}
         {/* LEFT COLUMN: Calendar (4 cols on lg)                       */}
         {/* ========================================================== */}
-        <div className="lg:col-span-4 lg:sticky lg:top-[101px] lg:self-start flex flex-col gap-6">
+        <div className="lg:col-span-4 lg:sticky lg:top-[85px] lg:self-start flex flex-col gap-6">
           {/* CALENDAR CARD */}
           <div className="bg-surface-card border-neo rounded-3xl p-5 shadow-neo relative">
             <WashiTape color="lime" rotate={-2} className="absolute -top-3 left-8 w-28" />
@@ -808,56 +807,12 @@ export function CalendarView() {
                 </div>
               )}
 
-              {/* Associated AI Analysis (FR-JOURNAL-09) */}
-              {selectedEntry.aiAnalysis && (
-                <div className="p-5 bg-surface-card rounded-2xl border-2 border-black shadow-neo-sm flex flex-col gap-4">
-                  <div className="flex items-center justify-between border-b border-black pb-2">
-                    <div className="flex items-center gap-2">
-                      <Bot className="w-5 h-5 text-black" />
-                      <span className="font-space text-sm font-extrabold uppercase text-black">
-                        Gợi ý nhìn lại đã lưu
-                      </span>
-                    </div>
-                    {selectedEntry.aiAnalysis.userCorrected && (
-                      <span className="px-2 py-0.5 bg-lime-300 text-black border border-black rounded text-[10px] font-space font-extrabold">
-                        ✓ Đã hiệu chỉnh bởi bạn
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <span className="font-space text-xs font-bold text-gray-500 uppercase block">Sắc thái tổng quan:</span>
-                    <span className="font-space text-sm font-extrabold text-primary">
-                      {selectedEntry.aiAnalysis.sentiment}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <span className="font-space text-xs font-bold text-gray-500 uppercase">Phổ cảm xúc:</span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {selectedEntry.aiAnalysis.emotions.map((em, i) => (
-                        <div key={i} className="p-2 bg-paper-warm rounded-lg border border-black text-xs font-space">
-                          <div className="flex justify-between font-bold">
-                            <span>{em.label}</span>
-                            <span>{em.percentage}%</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {selectedEntry.aiAnalysis.reflectionQuestions && (
-                    <div className="flex flex-col gap-1.5">
-                      <span className="font-space text-xs font-bold text-gray-500 uppercase">Câu hỏi phản tư:</span>
-                      <ul className="list-disc list-inside text-xs font-serif italic text-gray-800 space-y-1">
-                        {selectedEntry.aiAnalysis.reflectionQuestions.map((q, qi) => (
-                          <li key={qi}>&ldquo;{q}&rdquo;</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* AI reflection for this entry, read from the backend (FR-JOURNAL-09) */}
+              <EntryAnalysisPanel
+                entryId={selectedEntry.id}
+                contentVersion={selectedEntry.contentVersion}
+                riskLevel={selectedEntry.riskLevel}
+              />
             </div>
 
             {/* 3. Fixed Modal Footer */}
