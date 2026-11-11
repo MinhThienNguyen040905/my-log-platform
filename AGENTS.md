@@ -26,3 +26,13 @@ Không áp quy ước package Java của backend cho frontend hoặc Python; kh�
 - Đọc README và `AGENTS.md` của thư mục sở hữu trước khi triển khai. Với luồng xuyên suốt, đối chiếu cả backend và client thực tế.
 - Code, migration và test hiện tại quyết định trạng thái triển khai; ADR ghi lại quyết định kiến trúc; kế hoạch nêu mục tiêu và việc còn mở.
 - Phân biệt rõ bản demo/mock ở frontend, adapter chưa bật và tính năng hoạt động với backend. Không coi model đã train hoặc provider đã cấu hình là được duyệt để xử lý dữ liệu người dùng.
+
+## Tài khoản test local
+
+Tài khoản synthetic được tạo bằng `backend/scripts/seed-demo-journal.mjs` (xem mục "Seed dữ liệu demo" trong `backend/README.md`). Tài khoản này chỉ tồn tại trong database Docker local của máy đã chạy script; máy khác cần tự chạy script để tạo tài khoản riêng. Không dùng thông tin này cho staging/prod.
+
+Email và mật khẩu nằm trong `backend/.env` (đã gitignore) ở hai biến `MYLOG_TEST_ACCOUNT_EMAIL` và `MYLOG_TEST_ACCOUNT_PASSWORD`; script cũng lưu bản sao ở `backend/scratch/seed-demo-account.txt`. Không ghi mật khẩu vào file được commit.
+
+| Tài khoản | Dữ liệu |
+|---|---|
+| `MYLOG_TEST_ACCOUNT_EMAIL` trong `backend/.env` | ~120 ngày nhật ký (~200 chữ/bài), tag, check-in synthetic (seed 42); 30 ngày gần nhất có cảm xúc/chủ đề mẫu (`LOCAL_FAKE`) và đã bật consent `AI_PROCESSING`; bài cũ hơn ở `PENDING` |
