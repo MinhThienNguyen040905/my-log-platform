@@ -12,6 +12,10 @@ import { InsertImageModal } from './InsertImageModal';
 import { CompanionPanel } from './companion/CompanionPanel';
 import { CalmingToolsMenu } from './calming-tools/CalmingToolsMenu';
 import { CalmingToolsStatusBar } from './calming-tools/CalmingToolsStatusBar';
+import { AmbientPlayerBar } from './ambient-player/AmbientPlayerBar';
+import { AmbientSuggestionChip } from './ambient-player/AmbientSuggestionChip';
+import { useAmbientPlayer } from '../hooks/useAmbientPlayer';
+import type { JournalEmotion } from '@/types';
 import { VENT_PROMPT_TEXT } from './calming-tools/vent-prompt';
 import { JournalTipTapEditor } from './JournalTipTapEditor';
 import { JournalMoodBar } from './JournalMoodBar';
@@ -116,6 +120,10 @@ function JournalEditorContent() {
     router,
     streakCount,
   } = useJournalEditor();
+  // Music suggestions follow only a mood the user actually picked on this visit, not the editor's
+  // default emotion.
+  const [pickedMood, setPickedMood] = React.useState<JournalEmotion | null>(null);
+  const ambient = useAmbientPlayer(pickedMood);
 
   const escapeHtml = (value: string) => {
     const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -147,7 +155,8 @@ function JournalEditorContent() {
         calmingTools.startBreathing('CHAT');
         break;
       case 'AMBIENT': {
-        const started = calmingTools.startAmbient('CHAT');
+        // "Nghe âm thanh dịu" from the companion opens the music player on the rain track.
+        const started = ambient.openAndPlay('rain');
         if (!started) {
           showToast({
             title: 'Chưa thể phát âm thanh',
@@ -280,7 +289,7 @@ function JournalEditorContent() {
   };
 
   const handleStartAmbient = () => {
-    const started = calmingTools.startAmbient();
+    const started = ambient.openAndPlay('rain');
     setCalmingToolsMenuPosition(null);
     if (!started) {
       showToast({
@@ -316,6 +325,7 @@ function JournalEditorContent() {
             setMoodScore(JOURNAL_EMOTIONS[emotion].score);
             setMood(JOURNAL_EMOTIONS[emotion].mood);
             setSelectedEmotion(emotion);
+            setPickedMood(emotion);
           }}
           trailing={
             isEditMode ? (
@@ -401,10 +411,17 @@ function JournalEditorContent() {
                 </div>
               </header>
 
-              {/* Calming tool running inline above the writing area */}
-              {calmingTools.activeTool && (
+              {/* Background music player and "Thở chậm" can run side by side above the writing area */}
+              {ambient.open && <AmbientPlayerBar player={ambient} />}
+              {!ambient.open && ambient.suggestion && (
+                <AmbientSuggestionChip
+                  track={ambient.suggestion}
+                  onPlay={() => ambient.select(ambient.suggestion!.id)}
+                  onDismiss={ambient.dismissSuggestion}
+                />
+              )}
+              {calmingTools.activeTool === 'BREATHING' && (
                 <CalmingToolsStatusBar
-                  tool={calmingTools.activeTool}
                   breathingPhase={calmingTools.breathing.phase}
                   breathingLabel={calmingTools.breathing.label}
                   onStop={calmingTools.stop}
@@ -443,6 +460,14 @@ function JournalEditorContent() {
               calmingToolsButtonRef={calmingToolsButtonRef}
               isCalmingToolsActive={!!calmingToolsMenuPosition || !!calmingTools.activeTool}
               onToggleCalmingTools={toggleCalmingToolsMenu}
+              isMusicOpen={ambient.open}
+              isMusicPlaying={ambient.status === 'playing'}
+              onToggleMusic={() => {
+                if (ambient.open) { ambient.close(); return; }
+                if (!ambient.openAndPlay()) {
+                  showToast({ title: 'Chưa thể phát âm thanh', message: 'Trình duyệt của bạn chưa cho phép phát âm thanh lúc này. Thử lại nhé.', type: 'error' });
+                }
+              }}
             />
           </div>
 

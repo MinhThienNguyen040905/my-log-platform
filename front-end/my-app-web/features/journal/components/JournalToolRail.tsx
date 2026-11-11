@@ -2,6 +2,7 @@
 
 import type { ReactNode, RefObject } from 'react';
 import { Check, HeartHandshake, ImagePlus, Save, Sliders, Wind, X } from 'lucide-react';
+import { RailDiscIcon } from './ambient-player/PlayerVisuals';
 
 interface JournalToolRailProps {
   /** Dưới 768px cột công cụ là ngăn kéo nổi; chỉ hiện khi đang mở. */
@@ -21,6 +22,9 @@ interface JournalToolRailProps {
   calmingToolsButtonRef: RefObject<HTMLButtonElement | null>;
   isCalmingToolsActive: boolean;
   onToggleCalmingTools: () => void;
+  isMusicOpen: boolean;
+  isMusicPlaying: boolean;
+  onToggleMusic: () => void;
 }
 
 interface RailButtonProps {
@@ -74,7 +78,7 @@ export function JournalToolRail(props: JournalToolRailProps) {
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="grid grid-cols-5 gap-2 md:flex md:flex-col md:items-center md:gap-3">
+        <div className="grid grid-cols-3 gap-2 md:flex md:flex-col md:items-center md:gap-3">
           <RailButton
             label={props.isEditMode ? 'Cập nhật' : 'Lưu'}
             ariaLabel={saveLabel}
@@ -120,6 +124,15 @@ export function JournalToolRail(props: JournalToolRailProps) {
             pressed={props.isCalmingToolsActive}
             onClick={props.onToggleCalmingTools}
             icon={<Wind className="h-5 w-5" />}
+          />
+          <RailButton
+            label="Nhạc nền"
+            ariaLabel={props.isMusicOpen ? 'Tắt nhạc nền' : 'Mở nhạc nền'}
+            title={props.isMusicOpen ? 'Tắt nhạc nền' : 'Nhạc nền khi viết (chạy trên máy, không cần mạng)'}
+            active={props.isMusicOpen}
+            pressed={props.isMusicOpen}
+            onClick={props.onToggleMusic}
+            icon={<RailDiscIcon playing={props.isMusicPlaying} />}
           />
         </div>
       </div>

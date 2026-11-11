@@ -8,7 +8,9 @@
 >
 > **Đã làm (Bước 2):** `CompanionPopover.tsx` đã **xóa hẳn**, thay bằng `features/journal/components/companion/` (`CompanionPanel`, `CompanionMessageList`, `CompanionComposer`, `CompanionConsentCard`, `CompanionClosingCard`) + hook state machine `useCompanionConversation` + `companion.types.ts` (khớp contract backend mục 5) + `companion-draft.ts`/`companion-fallback.ts`. `useCalmingTools` được nối hai chiều với chat: hành động trong tin nhắn (`BREATHING_2MIN`/`AMBIENT`/`VENT_PROMPT`/`TITLE`) gọi thẳng cùng hook của Bước 1 (`startBreathing('CHAT')`/`startAmbient('CHAT')`), và khi Thở chậm tự kết thúc (không phải bấm Dừng) **và** được bắt đầu từ trong chat, một lượt `TOOL_COMPLETED` tự gửi đi. Adapter giả `companion.api/companion.mock.ts` mô phỏng đủ 5 status (kèm 3 từ khóa QA: "test an toàn"/"test chặn"/"test lỗi"), chỉ bật khi `NEXT_PUBLIC_COMPANION_MOCK=1` và `NODE_ENV !== 'production'` (cả hai inline ở build time nên nhánh này bị loại khỏi bundle production).
 >
-> **Bố cục hiện tại (cập nhật 2026-11-11):** dưới 640px khung chat là bottom sheet; 640–1279px là panel nổi bên phải; từ 1280px panel nằm trong lưới trang viết (cột 360px, sticky dưới header). Cột công cụ 5 nút (Lưu, Chèn ảnh, Chỉ số, Trợ lý, Công cụ dịu, có nhãn chữ) gắn vào cạnh phải card trang viết từ 768px; dưới 768px vẫn là ngăn kéo mở bằng nút `Wrench`. Mốc 1360px cũ không còn dùng.
+> **Bố cục hiện tại (cập nhật 2026-11-11):** dưới 640px khung chat là bottom sheet; 640–1279px là panel nổi bên phải; từ 1280px panel nằm trong lưới trang viết (cột 360px, sticky dưới header). Cột công cụ 6 nút (Lưu, Chèn ảnh, Chỉ số, Trợ lý, Công cụ dịu, Nhạc nền, có nhãn chữ) gắn vào cạnh phải card trang viết từ 768px; dưới 768px là ngăn kéo lưới 3×2 mở bằng nút `Wrench`. Mốc 1360px cũ không còn dùng; các bảng bên dưới nhắc tới 1360px là thiết kế ban đầu.
+>
+> **Máy phát nhạc nền (2026-11-11):** nút **Nhạc nền** (`Disc3`, xoay khi đang phát) trên cột công cụ mở thanh máy phát ngay trên vùng viết: 5 bài tạo hoàn toàn bằng Web Audio trên máy (Tiếng mưa, Piano lofi, Sóng biển & gió, Lửa trại, Quán cà phê — không file, không mạng, không consent), Phát/Tạm dừng, Bài trước/sau (chuyển mượt 1 giây), âm lượng + tắt tiếng, hẹn giờ 15/30 phút (nhỏ dần 5 giây rồi dừng, có thông báo), danh sách bài. Âm lượng và bài gần nhất lưu trong `localStorage` của trình duyệt. "Nghe âm thanh dịu" (menu Công cụ dịu, hành động `AMBIENT` của trợ lý) mở máy phát với bài Tiếng mưa. Nhạc nền chạy song song được với Thở chậm. Khi người dùng **chủ động chọn** cảm xúc, máy phát chỉ hiện chip gợi ý (Tức giận → mưa/sóng; Buồn, Rất tệ → lửa trại/piano; Vui → quán cà phê/piano), **không tự phát**. Rời trang viết luôn đóng `AudioContext`. Code: `utils/ambient/` (`audio-blocks`, `tracks`, `ambient-tracks`, `ambient-engine`), `hooks/useAmbientPlayer.ts`, `components/ambient-player/`. Test: `tests/ambient-player.spec.ts`.
 >
 > **Đã làm (Bước 3 + gỡ bóng đèn):** `secured-proxy.ts` đã thêm `journal-writing-suggestions` vào allowlist. `postCompanionTurn` nhánh thật gọi `apiJson` (nhánh mock chỉ còn dùng khi chủ động bật cờ dev). `grantCompanionConsent` nhánh thật gọi `getConsents()` lấy `documentVersion` của `AI_PROCESSING` rồi `setConsent(..., true)`. Đã gỡ hẳn nút `Lightbulb`, popover "Gợi ý chủ đề theo tâm trạng" và mảng `TOPIC_SUGGESTIONS_BY_EMOTION` tĩnh; tựa đề gợi ý chỉ còn đến qua trường `suggestedTitle` do backend sở hữu.
 >
@@ -113,9 +115,10 @@ features/journal/
     └── calming-tools/
         ├── CalmingToolsMenu.tsx      # menu từ nút "Công cụ dịu"
         ├── BreathingWidget.tsx       # 2 phút, đếm ngược, dừng; dạng mini và dạng đầy đủ
-        ├── AmbientSoundWidget.tsx    # Web Audio offline (chuyển từ CompanionPopover)
         └── VentPrompt.ts             # nội dung dòng mở đầu viết xả
 ```
+
+> **Cập nhật 2026-11-11:** `AmbientSoundWidget.tsx` và `utils/ambient-sound.ts` đã được thay bằng máy phát nhạc nền, xem mục "Máy phát nhạc nền" ở đầu tài liệu.
 
 - **Xóa** `CompanionPopover.tsx` sau khi đã chuyển hết phần trình bày dùng lại được.
 - `calming-tools` nằm trong `features/journal` vì hiện chỉ trang viết dùng. Chỉ chuyển ra feature riêng khi một trang khác (Insight, Dashboard) thật sự cần.

@@ -4,7 +4,8 @@ import { openToolsDrawerIfNeeded } from './helpers/tools-drawer';
 
 /**
  * Bước 1 của COMPANION_UI_PLAN.md: nút "Công cụ dịu" mở thẳng 3 công cụ, không gọi API, không
- * cần consent. Cần backend + tài khoản kiểm thử thật (xem tests/README.md); tự skip nếu thiếu.
+ * cần consent. "Nghe âm thanh dịu" giờ mở máy phát nhạc nền (chi tiết ở ambient-player.spec.ts).
+ * Cần backend + tài khoản kiểm thử thật (xem tests/README.md); tự skip nếu thiếu.
  */
 test.describe('Công cụ dịu trên trang viết', () => {
   test.beforeEach(async ({ page }) => {
@@ -30,14 +31,15 @@ test.describe('Công cụ dịu trên trang viết', () => {
     await expect(page.getByRole('status')).toHaveCount(0);
   });
 
-  test('mở menu và phát âm thanh dịu, dừng được', async ({ page }) => {
+  test('mở menu và phát âm thanh dịu (máy phát nhạc nền, bài Tiếng mưa), tắt được', async ({ page }) => {
     await page.getByRole('button', { name: 'Công cụ dịu' }).click();
     await page.getByRole('menuitem', { name: 'Nghe âm thanh dịu' }).click();
-    const status = page.getByRole('status');
-    await expect(status).toContainText('Đang phát âm thanh dịu');
+    const player = page.getByRole('region', { name: 'Nhạc nền' });
+    await expect(player).toContainText('Tiếng mưa rơi êm dịu');
+    await expect(player).toContainText('Đang phát');
 
-    await status.getByRole('button', { name: 'Dừng công cụ dịu' }).click();
-    await expect(page.getByRole('status')).toHaveCount(0);
+    await player.getByRole('button', { name: 'Tắt và đóng nhạc nền' }).click();
+    await expect(player).toHaveCount(0);
   });
 
   test('viết xả chèn dòng mở đầu vào bài, không mở thanh trạng thái', async ({ page }) => {
@@ -51,7 +53,7 @@ test.describe('Công cụ dịu trên trang viết', () => {
   test('rời trang khi âm thanh đang phát thì không còn tiến trình nào kẹt lại', async ({ page }) => {
     await page.getByRole('button', { name: 'Công cụ dịu' }).click();
     await page.getByRole('menuitem', { name: 'Nghe âm thanh dịu' }).click();
-    await expect(page.getByRole('status')).toContainText('Đang phát âm thanh dịu');
+    await expect(page.getByRole('region', { name: 'Nhạc nền' })).toContainText('Đang phát');
 
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/dashboard/);
