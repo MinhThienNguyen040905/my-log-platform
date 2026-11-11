@@ -289,7 +289,8 @@ function JournalEditorContent() {
   };
 
   const handleStartAmbient = () => {
-    const started = ambient.openAndPlay('rain');
+    // The menu is the only way into the music player: resume the last track (rain the first time).
+    const started = ambient.openAndPlay();
     setCalmingToolsMenuPosition(null);
     if (!started) {
       showToast({
@@ -458,16 +459,9 @@ function JournalEditorContent() {
               hasCompanionUnread={companion.unread}
               onToggleCompanion={() => (companion.isOpen ? companion.minimize() : companion.open())}
               calmingToolsButtonRef={calmingToolsButtonRef}
-              isCalmingToolsActive={!!calmingToolsMenuPosition || !!calmingTools.activeTool}
+              // The music player opens from "Công cụ dịu" → "Nghe âm thanh dịu", so the button stays lit while it is open.
+              isCalmingToolsActive={!!calmingToolsMenuPosition || !!calmingTools.activeTool || ambient.open}
               onToggleCalmingTools={toggleCalmingToolsMenu}
-              isMusicOpen={ambient.open}
-              isMusicPlaying={ambient.status === 'playing'}
-              onToggleMusic={() => {
-                if (ambient.open) { ambient.close(); return; }
-                if (!ambient.openAndPlay()) {
-                  showToast({ title: 'Chưa thể phát âm thanh', message: 'Trình duyệt của bạn chưa cho phép phát âm thanh lúc này. Thử lại nhé.', type: 'error' });
-                }
-              }}
             />
           </div>
 
