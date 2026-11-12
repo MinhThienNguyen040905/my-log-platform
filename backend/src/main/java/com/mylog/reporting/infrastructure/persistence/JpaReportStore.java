@@ -109,6 +109,9 @@ class JpaReportStore implements ReportStore {
         report.narrativeIv = encrypted.iv();
         report.narrativeWrappedKey = encrypted.wrappedKey();
         report.narrativeKeyVersion = encrypted.keyVersion();
+        report.generatedBy = result.generatedBy();
+        report.model = result.model();
+        report.promptTemplateVersion = result.promptVersion();
         report.status = "READY";
         report.completedAt = now;
         report.lockedAt = null; report.lockedBy = null; report.leaseExpiresAt = null;
@@ -177,7 +180,8 @@ class JpaReportStore implements ReportStore {
                 .toList() : List.of();
         return new ReportView(report.id, report.reportType, report.periodStart, report.periodEnd,
                 report.timezone, report.version, report.status, report.sampleSize,
-                report.metricsSnapshot, narrative, evidence, report.createdAt, report.completedAt);
+                report.metricsSnapshot, narrative, report.generatedBy, evidence, Map.of(),
+                report.createdAt, report.completedAt);
     }
 
     private record Cursor(LocalDate date, UUID id) {}

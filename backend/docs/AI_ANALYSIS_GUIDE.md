@@ -170,6 +170,10 @@ POST /insights:refresh
   → lưu insight (narrative mã hóa) + evidence
 ```
 
+Report tuần/tháng dùng cùng cơ chế: `ReportNarratives` dựng câu mẫu từ snapshot, `NarrativeRewriter` (dùng chung với
+pattern insight) chỉ viết lại khi đủ điều kiện dưới đây, và kỳ có tâm trạng giảm hoặc căng thẳng tăng rõ luôn giữ câu
+mẫu. Job làm mới pattern hằng đêm mặc định không gọi AI.
+
 Thống kê quyết định insight có hay không và các con số; AI chỉ được viết lại câu. Bước AI cần
 `MYLOG_INSIGHTS_AI_NARRATIVE_ENABLED=true`, provider `mylog.ai.*` có hai cờ phê duyệt và consent
 `AI_PROCESSING` của user tại thời điểm refresh. Insight xu hướng mood đi xuống và cửa sổ có bài risk cao luôn

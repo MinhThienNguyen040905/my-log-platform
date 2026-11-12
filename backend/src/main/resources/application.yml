@@ -104,6 +104,13 @@ mylog:
     ai-narrative:
       enabled: ${MYLOG_INSIGHTS_AI_NARRATIVE_ENABLED:false}
       timeout-ms: ${MYLOG_INSIGHTS_AI_NARRATIVE_TIMEOUT_MS:10000}
+    # Nightly refresh of pattern insights at this local hour for users with new data. The scheduled run uses
+    # template wording unless ai-narrative is true (one provider call per refreshed user).
+    refresh:
+      enabled: ${MYLOG_INSIGHTS_REFRESH_ENABLED:false}
+      local-hour: ${MYLOG_INSIGHTS_REFRESH_LOCAL_HOUR:3}
+      poll-delay-ms: ${MYLOG_INSIGHTS_REFRESH_POLL_DELAY_MS:900000}
+      ai-narrative: ${MYLOG_INSIGHTS_REFRESH_AI_NARRATIVE:false}
   reports:
     enabled: ${MYLOG_REPORTS_ENABLED:false}
     poll-delay-ms: ${MYLOG_REPORTS_POLL_DELAY_MS:5000}

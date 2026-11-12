@@ -10,12 +10,12 @@ import java.util.UUID;
 
 public record ReportResponse(UUID id, String type, LocalDate from, LocalDate to, String timezone,
                              int version, String status, int sampleSize, Map<String, Object> metrics,
-                             String narrative, List<ReportEvidenceResponse> evidence,
-                             Instant createdAt, Instant completedAt) {
+                             String narrative, String generatedBy, List<ReportEvidenceResponse> evidence,
+                             Map<String, String> entryTitles, Instant createdAt, Instant completedAt) {
     public static ReportResponse from(ReportView view) {
         return new ReportResponse(view.id(), view.type(), view.from(), view.to(), view.timezone(),
                 view.version(), view.status(), view.sampleSize(), view.metrics(), view.narrative(),
-                view.evidence().stream().map(ReportEvidenceResponse::from).toList(),
-                view.createdAt(), view.completedAt());
+                view.generatedBy(), view.evidence().stream().map(ReportEvidenceResponse::from).toList(),
+                view.entryTitles(), view.createdAt(), view.completedAt());
     }
 }

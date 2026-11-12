@@ -33,4 +33,15 @@ public interface InsightStore {
     void recordNarrationUsage(NarrationUsage usage, Instant now);
 
     InsightPage list(UUID userId, LocalDate from, LocalDate to, String cursor, int limit);
+
+    record UserZone(UUID userId, String timezone) {}
+
+    /** Active users with a profile, ordered by ID, for the scheduled refresh. */
+    List<UserZone> activeUsersAfter(UUID cursor, int limit);
+
+    /**
+     * True when the user has no pattern insights of {@code algorithmVersion} created since {@code since}
+     * and has journal/check-in changes after the last such refresh (or never had one).
+     */
+    boolean needsPatternRefresh(UUID userId, String algorithmVersion, Instant since);
 }

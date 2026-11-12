@@ -8,10 +8,11 @@ import type { JournalEmotion } from '@/types';
 import type { Checkin } from '../api/checkin';
 import { useDailyCheckin } from '../hooks/useDailyCheckin';
 import { CHECKIN_LIMITS, CHECKIN_MOOD_CODES, emotionFromMoodCode, localDateIn, roundScore } from '../utils/checkin-values';
+import { activitiesForSave, activityChoices } from '../utils/checkin-activities';
 
-type Draft = { emotion: JournalEmotion | null; stress: number; energy: number; sleepHours: number; note: string };
+type Draft = { emotion: JournalEmotion | null; stress: number; energy: number; sleepHours: number; note: string; activities: string[] };
 
-const DEFAULT_DRAFT: Draft = { emotion: null, stress: 5, energy: 5, sleepHours: 7, note: '' };
+const DEFAULT_DRAFT: Draft = { emotion: null, stress: 5, energy: 5, sleepHours: 7, note: '', activities: [] };
 
 function draftFrom(checkin: Checkin | null): Draft {
   if (!checkin) return DEFAULT_DRAFT;
@@ -21,6 +22,7 @@ function draftFrom(checkin: Checkin | null): Draft {
     energy: checkin.energyScore ?? DEFAULT_DRAFT.energy,
     sleepHours: checkin.sleepMinutes === null ? DEFAULT_DRAFT.sleepHours : checkin.sleepMinutes / 60,
     note: checkin.note ?? '',
+    activities: checkin.activities.map((activity) => activity.code),
   };
 }
 
@@ -54,8 +56,16 @@ export function DailyCheckinCard({ userId, timezone }: { userId: string; timezon
       energyScore: roundScore(draft.energy),
       sleepMinutes: Math.round(draft.sleepHours * 60),
       note: note ? note : null,
+      activities: activitiesForSave(draft.activities, existing?.activities ?? []),
     }, { onSuccess: () => setEditing(false) });
   };
+
+  const toggleActivity = (code: string) => setDraft((current) => ({
+    ...current,
+    activities: current.activities.includes(code)
+      ? current.activities.filter((value) => value !== code)
+      : [...current.activities, code],
+  }));
 
   return (
     <section aria-labelledby="checkin-title" className="bg-surface-card border-neo rounded-3xl p-5 sm:p-6 shadow-neo">
@@ -126,6 +136,29 @@ export function DailyCheckinCard({ userId, timezone }: { userId: string; timezon
             onChange={(sleepHours) => setDraft((current) => ({ ...current, sleepHours }))} />
           </div>
 
+          <fieldset className="flex flex-col gap-2">
+            <legend className="font-space text-xs font-bold uppercase mb-1">{t('checkin.activities')}</legend>
+            <p className="font-sans text-xs text-on-surface-variant">{t('checkin.activitiesHint')}</p>
+            <div className="flex flex-wrap gap-2">
+              {activityChoices(existing?.activities ?? []).map((code) => {
+                const selected = draft.activities.includes(code);
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => toggleActivity(code)}
+                    className={`rounded-full border-2 border-black px-3 py-1 font-space text-xs font-bold cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${
+                      selected ? 'bg-primary-container shadow-neo-sm' : 'bg-white'
+                    }`}
+                  >
+                    {t(`checkin.activityLabels.${code}`, { defaultValue: code.replace(/-/g, ' ') })}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
           <div className="flex flex-col gap-1.5">
             <label htmlFor="checkin-note" className="font-space text-xs font-bold uppercase">{t('checkin.note')}</label>
             <textarea
@@ -176,6 +209,7 @@ function CheckinSummary({ checkin }: { checkin: Checkin }) {
     checkin.stressScore !== null ? `${t('checkin.stress')} ${checkin.stressScore}/10` : null,
     checkin.energyScore !== null ? `${t('checkin.energy')} ${checkin.energyScore}/10` : null,
     checkin.sleepMinutes !== null ? `${t('checkin.sleep')} ${Math.round((checkin.sleepMinutes / 60) * 10) / 10}h` : null,
+    ...checkin.activities.map((activity) => t(`checkin.activityLabels.${activity.code}`, { defaultValue: activity.code.replace(/-/g, ' ') })),
   ].filter((value): value is string => value !== null);
   return (
     <div className="flex flex-col gap-2" role="status">

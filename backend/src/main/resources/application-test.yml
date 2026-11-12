@@ -25,6 +25,10 @@ mylog:
   insights:
     ai-narrative:
       enabled: false
+    refresh:
+      enabled: false
+  reports:
+    enabled: false
   safety:
     classifier:
       url: ""

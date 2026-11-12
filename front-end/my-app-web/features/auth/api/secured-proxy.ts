@@ -15,6 +15,8 @@ const routes: AllowedRoute[] = [
   { methods: ['GET'], pattern: /^check-ins$/ },
   { methods: ['GET', 'PUT'], pattern: new RegExp(`^check-ins/${date}$`) },
   { methods: ['GET'], pattern: new RegExp(`^reports/${uuid}$`) },
+  { methods: ['POST'], pattern: /^reports$/ },
+  { methods: ['POST'], pattern: new RegExp(`^reports/${uuid}:regenerate$`) },
   { methods: ['GET', 'POST'], pattern: /^self-care\/goals$/ },
   { methods: ['PATCH'], pattern: new RegExp(`^self-care/goals/${uuid}$`) },
   { methods: ['POST'], pattern: new RegExp(`^self-care/goals/${uuid}/habits$`) },

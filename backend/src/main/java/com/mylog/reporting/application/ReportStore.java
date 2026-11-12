@@ -15,7 +15,9 @@ public interface ReportStore {
     record Task(UUID id, UUID userId, String type, LocalDate from, LocalDate to,
                 String timezone, int version) {}
     record Evidence(String source, UUID sourceId, LocalDate date, String metric, BigDecimal value) {}
-    record Result(int sampleSize, Map<String, Object> metrics, String narrative, List<Evidence> evidence) {}
+    /** {@code generatedBy} is RULE or AI_ASSISTED; {@code model} is null for templates. */
+    record Result(int sampleSize, Map<String, Object> metrics, String narrative, List<Evidence> evidence,
+                  String generatedBy, String model, String promptVersion) {}
 
     List<UserZone> usersAfter(UUID cursor, int limit);
     UUID enqueue(UUID userId, String type, LocalDate from, LocalDate to,

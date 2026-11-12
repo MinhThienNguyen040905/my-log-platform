@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useJournal } from '@/features/journal';
 import { getDashboard } from '@/features/dashboard';
 import { HabitTrackerCard, SelfCareGoalsChecklist } from '@/features/selfcare';
 import { listInsights } from '../api/insights';
 import { isPatternInsight } from '../utils/pattern-insights';
 import { PatternInsightsPanel } from './PatternInsightsPanel';
-import { listReports } from '@/features/reporting';
+import { createReport, latestPerPeriod, listReports, type ReportType } from '@/features/reporting';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useTranslation } from 'react-i18next';
@@ -29,12 +30,22 @@ export function InsightView() {
 
   const [activeTab, setActiveTab] = useState<'weekly-report' | 'evidence-matrix'>('weekly-report');
   const insightsQuery = useQuery({ queryKey: ['insights', userId, 20], queryFn: () => listInsights({ limit: 20 }) });
-  const reportsQuery = useQuery({ queryKey: ['reports', userId, 'WEEKLY', 20], queryFn: () => listReports({ type: 'WEEKLY', limit: 20 }) });
+  const [reportType, setReportType] = useState<ReportType>('WEEKLY');
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const reportsQuery = useQuery({ queryKey: ['reports', userId, reportType, 20], queryFn: () => listReports({ type: reportType, limit: 20 }) });
+  const createReportMutation = useMutation({
+    mutationFn: () => createReport(reportType),
+    onSuccess: (created) => {
+      void queryClient.invalidateQueries({ queryKey: ['reports'] });
+      router.push(`/reports/${created.id}/print`);
+    },
+  });
   const historyQuery = useQuery({ queryKey: ['dashboard', userId, '90d'], queryFn: () => getDashboard('90d') });
   const insights = insightsQuery.data?.items ?? [];
   const patternInsights = insights.filter(isPatternInsight);
   const reportInsights = insights.filter((insight) => !isPatternInsight(insight));
-  const reports = reportsQuery.data?.items ?? [];
+  const reports = latestPerPeriod(reportsQuery.data?.items ?? []);
   const insightsLoading = insightsQuery.isPending;
   const reportsLoading = reportsQuery.isPending;
   const insightsError = insightsQuery.isError;
@@ -176,10 +187,28 @@ export function InsightView() {
           transition={{ duration: 0.22, ease: 'easeOut' }}
           className="bg-surface-card border-neo rounded-3xl p-6 sm:p-8 shadow-neo flex flex-col gap-5"
         >
-          <div className="flex items-center gap-3 border-b-2 border-black pb-3">
-            <BarChart3 className="w-6 h-6 text-primary" />
-            <h2 className="font-space text-xl font-extrabold">{t('insight.reports')}</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-black pb-3">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="w-6 h-6 text-primary" />
+              <h2 className="font-space text-xl font-extrabold">{t('insight.reports')}</h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div role="group" aria-label={t('insight.reportType')} className="flex gap-1 p-1 rounded-xl border border-black bg-paper-warm">
+                {(['WEEKLY', 'MONTHLY'] as const).map((type) => (
+                  <button key={type} type="button" aria-pressed={reportType === type} onClick={() => setReportType(type)}
+                    className={`px-3 py-1 rounded-lg font-space text-xs font-bold cursor-pointer ${reportType === type ? 'bg-primary-container border border-black' : ''}`}>
+                    {type === 'WEEKLY' ? t('insight.reportWeekly') : t('insight.reportMonthly')}
+                  </button>
+                ))}
+              </div>
+              <button type="button" onClick={() => createReportMutation.mutate()} disabled={createReportMutation.isPending}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black bg-primary-container shadow-neo-sm font-space text-xs font-extrabold disabled:opacity-60 cursor-pointer">
+                <Sparkles className="w-3.5 h-3.5" />
+                {createReportMutation.isPending ? t('insight.reportCreating') : reportType === 'WEEKLY' ? t('insight.reportCreateWeekly') : t('insight.reportCreateMonthly')}
+              </button>
+            </div>
           </div>
+          {createReportMutation.isError && <p role="alert" className="text-sm text-red-700">{t('insight.reportCreateError')}</p>}
           {reportsLoading && <p role="status">{t('status.loadingReport')}</p>}
           {reportsError && <p role="alert">{t('insight.reportError')} <button type="button" className="underline" onClick={() => void reportsQuery.refetch()}>{t('common.retry')}</button></p>}
           {!reportsLoading && !reportsError && reports.length === 0 && (
@@ -188,12 +217,12 @@ export function InsightView() {
           {reports.map((report) => (
             <article key={report.id} className="p-4 bg-paper-warm rounded-2xl border-neo-sm flex flex-col gap-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-space text-sm font-bold">{report.type} · {report.from} – {report.to}</h3>
-                <span className="font-mono text-xs">{report.status}</span>
+                <h3 className="font-space text-sm font-bold">{report.type === 'MONTHLY' ? t('insight.reportMonthly') : t('insight.reportWeekly')} · {report.from} – {report.to}</h3>
+                <span className="font-space text-xs">{report.status === 'READY' ? '' : report.status === 'FAILED' ? t('report.failed') : t('insight.reportPending')}</span>
               </div>
               <p className="text-xs">{t('insight.sample', { count: report.sampleSize })}</p>
               {report.narrative && <p className="font-serif text-sm leading-relaxed">{report.narrative}</p>}
-              {report.status === 'READY' && <Link href={`/reports/${report.id}/print`} className="self-start text-sm font-bold underline">{t('insight.reportAction')}</Link>}
+              <Link href={`/reports/${report.id}/print`} className="self-start text-sm font-bold underline">{t('insight.reportOpen')}</Link>
             </article>
           ))}
         </motion.section>
