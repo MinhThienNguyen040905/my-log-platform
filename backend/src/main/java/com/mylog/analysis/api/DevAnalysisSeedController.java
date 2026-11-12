@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** Local-only: synthetic emotion/topic analysis for the current user's last 30 days (option 1a). */
@@ -25,7 +26,7 @@ class DevAnalysisSeedController {
     }
 
     @PostMapping("/analyses:seed")
-    DevAnalysisSeedResponse seed() {
-        return DevAnalysisSeedResponse.from(seeds.seedRecent(current.requireCurrent().userId()));
+    DevAnalysisSeedResponse seed(@RequestParam(defaultValue = "false") boolean reseed) {
+        return DevAnalysisSeedResponse.from(seeds.seedRecent(current.requireCurrent().userId(), reseed));
     }
 }

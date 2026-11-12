@@ -77,6 +77,7 @@ class InsightPatternIntegrationTest {
     }
 
     @Autowired InsightService insights;
+    @Autowired com.mylog.insight.application.DashboardService dashboard;
     @Autowired UserProfileUseCase users;
     @Autowired SensitiveDataCipher cipher;
     @Autowired JdbcTemplate jdbc;
@@ -142,6 +143,20 @@ class InsightPatternIntegrationTest {
         });
         assertTrue(jdbc.queryForObject("select count(*) from ai_usage_records where operation='INSIGHT_NARRATIVE'",
                 Integer.class) > 0);
+    }
+
+    @Test void dashboardSpectrumUsesPickedIconsAndOnlyPrimaryTones() {
+        UUID owner = user();
+        UUID happy = insertEntry(owner, TODAY.minusDays(1), 8, 3, 420, null);
+        UUID calm = insertEntry(owner, TODAY.minusDays(2), 6, 4, 420, null);
+        jdbc.update("update journal_entries set mood_code='happy' where id=?", happy);
+        attachAnalysis(owner, happy, List.of("JOY", "HOPE"), "SELF_CARE");
+        attachAnalysis(owner, calm, List.of("CALM"), "WORK");
+        var view = dashboard.get(owner, "30d");
+        assertEquals(Map.of("JOY", 1L, "CALM", 1L), view.topEmotions().stream()
+                .collect(Collectors.toMap(c -> c.code(), c -> c.count())), "secondary HOPE is not counted");
+        assertEquals(Map.of("happy", 1L, "neutral", 1L), view.topMoods().stream()
+                .collect(Collectors.toMap(c -> c.code(), c -> c.count())));
     }
 
     @Test void hiddenInsightStaysHiddenAndEndpointsRequireOwner() throws Exception {

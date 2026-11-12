@@ -8,7 +8,11 @@ export type DailyMetric = {
 export type TopCode = { code: string; count: number; averageScore: number | null };
 export type Dashboard = {
   range: string; timezone: string; from: string; to: string;
-  timeline: DailyMetric[]; topEmotions: TopCode[]; topTopics: TopCode[];
+  timeline: DailyMetric[];
+  /** Mood icons picked on entries (`happy`, `neutral`, `angry`, `sad`, `very-bad`), one per entry. */
+  topMoods: TopCode[];
+  /** Primary analysis tone per analyzed entry. */
+  topEmotions: TopCode[]; topTopics: TopCode[];
   currentJournalStreak: number; longestJournalStreak: number;
   journalEntryCount: number; moodSampleSize: number;
 };

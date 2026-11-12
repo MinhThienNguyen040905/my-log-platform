@@ -17,4 +17,10 @@ public interface DevAnalysisSeedStore {
     List<Candidate> candidates(UUID userId, LocalDate from, LocalDate to);
 
     UUID save(UUID userId, UUID entryId, int contentVersion, JournalAnalyzer.Result result, Instant now);
+
+    /**
+     * Marks the user's current {@code LOCAL_FAKE} analyses in the window STALE and puts those entries back to
+     * PENDING so they can be seeded again. Never touches analyses from any other provider.
+     */
+    int resetSynthetic(UUID userId, LocalDate from, LocalDate to);
 }

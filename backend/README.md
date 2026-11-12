@@ -205,7 +205,22 @@ Quota journal là 60 lượt ghi/15 phút mỗi user, nên script tự chờ khi
 
 `--analyze` (sau khi seed) hoặc `--analyze-only` (tài khoản đã có dữ liệu) làm thêm ba việc cho tài khoản
 synthetic: bật consent `AI_PROCESSING`, gọi `POST /api/v1/dev/analyses:seed` để gán cảm xúc/chủ đề mẫu cho
-30 ngày gần nhất, rồi `POST /api/v1/insights:refresh` và in các insight.
+30 ngày gần nhất, rồi `POST /api/v1/insights:refresh` và in các insight. Thêm `--reseed-analysis`
+(`?reseed=true`) để thay các phân tích mẫu `LOCAL_FAKE` cũ trong cửa sổ, ví dụ sau khi đổi quy tắc seeder; phân
+tích của provider khác không bị đụng tới. Seeder lấy cảm xúc chính theo icon người dùng chọn và chỉ thêm sắc thái
+phụ không mâu thuẫn với icon (bài buồn không có Hy vọng/Vui, bài vui không có Buồn/Sợ).
+
+### Dashboard: phổ cảm xúc và sắc thái
+
+`GET /api/v1/dashboard` trả hai phân bố tách biệt:
+- `topMoods`: số bài theo **icon cảm xúc người dùng chọn** (`mood_code` của journal: `happy`, `neutral`,
+  `angry`, `sad`, `very-bad`). Web vẽ thành "Phổ cảm xúc".
+- `topEmotions`: **sắc thái chính** (rank 1) của mỗi bài đã phân tích, nên tổng bằng số bài đã phân tích. Web vẽ
+  thành "Sắc thái trong bài viết" theo % số bài. `topEmotions` trong snapshot report dùng cùng cách đếm này;
+  pattern `EMOTION_TOPIC_COOCCURRENCE` vẫn xét mọi sắc thái của bài (một bài có thể vừa lo lắng vừa hy vọng).
+
+Hai phân bố có thể khác nhau (chọn "Vui" nhưng viết về deadline có thể mang sắc thái lo lắng); giao diện không dùng
+sắc thái để thay thế cảm xúc người dùng tự chọn.
 
 ### Pattern insight 30 ngày
 
