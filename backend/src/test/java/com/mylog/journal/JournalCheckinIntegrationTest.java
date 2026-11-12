@@ -105,6 +105,11 @@ class JournalCheckinIntegrationTest {
                 new PutCheckinCommand.ActivityCommand("walking", 30, "LOW")));
         var saved = checkins.put(owner, date, first);
         assertEquals(1, saved.activities().size());
+        // A client that does not send activities (null) must not wipe the ones already saved.
+        var keptActivities = checkins.put(owner, date, new PutCheckinCommand("Asia/Ho_Chi_Minh", "calm",
+                BigDecimal.valueOf(7), null, null, 420, "A private checkin note", null));
+        assertEquals(1, keptActivities.activities().size());
+        assertEquals("walking", keptActivities.activities().getFirst().code());
         var changed = checkins.put(owner, date, new PutCheckinCommand("Asia/Ho_Chi_Minh", "happy",
                 BigDecimal.valueOf(8), null, null, 480, "New note", List.of()));
         assertEquals(saved.id(), changed.id());

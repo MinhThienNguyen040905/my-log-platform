@@ -60,7 +60,8 @@ class JpaCheckinStore implements CheckinStore {
         checkin.source = "USER";
         checkin.updatedAt = now;
         checkin.rowVersion++;
-        em.createQuery("delete from CheckinActivity a where a.checkinId=:id")
+        // Null activities means "not sent": keep what the day already has (another client may have set them).
+        if (command.activities() != null) em.createQuery("delete from CheckinActivity a where a.checkinId=:id")
                 .setParameter("id", checkin.id).executeUpdate();
         if (command.activities() != null) for (var item : command.activities()) {
             var activity = new CheckinActivity();
