@@ -7,7 +7,6 @@ import com.mylog.journal.application.query.JournalEntryView;
 import com.mylog.journal.application.query.JournalPage;
 import com.mylog.journal.application.query.JournalSummaryView;
 import com.mylog.journal.application.query.JournalTagView;
-import com.mylog.journal.infrastructure.persistence.entity.JournalAsset;
 import com.mylog.platform.id.IdGenerator;
 import com.mylog.platform.idempotency.IdempotencyStore;
 import com.mylog.platform.outbox.OutboxPublisher;
@@ -134,7 +133,7 @@ public class JournalService implements JournalAnalysisAccess {
 
         List<UUID> entryIds = page.stream().map(JournalEntrySnapshot::id).toList();
         Map<UUID, List<JournalTagView>> tagsByEntry = tagStore.listTagsForEntries(userId, entryIds);
-        Map<UUID, JournalAsset> coverAssets = assetStore == null ? Map.of() : assetStore.findCoverAssetsForEntries(userId, entryIds);
+        Map<UUID, JournalAssetData> coverAssets = assetStore == null ? Map.of() : assetStore.findCoverAssetsForEntries(userId, entryIds);
 
         return new JournalPage(page.stream()
                 .map(e -> {
@@ -215,7 +214,7 @@ public class JournalService implements JournalAnalysisAccess {
 
         List<UUID> entryIds = pageEntries.stream().map(JournalEntrySnapshot::id).toList();
         Map<UUID, List<JournalTagView>> tagsByEntry = tagStore.listTagsForEntries(userId, entryIds);
-        Map<UUID, JournalAsset> coverAssets = assetStore == null ? Map.of() : assetStore.findCoverAssetsForEntries(userId, entryIds);
+        Map<UUID, JournalAssetData> coverAssets = assetStore == null ? Map.of() : assetStore.findCoverAssetsForEntries(userId, entryIds);
 
         List<JournalSummaryView> views = pageEntries.stream()
                 .map(e -> {
@@ -377,8 +376,8 @@ public class JournalService implements JournalAnalysisAccess {
         JsonNode enrichedContent = assetService == null ? data.contentJson() : assetService.enrichContentWithSignedUrls(entry.userId(), data.contentJson());
         String photoUrl = null;
         if (assetStore != null && assetService != null) {
-            Map<UUID, JournalAsset> covers = assetStore.findCoverAssetsForEntries(entry.userId(), List.of(entry.id()));
-            JournalAsset cover = covers.get(entry.id());
+            Map<UUID, JournalAssetData> covers = assetStore.findCoverAssetsForEntries(entry.userId(), List.of(entry.id()));
+            JournalAssetData cover = covers.get(entry.id());
             photoUrl = assetService.resolveCoverUrl(cover);
         }
         return new JournalEntryView(entry.id(), data.title(), enrichedContent, data.location(),

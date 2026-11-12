@@ -1,11 +1,13 @@
 package com.mylog.journal.infrastructure.persistence;
 
+import com.mylog.journal.application.JournalAssetData;
 import com.mylog.journal.application.JournalAssetService;
 import com.mylog.journal.application.JournalAssetStore;
 import com.mylog.journal.infrastructure.persistence.entity.JournalAsset;
 import com.mylog.platform.web.ConflictException;
 import com.mylog.platform.web.InvalidRequestException;
 import jakarta.persistence.EntityManager;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -16,7 +18,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+/** JPA adapter for journal images; the entity stays here and callers get {@link JournalAssetData} copies. */
 @Repository
+@ConditionalOnProperty(prefix = "mylog.identity", name = "enabled", havingValue = "true")
 public class JpaJournalAssetStore implements JournalAssetStore {
     private final EntityManager em;
 
@@ -25,74 +29,72 @@ public class JpaJournalAssetStore implements JournalAssetStore {
     }
 
     @Override
-    public void save(JournalAsset asset) {
-        if (asset.id != null && em.find(JournalAsset.class, asset.id) != null) {
-            em.merge(asset);
+    public void save(JournalAssetData asset) {
+        JournalAsset existing = asset.id == null ? null : em.find(JournalAsset.class, asset.id);
+        if (existing != null) {
+            copy(asset, existing);
         } else {
-            em.persist(asset);
+            JournalAsset created = new JournalAsset();
+            copy(asset, created);
+            em.persist(created);
         }
     }
 
     @Override
-    public Optional<JournalAsset> findById(UUID id) {
-        return Optional.ofNullable(em.find(JournalAsset.class, id));
+    public Optional<JournalAssetData> findById(UUID id) {
+        return Optional.ofNullable(em.find(JournalAsset.class, id)).map(JpaJournalAssetStore::data);
     }
 
     @Override
-    public Optional<JournalAsset> findByUserIdAndId(UUID userId, UUID id) {
+    public Optional<JournalAssetData> findByUserIdAndId(UUID userId, UUID id) {
         List<JournalAsset> results = em.createQuery(
                 "SELECT a FROM JournalAsset a WHERE a.userId = :userId AND a.id = :id", JournalAsset.class)
                 .setParameter("userId", userId)
                 .setParameter("id", id)
                 .getResultList();
-        return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+        return results.isEmpty() ? Optional.empty() : Optional.of(data(results.get(0)));
     }
 
     @Override
-    public List<JournalAsset> findAssetsByUserIdAndIds(UUID userId, Collection<UUID> ids) {
-        if (ids == null || ids.isEmpty()) return List.of();
-        return em.createQuery(
-                "SELECT a FROM JournalAsset a WHERE a.userId = :userId AND a.id IN :ids", JournalAsset.class)
-                .setParameter("userId", userId)
-                .setParameter("ids", ids)
-                .getResultList();
+    public List<JournalAssetData> findAssetsByUserIdAndIds(UUID userId, Collection<UUID> ids) {
+        return data(entitiesByUserIdAndIds(userId, ids));
     }
 
     @Override
     public List<JournalAssetService.StoredFile> findStoredFilesByUser(UUID userId) {
         return em.createQuery("SELECT a FROM JournalAsset a WHERE a.userId = :userId AND a.status <> :deleted", JournalAsset.class)
                 .setParameter("userId", userId)
-                .setParameter("deleted", JournalAsset.STATUS_DELETED)
+                .setParameter("deleted", JournalAssetData.STATUS_DELETED)
                 .getResultList().stream()
                 .map(a -> new JournalAssetService.StoredFile(a.publicId, a.assetType, a.deliveryType)).toList();
     }
 
     @Override
-    public List<JournalAsset> findAssetsForEntry(UUID userId, UUID entryId) {
-        return em.createQuery(
+    public List<JournalAssetData> findAssetsForEntry(UUID userId, UUID entryId) {
+        return data(em.createQuery(
                 "SELECT a FROM JournalAsset a WHERE a.userId = :userId AND a.journalEntryId = :entryId AND a.status = :ready ORDER BY a.position ASC", JournalAsset.class)
                 .setParameter("userId", userId)
                 .setParameter("entryId", entryId)
-                .setParameter("ready", JournalAsset.STATUS_READY)
-                .getResultList();
+                .setParameter("ready", JournalAssetData.STATUS_READY)
+                .getResultList());
     }
 
     @Override
-    public Map<UUID, JournalAsset> findCoverAssetsForEntries(UUID userId, List<UUID> entryIds) {
+    public Map<UUID, JournalAssetData> findCoverAssetsForEntries(UUID userId, List<UUID> entryIds) {
         if (entryIds == null || entryIds.isEmpty()) return Map.of();
         List<JournalAsset> assets = em.createQuery(
                 "SELECT a FROM JournalAsset a WHERE a.userId = :userId AND a.journalEntryId IN :entryIds AND a.status = :ready ORDER BY a.position ASC", JournalAsset.class)
                 .setParameter("userId", userId)
                 .setParameter("entryIds", entryIds)
-                .setParameter("ready", JournalAsset.STATUS_READY)
+                .setParameter("ready", JournalAssetData.STATUS_READY)
                 .getResultList();
 
-        Map<UUID, JournalAsset> map = new HashMap<>();
+        Map<UUID, JournalAssetData> map = new HashMap<>();
         for (JournalAsset a : assets) {
             if (a.isCover) {
-                map.put(a.journalEntryId, a);
+                map.put(a.journalEntryId, data(a));
             } else {
-                map.putIfAbsent(a.journalEntryId, a);
+                map.putIfAbsent(a.journalEntryId, data(a));
             }
         }
         return map;
@@ -103,13 +105,13 @@ public class JpaJournalAssetStore implements JournalAssetStore {
         Long sum = em.createQuery(
                 "SELECT COALESCE(SUM(a.sizeBytes), 0L) FROM JournalAsset a WHERE a.userId = :userId AND a.status <> :deleted", Long.class)
                 .setParameter("userId", userId)
-                .setParameter("deleted", JournalAsset.STATUS_DELETED)
+                .setParameter("deleted", JournalAssetData.STATUS_DELETED)
                 .getSingleResult();
         return sum == null ? 0L : sum;
     }
 
     @Override
-    public List<JournalAsset> findOrphansBefore(Instant cutoff, int limit) {
+    public List<JournalAssetData> findOrphansBefore(Instant cutoff, int limit) {
         // Native query with FOR UPDATE SKIP LOCKED
         List<?> rows = em.createNativeQuery("""
                 SELECT id FROM journal_assets
@@ -124,38 +126,32 @@ public class JpaJournalAssetStore implements JournalAssetStore {
 
         if (rows.isEmpty()) return List.of();
         List<UUID> ids = rows.stream().map(r -> (UUID) r).toList();
-        return em.createQuery("SELECT a FROM JournalAsset a WHERE a.id IN :ids", JournalAsset.class)
+        return data(em.createQuery("SELECT a FROM JournalAsset a WHERE a.id IN :ids", JournalAsset.class)
                 .setParameter("ids", ids)
-                .getResultList();
+                .getResultList());
     }
 
     @Override
     public void linkAssets(UUID userId, UUID entryId, List<UUID> assetIdsInOrder, Instant now) {
+        // Works on managed entities: field changes are flushed with the surrounding transaction.
         List<JournalAsset> currentAssets = em.createQuery(
                 "SELECT a FROM JournalAsset a WHERE a.userId = :userId AND a.journalEntryId = :entryId", JournalAsset.class)
                 .setParameter("userId", userId)
                 .setParameter("entryId", entryId)
                 .getResultList();
 
-        Map<UUID, JournalAsset> currentMap = new HashMap<>();
-        for (JournalAsset a : currentAssets) {
-            currentMap.put(a.id, a);
-        }
-
         // Unlink assets that are no longer referenced
         for (JournalAsset a : currentAssets) {
             if (!assetIdsInOrder.contains(a.id)) {
-                a.status = JournalAsset.STATUS_DELETED;
+                a.status = JournalAssetData.STATUS_DELETED;
                 a.deletedAt = now;
             }
         }
 
         if (assetIdsInOrder.isEmpty()) return;
 
-        // Fetch all requested assets
-        List<JournalAsset> requestedAssets = findAssetsByUserIdAndIds(userId, assetIdsInOrder);
         Map<UUID, JournalAsset> requestedMap = new HashMap<>();
-        for (JournalAsset a : requestedAssets) {
+        for (JournalAsset a : entitiesByUserIdAndIds(userId, assetIdsInOrder)) {
             requestedMap.put(a.id, a);
         }
 
@@ -165,14 +161,14 @@ public class JpaJournalAssetStore implements JournalAssetStore {
             if (asset == null) {
                 throw new InvalidRequestException("Hình ảnh đính kèm không tồn tại hoặc không thuộc quyền sở hữu của bạn.");
             }
-            if (JournalAsset.STATUS_DELETED.equals(asset.status)) {
+            if (JournalAssetData.STATUS_DELETED.equals(asset.status)) {
                 throw new ConflictException("Một số hình ảnh đính kèm đã hết hạn lưu tạm. Vui lòng tải lại ảnh.");
             }
             if (asset.journalEntryId != null && !asset.journalEntryId.equals(entryId)) {
                 throw new InvalidRequestException("Hình ảnh đã được gắn vào một bài viết khác.");
             }
             asset.journalEntryId = entryId;
-            asset.status = JournalAsset.STATUS_READY;
+            asset.status = JournalAssetData.STATUS_READY;
             asset.position = i;
             asset.isCover = (i == 0);
         }
@@ -184,7 +180,7 @@ public class JpaJournalAssetStore implements JournalAssetStore {
                 UPDATE JournalAsset a SET a.status = :deleted, a.deletedAt = :now
                 WHERE a.userId = :userId AND a.journalEntryId = :entryId AND a.status <> :deleted
                 """)
-                .setParameter("deleted", JournalAsset.STATUS_DELETED)
+                .setParameter("deleted", JournalAssetData.STATUS_DELETED)
                 .setParameter("now", now)
                 .setParameter("userId", userId)
                 .setParameter("entryId", entryId)
@@ -194,7 +190,7 @@ public class JpaJournalAssetStore implements JournalAssetStore {
     @Override
     public void markDeleted(UUID assetId, Instant now) {
         em.createQuery("UPDATE JournalAsset a SET a.status = :deleted, a.deletedAt = :now WHERE a.id = :id")
-                .setParameter("deleted", JournalAsset.STATUS_DELETED)
+                .setParameter("deleted", JournalAssetData.STATUS_DELETED)
                 .setParameter("now", now)
                 .setParameter("id", assetId)
                 .executeUpdate();
@@ -203,9 +199,43 @@ public class JpaJournalAssetStore implements JournalAssetStore {
     @Override
     public int purgeDeletedBefore(Instant cutoff) {
         return em.createQuery("DELETE FROM JournalAsset a WHERE a.status = :deleted AND a.deletedAt < :cutoff")
-                .setParameter("deleted", JournalAsset.STATUS_DELETED)
+                .setParameter("deleted", JournalAssetData.STATUS_DELETED)
                 .setParameter("cutoff", cutoff)
                 .executeUpdate();
     }
-}
 
+    private List<JournalAsset> entitiesByUserIdAndIds(UUID userId, Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        return em.createQuery(
+                "SELECT a FROM JournalAsset a WHERE a.userId = :userId AND a.id IN :ids", JournalAsset.class)
+                .setParameter("userId", userId)
+                .setParameter("ids", ids)
+                .getResultList();
+    }
+
+    private static List<JournalAssetData> data(List<JournalAsset> entities) {
+        return entities.stream().map(JpaJournalAssetStore::data).toList();
+    }
+
+    private static JournalAssetData data(JournalAsset e) {
+        JournalAssetData d = new JournalAssetData();
+        d.id = e.id; d.journalEntryId = e.journalEntryId; d.userId = e.userId;
+        d.providerAssetId = e.providerAssetId; d.publicId = e.publicId; d.providerVersion = e.providerVersion;
+        d.format = e.format; d.deliveryType = e.deliveryType; d.assetType = e.assetType; d.mimeType = e.mimeType;
+        d.sizeBytes = e.sizeBytes; d.sha256 = e.sha256; d.width = e.width; d.height = e.height;
+        d.position = e.position; d.isCover = e.isCover; d.status = e.status;
+        d.encryptedCaption = e.encryptedCaption; d.captionIv = e.captionIv; d.captionWrappedKey = e.captionWrappedKey;
+        d.captionKeyVersion = e.captionKeyVersion; d.createdAt = e.createdAt; d.deletedAt = e.deletedAt;
+        return d;
+    }
+
+    private static void copy(JournalAssetData d, JournalAsset e) {
+        e.id = d.id; e.journalEntryId = d.journalEntryId; e.userId = d.userId;
+        e.providerAssetId = d.providerAssetId; e.publicId = d.publicId; e.providerVersion = d.providerVersion;
+        e.format = d.format; e.deliveryType = d.deliveryType; e.assetType = d.assetType; e.mimeType = d.mimeType;
+        e.sizeBytes = d.sizeBytes; e.sha256 = d.sha256; e.width = d.width; e.height = d.height;
+        e.position = d.position; e.isCover = d.isCover; e.status = d.status;
+        e.encryptedCaption = d.encryptedCaption; e.captionIv = d.captionIv; e.captionWrappedKey = d.captionWrappedKey;
+        e.captionKeyVersion = d.captionKeyVersion; e.createdAt = d.createdAt; e.deletedAt = d.deletedAt;
+    }
+}

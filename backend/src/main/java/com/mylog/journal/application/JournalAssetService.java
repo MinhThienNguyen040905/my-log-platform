@@ -1,11 +1,11 @@
 package com.mylog.journal.application;
 
-import com.mylog.journal.infrastructure.persistence.entity.JournalAsset;
 import com.mylog.platform.id.IdGenerator;
 import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.platform.web.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +23,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@ConditionalOnProperty(prefix = "mylog.identity", name = "enabled", havingValue = "true")
 public class JournalAssetService {
     private static final Logger log = LoggerFactory.getLogger(JournalAssetService.class);
     private final JournalAssetStore store;
@@ -76,7 +77,7 @@ public class JournalAssetService {
         AssetStoredResult stored = storage.store(userId, assetId, sanitized.bytes(), sanitized.format(), sanitized.mimeType());
 
         Instant now = clock.instant();
-        JournalAsset asset = new JournalAsset();
+        JournalAssetData asset = new JournalAssetData();
         asset.id = assetId;
         asset.userId = userId;
         asset.journalEntryId = null;
@@ -93,7 +94,7 @@ public class JournalAssetService {
         asset.height = sanitized.height();
         asset.position = 0;
         asset.isCover = false;
-        asset.status = JournalAsset.STATUS_PENDING_ATTACH;
+        asset.status = JournalAssetData.STATUS_PENDING_ATTACH;
         asset.createdAt = now;
 
         store.save(asset);
@@ -112,9 +113,9 @@ public class JournalAssetService {
 
     @Transactional(readOnly = true)
     public String getSignedUrl(UUID userId, UUID assetId) {
-        JournalAsset asset = store.findByUserIdAndId(userId, assetId)
+        JournalAssetData asset = store.findByUserIdAndId(userId, assetId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hình ảnh."));
-        if (JournalAsset.STATUS_DELETED.equals(asset.status)) {
+        if (JournalAssetData.STATUS_DELETED.equals(asset.status)) {
             throw new ResourceNotFoundException("Hình ảnh đã bị xóa.");
         }
         return storage.generateSignedUrl(asset.publicId, asset.format, asset.deliveryType, Duration.ofHours(1));
@@ -123,10 +124,10 @@ public class JournalAssetService {
     @Transactional(readOnly = true)
     public Map<UUID, String> batchGetSignedUrls(UUID userId, List<UUID> assetIds) {
         if (assetIds == null || assetIds.isEmpty()) return Map.of();
-        List<JournalAsset> assets = store.findAssetsByUserIdAndIds(userId, assetIds);
+        List<JournalAssetData> assets = store.findAssetsByUserIdAndIds(userId, assetIds);
         Map<UUID, String> result = new HashMap<>();
-        for (JournalAsset a : assets) {
-            if (!JournalAsset.STATUS_DELETED.equals(a.status)) {
+        for (JournalAssetData a : assets) {
+            if (!JournalAssetData.STATUS_DELETED.equals(a.status)) {
                 String url = storage.generateSignedUrl(a.publicId, a.format, a.deliveryType, Duration.ofHours(1));
                 result.put(a.id, url);
             }
@@ -143,8 +144,8 @@ public class JournalAssetService {
         return TipTapContent.enrichImageUrls(contentJson, urls);
     }
 
-    public String resolveCoverUrl(JournalAsset asset) {
-        if (asset == null || JournalAsset.STATUS_DELETED.equals(asset.status)) return null;
+    public String resolveCoverUrl(JournalAssetData asset) {
+        if (asset == null || JournalAssetData.STATUS_DELETED.equals(asset.status)) return null;
         return storage.generateThumbnailUrl(asset.publicId, asset.format, asset.deliveryType, 400, 400, Duration.ofHours(1));
     }
 
