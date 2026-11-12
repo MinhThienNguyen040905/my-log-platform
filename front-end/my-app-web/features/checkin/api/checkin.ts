@@ -25,6 +25,8 @@ export type CheckinInput = {
   energyScore?: number | null;
   sleepMinutes?: number | null;
   note?: string | null;
+  /** Omit to keep the day's existing activities; send `[]` to clear them. */
+  activities?: CheckinActivity[];
 };
 
 /** `null` khi ngày đó chưa check-in (backend trả 404) — đây là trạng thái bình thường, không phải lỗi. */

@@ -1,6 +1,6 @@
 # Kế hoạch thực thi: bù các tính năng còn thiếu trên web và mobile
 
-> **Trạng thái:** đợt 1 (W1, M2, M4, M5) đã triển khai và kiểm thử với backend local ngày 2026-11-11, xem kết quả ở mục 9 của kế hoạch kiểm thử. Các đợt 2–4 chưa làm. Lập ngày 2026-11-11.
+> **Trạng thái:** đợt 1 (W1, M2, M4, M5) đã triển khai và kiểm thử với backend local ngày 2026-11-11, xem kết quả ở mục 9 của kế hoạch kiểm thử. Phần web đã xong (cập nhật 2026-11-12): W2 có card check-in và chọn hoạt động; W3 đã bật tô sáng ở backend và web; W4 theo phương án A (đã bỏ ô bio). Các hạng mục mobile của đợt 2–4 chưa làm. Lập ngày 2026-11-11.
 > **Kế hoạch kiểm thử đi kèm:** [`WEB_MOBILE_GAP_TEST_PLAN.md`](WEB_MOBILE_GAP_TEST_PLAN.md).
 > **Phạm vi:** hai nhóm việc. Nhóm 1 là các tính năng backend đã có API nhưng web chưa làm. Nhóm 2 là các tính năng mobile còn thiếu so với web và backend. Phần duyệt safety/AI/provider trước khi phát hành **không** nằm trong tài liệu này.
 
@@ -89,7 +89,9 @@ M5 phải xong **trước hoặc cùng lúc** với M4 và M7, vì cả hai lu�
 
 ### W2. Check-in hằng ngày (P0)
 
-**Hiện trạng:** web không gọi `/api/v1/check-ins` ở đâu. Điểm áp lực, năng lượng và giấc ngủ trong trang viết được lưu **kèm từng bài nhật ký**, không phải check-in. Backend đã dùng check-in khi tính daily aggregate (`JpaDailyAggregateSource`), trong dashboard admin và trong bản xuất dữ liệu.
+> **Đã làm:** `features/checkin/` với card "Check-in hôm nay" trên dashboard, kèm chip chọn hoạt động (`utils/checkin-activities.ts`, mobile nên dùng cùng danh sách mã). Contract `activities` (2026-11-12): **không gửi trường** thì backend giữ nguyên hoạt động đã lưu của ngày đó; gửi `[]` thì xóa. Web luôn gửi danh sách đầy đủ và giữ thời lượng/cường độ của các hoạt động vẫn được chọn. Phần dưới là kế hoạch ban đầu.
+
+**Hiện trạng (lúc lập kế hoạch):** web không gọi `/api/v1/check-ins` ở đâu. Điểm áp lực, năng lượng và giấc ngủ trong trang viết được lưu **kèm từng bài nhật ký**, không phải check-in. Backend đã dùng check-in khi tính daily aggregate (`JpaDailyAggregateSource`), trong dashboard admin và trong bản xuất dữ liệu.
 
 **Contract backend** ([`CheckinController`](../src/main/java/com/mylog/checkin/api/CheckinController.java), [`CheckinService`](../src/main/java/com/mylog/checkin/application/CheckinService.java)):
 
@@ -129,7 +131,9 @@ M5 phải xong **trước hoặc cùng lúc** với M4 và M7, vì cả hai lu�
 
 ### W3. Tô sáng chữ (P2)
 
-**Hiện trạng:** nút tô sáng trong [`JournalBubbleMenu.tsx`](../../front-end/my-app-web/features/journal/components/JournalBubbleMenu.tsx) bị tắt. Backend chỉ chấp nhận các mark `bold, italic, underline, strike, code` ([`TipTapContent.java:18`](../src/main/java/com/mylog/journal/application/TipTapContent.java)).
+> **Đã làm:** backend nhận mark `highlight` (`TipTapContent.MARKS`), nút tô sáng trong `JournalBubbleMenu` đã bật. Mobile (M9) vẫn cần hiển thị mark này.
+
+**Hiện trạng (lúc lập kế hoạch):** nút tô sáng trong [`JournalBubbleMenu.tsx`](../../front-end/my-app-web/features/journal/components/JournalBubbleMenu.tsx) bị tắt. Backend chỉ chấp nhận các mark `bold, italic, underline, strike, code` ([`TipTapContent.java:18`](../src/main/java/com/mylog/journal/application/TipTapContent.java)).
 
 **Việc cần làm**
 1. **Backend:**
@@ -142,7 +146,9 @@ M5 phải xong **trước hoặc cùng lúc** với M4 và M7, vì cả hai lu�
 
 ### W4. Lời đề tựa (bio) trong hồ sơ (P2)
 
-**Hiện trạng:** [`SettingsView.tsx`](../../front-end/my-app-web/features/user/components/SettingsView.tsx) có ô bio, nhưng [`UpdateProfileRequest`](../src/main/java/com/mylog/user/api/request/UpdateProfileRequest.java) không có trường này.
+> **Quyết định:** phương án A, ô bio đã được bỏ khỏi `SettingsView`. Chỉ làm phương án B khi sản phẩm xác nhận cần bio.
+
+**Hiện trạng (lúc lập kế hoạch):** [`SettingsView.tsx`](../../front-end/my-app-web/features/user/components/SettingsView.tsx) có ô bio, nhưng [`UpdateProfileRequest`](../src/main/java/com/mylog/user/api/request/UpdateProfileRequest.java) không có trường này.
 
 **Cần chốt một trong hai phương án**
 - **A (đề xuất trước mắt):** bỏ ô bio khỏi giao diện cho tới khi sản phẩm xác nhận cần. Chỉ sửa web.

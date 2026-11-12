@@ -70,17 +70,17 @@ public final class InsightTemplates {
         return out;
     }
 
-    static String num(Object value) {
+    public static String num(Object value) {
         if (value == null) return "";
         BigDecimal d = value instanceof BigDecimal b ? b : new BigDecimal(value.toString());
         return d.stripTrailingZeros().scale() <= 0 ? d.toBigInteger().toString() : d.toPlainString().replace('.', ',');
     }
 
-    static String metric(Object code) {
+    public static String metric(Object code) {
         return "STRESS".equals(code) ? "căng thẳng" : "tâm trạng";
     }
 
-    static String weekday(Object code) {
+    public static String weekday(Object code) {
         return switch (String.valueOf(code)) {
             case "MONDAY" -> "thứ Hai";
             case "TUESDAY" -> "thứ Ba";
@@ -92,7 +92,7 @@ public final class InsightTemplates {
         };
     }
 
-    static String emotion(Object code) {
+    public static String emotion(Object code) {
         return switch (String.valueOf(code)) {
             case "JOY" -> "vui vẻ";
             case "SADNESS" -> "buồn";
@@ -105,7 +105,7 @@ public final class InsightTemplates {
         };
     }
 
-    static String topic(Object code) {
+    public static String topic(Object code) {
         return switch (String.valueOf(code)) {
             case "WORK" -> "công việc";
             case "RELATIONSHIPS" -> "các mối quan hệ";
@@ -116,7 +116,7 @@ public final class InsightTemplates {
         };
     }
 
-    static String activity(Object code) {
+    public static String activity(Object code) {
         String value = String.valueOf(code);
         return switch (value) {
             case "walking" -> "đi bộ";

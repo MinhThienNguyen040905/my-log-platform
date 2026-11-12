@@ -86,6 +86,36 @@ test.describe('daily check-in', () => {
     expect(list).toHaveLength(1);
   });
 
+  test('activities: pick, show, and keep ones saved by another client', async ({ page, request }) => {
+    const account = await createOnboardedAccount(request, 'checkin-activities');
+    const date = localDate(PROFILE_TZ);
+    const auth = { Authorization: `Bearer ${account.token}` };
+    // Another client (e.g. mobile) saved a check-in with an activity the web catalogue does not list.
+    const seeded = await request.put(`${BACKEND_URL}/api/v1/check-ins/${date}`, { headers: auth, data: {
+      timezone: PROFILE_TZ, moodCode: 'neutral', moodScore: 6,
+      activities: [{ code: 'gardening', durationMinutes: 40, intensity: 'LOW' }, { code: 'walking', durationMinutes: 30, intensity: 'LOW' }],
+    } });
+    expect(seeded.status()).toBe(200);
+    // The backend keeps activities when a client does not send the field at all.
+    const keep = await request.put(`${BACKEND_URL}/api/v1/check-ins/${date}`, { headers: auth, data: { timezone: PROFILE_TZ, moodCode: 'neutral', moodScore: 6 } });
+    expect((await keep.json()).activities).toHaveLength(2);
+
+    await login(page, account.email, account.password);
+    await expect(card(page).getByRole('listitem').filter({ hasText: /^Đi bộ$/ })).toBeVisible();
+    await card(page).getByRole('button', { name: /^Sửa$|^Edit$/ }).click();
+    await expect(card(page).getByRole('button', { name: 'Đi bộ', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(card(page).getByRole('button', { name: 'gardening', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await card(page).getByRole('button', { name: 'Đọc sách', exact: true }).click();
+    await card(page).getByRole('button', { name: 'Đi bộ', exact: true }).click(); // deselect on purpose
+    await card(page).getByRole('button', { name: /Lưu check-in|Save check-in/ }).click();
+    await expect(card(page).getByRole('listitem').filter({ hasText: /^Đọc sách$/ })).toBeVisible();
+
+    const after = await (await request.get(`${BACKEND_URL}/api/v1/check-ins/${date}`, { headers: auth })).json();
+    const byCode = Object.fromEntries((after.activities as { code: string; durationMinutes: number | null }[]).map((a) => [a.code, a]));
+    expect(Object.keys(byCode).sort()).toEqual(['gardening', 'reading']);
+    expect(byCode.gardening.durationMinutes).toBe(40); // untouched details survive a web edit
+  });
+
   test('W2-05: the backend rejects out-of-range values', async ({ request }) => {
     const account = await createOnboardedAccount(request, 'checkin-invalid');
     const auth = { Authorization: `Bearer ${account.token}` };

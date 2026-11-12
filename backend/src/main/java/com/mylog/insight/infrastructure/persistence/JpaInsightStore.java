@@ -158,6 +158,32 @@ class JpaInsightStore implements InsightStore {
                 .setParameter(1, insightId).setParameter(2, userId).getSingleResult()).longValue() > 0;
     }
 
+    @Override @Transactional(readOnly = true)
+    public List<UserZone> activeUsersAfter(UUID cursor, int limit) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery("""
+                SELECT p.user_id, p.timezone FROM user_profiles p JOIN users u ON u.id=p.user_id
+                WHERE u.status='ACTIVE' AND (CAST(?1 AS uuid) IS NULL OR p.user_id > CAST(?1 AS uuid))
+                ORDER BY p.user_id LIMIT ?2
+                """).setParameter(1, cursor == null ? null : cursor.toString()).setParameter(2, limit).getResultList();
+        List<UserZone> out = new ArrayList<>(rows.size());
+        for (Object[] row : rows) out.add(new UserZone((UUID) row[0], (String) row[1]));
+        return out;
+    }
+
+    @Override @Transactional(readOnly = true)
+    public boolean needsPatternRefresh(UUID userId, String algorithmVersion, Instant since) {
+        Object result = em.createNativeQuery("""
+                SELECT NOT EXISTS (SELECT 1 FROM insights WHERE user_id=?1 AND algorithm_version=?2 AND created_at>=?3)
+                   AND coalesce(greatest(
+                        (SELECT max(updated_at) FROM journal_entries WHERE user_id=?1),
+                        (SELECT max(updated_at) FROM daily_checkins WHERE user_id=?1)), timestamptz 'epoch')
+                     > coalesce((SELECT max(created_at) FROM insights WHERE user_id=?1 AND algorithm_version=?2),
+                        timestamptz 'epoch')
+                """).setParameter(1, userId).setParameter(2, algorithmVersion).setParameter(3, since).getSingleResult();
+        return Boolean.TRUE.equals(result);
+    }
+
     @Override @Transactional
     public void recordNarrationUsage(NarrationUsage usage, Instant now) {
         em.createNativeQuery("""

@@ -360,7 +360,7 @@ Asset có thể chuyển P2 nếu demo MVP không cần upload ảnh thật.
 
 - Backend đã có journal CRUD/list/favorite/tag, daily check-in, encryption, idempotency, outbox và safety event trong cùng transaction. Flyway V5–V7 đã áp dụng lên Supabase PostgreSQL (schema version 7); ứng dụng khởi động và Hibernate validate thành công với schema này. `mvn verify` qua PostgreSQL Testcontainers.
 - Classifier mặc định trả `unavailable`: journal vẫn lưu; ordinary analysis bị chặn và tạo `SafetyRescreenRequested`. Kể cả khi cắm classifier, policy gate chỉ cho ordinary analysis nếu có policy `APPROVED` đang hiệu lực và khớp rule/provider/version/confidence. Rule tiếng Việt/Anh hiện là **draft**, không được coi là policy đã duyệt. Corpus synthetic ghi nhận false positive dự kiến ở câu phủ định/trích dẫn; chưa có đánh giá false negative đáng tin cậy. API safety resources công khai chỉ trả nguồn đã duyệt, xác minh và có nguồn HTTPS; safety modal gọi API nhưng chưa có hotline hoặc nguồn hỗ trợ thật nào được duyệt trong DB.
-- Frontend hiện còn auth mock và journal trong `localStorage`; chưa đạt exit criteria tích hợp API. Frontend safety modal đã bỏ số điện thoại chưa xác minh. Cần nối auth M1 trước khi thay luồng journal/check-in bằng API có token, rồi kiểm tra high-risk end-to-end.
+- Web đã dùng auth M1 và API journal/check-in thật (không còn auth mock hay journal trong `localStorage`); safety modal đã bỏ số điện thoại chưa xác minh. Mobile còn thiếu một số luồng, xem `WEB_MOBILE_GAP_IMPLEMENTATION_PLAN.md`. Kiểm tra high-risk end-to-end với classifier/policy được duyệt vẫn còn mở.
 - Asset upload Cloudinary signed workflow vẫn mở và có thể chuyển P2 theo quy định ở trên. Dashboard ưu tiên check-in là quy tắc cho M4, chưa có dashboard query thực tế để xác nhận.
 
 ## 9. M3 — Outbox, jobs và AI analysis
@@ -495,9 +495,15 @@ cần bật rõ khi muốn chạy scheduler/worker.
 Bổ sung 2026-11-11: pattern insight 30 ngày (`POST /api/v1/insights:refresh`, `PATCH /api/v1/insights/{id}`)
 với sáu detector thống kê, evidence, ẩn insight và AI diễn đạt lại tùy chọn (facts only, validator + output
 screening, fallback câu mẫu). Có unit test detector/validator/adapter, PostgreSQL integration test
-(`InsightPatternIntegrationTest`) và Playwright cho trang Insight. Còn mở: job hằng đêm tự refresh, đánh giá
-chất lượng/safety câu AI trên tập mẫu lớn, analyzer cảm xúc được duyệt cho production (local đang dùng dev
-seeder `LOCAL_FAKE`).
+(`InsightPatternIntegrationTest`) và Playwright cho trang Insight.
+
+Bổ sung 2026-11-12: report tuần/tháng chi tiết (so sánh với kỳ trước, ngày dễ chịu/nặng nề nhất với tiêu đề bài
+giải mã lúc chủ sở hữu mở, thay đổi sắc thái/chủ đề, câu tóm tắt mẫu `report-template-v2` dùng dấu phẩy thập phân,
+AI diễn đạt lại tùy chọn qua `NarrativeRewriter` dùng chung với insight; kỳ khó khăn hơn luôn giữ câu mẫu),
+`POST /api/v1/reports` tạo report kỳ gần nhất theo yêu cầu, `POST /api/v1/reports/{id}:regenerate` tạo phiên bản
+mới, job hằng đêm `InsightRefreshScheduler` (tắt mặc định, không gọi AI mặc định). Test: `ReportNarrativesTest`,
+`ReportDetailIntegrationTest`, Playwright `report-detail.spec.ts`. Còn mở: đánh giá chất lượng/safety câu AI trên
+tập mẫu lớn, analyzer cảm xúc được duyệt cho production (local đang dùng dev seeder `LOCAL_FAKE`).
 
 - Dashboard không gọi LLM trong request path.
 - Mọi insight hiển thị được evidence/sample size.

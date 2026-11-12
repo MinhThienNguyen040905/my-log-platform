@@ -226,6 +226,30 @@ synthetic: bật consent `AI_PROCESSING`, gọi `POST /api/v1/dev/analyses:seed`
 - `POST /api/v1/dev/analyses:seed` chỉ có ở profile `local`: gán cảm xúc/chủ đề **mẫu** (`provider =
   LOCAL_FAKE`) cho bài 30 ngày gần nhất của user hiện tại, suy ra từ icon mood, điểm số, giấc ngủ và thẻ;
   không đọc hay gửi nội dung nhật ký. Không phải AI phân tích thật.
+- Job hằng đêm `InsightRefreshScheduler` (`MYLOG_INSIGHTS_REFRESH_ENABLED`, mặc định `false`, không chạy ở profile
+  `api`): mỗi `MYLOG_INSIGHTS_REFRESH_POLL_DELAY_MS` (15 phút) xét user đang ở giờ `MYLOG_INSIGHTS_REFRESH_LOCAL_HOUR`
+  (mặc định 3 giờ sáng theo timezone hồ sơ), chỉ tính lại khi có journal/check-in mới và chưa làm mới trong ngày.
+  Mặc định dùng câu mẫu; `MYLOG_INSIGHTS_REFRESH_AI_NARRATIVE=true` mới gọi AI (một lần gọi cho mỗi user được làm mới).
+  Giới hạn đã biết: user chưa đủ dữ liệu để có pattern không có dòng insight làm mốc, nên có thể được tính lại tối đa
+  vài lần trong khung giờ đó (chỉ là truy vấn thống kê, không gọi AI).
+
+### Report tuần/tháng chi tiết
+
+- Snapshot có thêm `journalDays`, `periodDays`, `previous` (trung bình kỳ trước), `bestDay`/`lowestDay` (ngày,
+  điểm, `entryId`), `topEmotions`/`topTopics` kèm `previousCount`. Tiêu đề bài không lưu trong snapshot (JSONB không
+  mã hóa); `GET /api/v1/reports/{id}` trả `entryTitles` giải mã cho chính chủ lúc đọc.
+- Câu tóm tắt dựng từ mẫu `ReportNarratives` (dấu phẩy thập phân, so sánh với kỳ trước, không nói nguyên nhân).
+  AI diễn đạt lại theo cùng điều kiện với pattern insight qua `NarrativeRewriter`; kỳ có tâm trạng giảm hoặc căng
+  thẳng tăng rõ luôn giữ câu mẫu. `generatedBy` là `RULE` hoặc `AI_ASSISTED`.
+- `POST /api/v1/reports` với `{"type":"WEEKLY"|"MONTHLY"}` tạo report cho tuần/tháng gần nhất đã kết thúc (trả
+  report có sẵn nếu kỳ đó đã có); `POST /api/v1/reports/{id}:regenerate` tạo phiên bản mới, bản cũ giữ nguyên. Hai
+  endpoint dùng chung giới hạn 10 lần/giờ. Worker (`MYLOG_REPORTS_ENABLED=true`) mới tính report; nếu tắt, report
+  ở trạng thái `PENDING`.
+
+### Check-in: hoạt động
+
+`PUT /api/v1/check-ins/{localDate}` không gửi trường `activities` thì giữ nguyên hoạt động đã lưu của ngày đó;
+gửi `[]` thì xóa; gửi danh sách thì thay thế. Web luôn gửi danh sách đầy đủ.
 
 ## Supabase PostgreSQL
 
