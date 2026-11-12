@@ -41,8 +41,14 @@ public class DevAnalysisSeedService {
     public record Result(int analyzed, int skipped, LocalDate from, LocalDate to) {}
 
     public Result seedRecent(UUID userId) {
+        return seedRecent(userId, false);
+    }
+
+    /** {@code reseed} first replaces earlier synthetic analyses of the window (never real ones). */
+    public Result seedRecent(UUID userId, boolean reseed) {
         LocalDate to = LocalDate.now(clock.withZone(ZoneId.of(store.timezone(userId))));
         LocalDate from = to.minusDays(WINDOW_DAYS - 1L);
+        if (reseed) store.resetSynthetic(userId, from, to);
         Map<UUID, String> topicByTag = new HashMap<>();
         for (JournalTagView tag : tags.list(userId)) {
             String topic = topicForTag(tag.name());

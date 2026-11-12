@@ -35,7 +35,7 @@ public class DashboardService {
         LocalDate from = today.minusDays(days - 1L);
         var timeline = source.daily(userId, from, today);
         var streak = JournalStreak.calculate(timeline, today);
-        return new DashboardView(range, timezone, from, today, timeline,
+        return new DashboardView(range, timezone, from, today, timeline, source.topMoods(userId, from, today, 6),
                 source.topEmotions(userId, from, today, 5), source.topTopics(userId, from, today, 5),
                 source.currentJournalStreak(userId, today), streak.longestInRange(),
                 timeline.stream().mapToInt(d -> d.journalCount()).sum(),

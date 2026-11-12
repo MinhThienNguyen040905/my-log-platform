@@ -30,6 +30,28 @@ class SyntheticAnalysisTest {
         }
     }
 
+    @Test void secondaryTonesNeverContradictTheIcon() {
+        int neutralWithHope = 0;
+        for (int i = 0; i < 600; i++) {
+            UUID id = UUID.randomUUID();
+            for (String icon : new String[] {"sad", "very-bad", "angry"}) {
+                var negative = SyntheticAnalysis.generate(new SyntheticAnalysis.Input(id, icon,
+                        new BigDecimal("3.5"), new BigDecimal("7.5"), 420, Set.of()));
+                assertTrue(negative.emotions().stream().noneMatch(e -> Set.of("HOPE", "JOY", "CALM").contains(e.code())),
+                        icon + " -> " + negative.emotions());
+                assertNotEquals("MIXED", negative.sentiment());
+            }
+            var happy = SyntheticAnalysis.generate(new SyntheticAnalysis.Input(id, "happy",
+                    new BigDecimal("8"), new BigDecimal("3"), 420, Set.of()));
+            assertTrue(happy.emotions().stream().noneMatch(e -> Set.of("SADNESS", "FEAR", "ANGER").contains(e.code())));
+            var neutral = SyntheticAnalysis.generate(new SyntheticAnalysis.Input(id, "neutral",
+                    new BigDecimal("6"), new BigDecimal("4"), 420, Set.of()));
+            assertEquals("CALM", neutral.emotions().getFirst().code());
+            if (neutral.emotions().stream().anyMatch(e -> e.code().equals("HOPE"))) neutralWithHope++;
+        }
+        assertTrue(neutralWithHope < 600 * 0.25, "hope is only an occasional secondary tone on neutral days: " + neutralWithHope);
+    }
+
     @Test void isDeterministicPerEntry() {
         UUID id = UUID.randomUUID();
         var input = new SyntheticAnalysis.Input(id, "neutral", new BigDecimal("6.0"), new BigDecimal("5.0"), null, Set.of());

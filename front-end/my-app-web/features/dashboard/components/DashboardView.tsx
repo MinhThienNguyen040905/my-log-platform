@@ -8,6 +8,7 @@ import { DailyCheckinCard } from '@/features/checkin';
 import { getDashboard, type Dashboard } from '../api/dashboard';
 import { MoodStressTrendChart } from './MoodStressTrendChart';
 import { EmotionDistributionChart } from './EmotionDistributionChart';
+import { moodSpectrum, toneSpectrum, topicLabel } from '../utils/spectrum';
 import { useQuery } from '@tanstack/react-query';
 import { WashiTape, PolaroidCard } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
@@ -282,7 +283,7 @@ export function DashboardView() {
                   key={i}
                   className="font-space text-xs font-bold px-3 py-1.5 rounded-xl border-neo-sm shadow-neo-sm flex items-center gap-1.5 bg-paper-warm"
                 >
-                  <span>{item.code}</span>
+                  <span>{topicLabel(item.code, t)}</span>
                   <span className="text-[10px] bg-black/15 px-1.5 py-0.5 rounded-full font-mono">{item.count}</span>
                 </span>
               ))}
@@ -293,21 +294,48 @@ export function DashboardView() {
         {/* COLUMN 2 (5 cols): EMOTION SPECTRUM (FR-06) & RECENT POLAROID SHELF */}
         <div className="lg:col-span-5 flex flex-col gap-6">
           {/* EMOTION SPECTRUM (FR-06 & FR-DASH-04) */}
-          <div className="bg-surface-card border-neo rounded-3xl p-6 shadow-neo relative">
+          <section aria-labelledby="dashboard-emotions-title" className="bg-surface-card border-neo rounded-3xl p-6 shadow-neo relative">
             <WashiTape color="blue" rotate={-1} className="absolute -top-3 left-6 w-24" />
 
             <div className="flex items-center justify-between pb-3 border-b-2 border-on-background mb-4">
               <div className="flex items-center gap-2">
                 <span className="w-3.5 h-3.5 rounded-full bg-mood-hope-energy border-neo-sm"></span>
-                <h2 className="font-space text-lg font-bold text-on-surface">{t('dashboard.emotions')}</h2>
+                <h2 id="dashboard-emotions-title" className="font-space text-lg font-bold text-on-surface">{t('dashboard.emotions')}</h2>
               </div>
               <span className="font-space text-xs bg-paper-warm px-2 py-0.5 rounded border border-black font-bold">
                 {t('dashboard.last30')}
               </span>
             </div>
 
-            <EmotionDistributionChart emotions={dashboard?.topEmotions ?? []} />
-          </div>
+            <p className="font-sans text-xs text-on-surface-variant mb-1">{t('dashboard.emotionsHint')}</p>
+            <EmotionDistributionChart
+              items={moodSpectrum(dashboard?.topMoods ?? [], t)}
+              emptyText={t('dashboard.noEmotions')}
+              formatValue={(value) => t('dashboard.entryCount', { count: value })}
+              valueName={t('dashboard.entries')}
+            />
+          </section>
+
+          {/* TONES IN WRITING: primary analysis tone per entry, kept separate from the picked mood. */}
+          <section aria-labelledby="dashboard-tones-title" className="bg-surface-card border-neo rounded-3xl p-6 shadow-neo relative">
+            <div className="flex items-center justify-between pb-3 border-b-2 border-on-background mb-4">
+              <div className="flex items-center gap-2">
+                <span className="w-3.5 h-3.5 rounded-full bg-paper-warm border-neo-sm"></span>
+                <h2 id="dashboard-tones-title" className="font-space text-lg font-bold text-on-surface">{t('dashboard.tones')}</h2>
+              </div>
+              <span className="font-space text-xs bg-paper-warm px-2 py-0.5 rounded border border-black font-bold">
+                {t('dashboard.last30')}
+              </span>
+            </div>
+            <p className="font-sans text-xs text-on-surface-variant mb-1">{t('dashboard.tonesHint')}</p>
+            <EmotionDistributionChart
+              items={toneSpectrum(dashboard?.topEmotions ?? [], t)}
+              emptyText={t('dashboard.noTones')}
+              formatValue={(value) => `${value}%`}
+              maxValue={100}
+              valueName={t('dashboard.shareOfEntries')}
+            />
+          </section>
 
           {/* POLAROID SHELF (FR-12 & FR-JOURNAL-09) */}
           <div className="bg-surface-card border-neo rounded-3xl p-6 shadow-neo">

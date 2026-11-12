@@ -91,6 +91,10 @@ class M4IntegrationTest {
         assertEquals(0, preferred.moodScore().compareTo(BigDecimal.valueOf(9)));
         assertEquals(1, preferred.journalCount());
         assertEquals("CALM", dashboardView.topEmotions().getFirst().code());
+        // Mood spectrum follows the icon picked on each entry, not the analysis codes.
+        assertEquals(1, dashboardView.topMoods().size());
+        assertEquals("calm", dashboardView.topMoods().getFirst().code());
+        assertEquals(7, dashboardView.topMoods().getFirst().count());
         assertEquals("OTHER", dashboardView.topTopics().getFirst().code());
         assertTrue(dashboard.get(stranger, "7d").timeline().isEmpty());
 

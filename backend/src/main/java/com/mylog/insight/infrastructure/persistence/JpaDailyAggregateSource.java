@@ -94,7 +94,7 @@ class JpaDailyAggregateSource implements DailyAggregateSource {
         return top("""
                 SELECT e.emotion_code, count(*), avg(e.score)
                 FROM journal_entries j JOIN ai_analyses a ON a.id=j.latest_analysis_id
-                JOIN analysis_emotions e ON e.analysis_id=a.id
+                JOIN analysis_emotions e ON e.analysis_id=a.id AND e.rank=1
                 WHERE j.user_id=?1 AND j.local_date BETWEEN ?2 AND ?3
                     AND j.deleted_at IS NULL AND j.analysis_status='ANALYZED'
                     AND a.user_id=?1 AND a.journal_entry_id=j.id
@@ -125,6 +125,17 @@ class JpaDailyAggregateSource implements DailyAggregateSource {
         for (Object[] row : rows)
             codes.add(new TopCode(row[0].toString(), ((Number) row[1]).longValue(), decimal(row[2])));
         return codes;
+    }
+
+    @Override @Transactional(readOnly = true)
+    public List<TopCode> topMoods(UUID userId, LocalDate from, LocalDate to, int limit) {
+        return top("""
+                SELECT mood_code, count(*), avg(mood_score)
+                FROM journal_entries
+                WHERE user_id=?1 AND local_date BETWEEN ?2 AND ?3
+                    AND deleted_at IS NULL AND entry_status='SAVED' AND mood_code IS NOT NULL
+                GROUP BY mood_code ORDER BY count(*) DESC, mood_code LIMIT ?4
+                """, userId, from, to, limit);
     }
 
     @Override @Transactional(readOnly = true)

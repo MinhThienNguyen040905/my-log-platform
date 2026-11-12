@@ -40,12 +40,16 @@ public final class SyntheticAnalysis {
             case "angry" -> stress >= 7 && random.nextBoolean() ? "ANXIETY" : "ANGER";
             default -> mood >= 7 ? "JOY" : mood <= 4 ? "SADNESS" : "CALM";
         };
+        // Secondary tones must stay compatible with the icon: no hope on a sad day, no fear on a happy one.
+        String icon = input.moodCode() == null ? "" : input.moodCode();
+        boolean positiveIcon = icon.equals("happy");
+        boolean negativeIcon = icon.equals("sad") || icon.equals("very-bad") || icon.equals("angry");
         Set<String> emotions = new LinkedHashSet<>();
         emotions.add(primary);
         if (stress >= 6.5) emotions.add("ANXIETY");
-        if (mood >= 7 && stress < 5) emotions.add(random.nextBoolean() ? "CALM" : "HOPE");
-        if (mood <= 4 && stress >= 7 && random.nextInt(3) == 0) emotions.add("FEAR");
-        if (mood >= 5 && mood < 7 && random.nextInt(4) == 0) emotions.add("HOPE");
+        if (positiveIcon && stress < 5) emotions.add(primary.equals("JOY") ? "CALM" : "JOY");
+        if (icon.equals("neutral") && stress < 6.5 && random.nextInt(6) == 0) emotions.add("HOPE");
+        if (negativeIcon && mood <= 4 && stress >= 7 && random.nextInt(3) == 0) emotions.add("FEAR");
 
         Set<String> topics = new LinkedHashSet<>(input.topicHints());
         if (input.sleepMinutes() != null && input.sleepMinutes() < 360) topics.add("SLEEP");

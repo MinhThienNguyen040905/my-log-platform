@@ -72,6 +72,20 @@ class JpaDevAnalysisSeedStore implements DevAnalysisSeedStore {
     }
 
     @Override @Transactional
+    public int resetSynthetic(UUID userId, LocalDate from, LocalDate to) {
+        return em.createNativeQuery("""
+                WITH target AS (
+                    SELECT j.id, j.latest_analysis_id FROM journal_entries j
+                    JOIN ai_analyses a ON a.id=j.latest_analysis_id AND a.user_id=j.user_id
+                    WHERE j.user_id=?1 AND j.local_date BETWEEN ?2 AND ?3 AND j.deleted_at IS NULL
+                        AND j.analysis_status='ANALYZED' AND a.provider='LOCAL_FAKE' AND a.status='SUCCEEDED'),
+                stale AS (UPDATE ai_analyses SET status='STALE' WHERE id IN (SELECT latest_analysis_id FROM target))
+                UPDATE journal_entries SET analysis_status='PENDING', latest_analysis_id=NULL, row_version=row_version+1
+                WHERE id IN (SELECT id FROM target)
+                """).setParameter(1, userId).setParameter(2, from).setParameter(3, to).executeUpdate();
+    }
+
+    @Override @Transactional
     public UUID save(UUID userId, UUID entryId, int contentVersion, JournalAnalyzer.Result result, Instant now) {
         AiAnalysis analysis = new AiAnalysis();
         analysis.id = ids.next();

@@ -12,7 +12,8 @@
 //        # also replace short bodies of existing entries with ~200-word synthetic text
 //   node backend/scripts/seed-demo-journal.mjs --email ... --password ... --analyze-only
 //        # grant AI_PROCESSING (synthetic account only), synthetic emotions for the last 30 days,
-//        # then POST /insights:refresh and print the pattern insights (--analyze does it after seeding)
+//        # then POST /insights:refresh and print the pattern insights (--analyze does it after seeding);
+//        # add --reseed-analysis to replace earlier synthetic analyses after the seeder rules change
 //
 // Env: MYLOG_API_URL (default http://localhost:8080), MAILPIT_URL (default http://localhost:8025).
 // All content is synthetic. Never point this at staging/prod or at a real person's account.
@@ -554,7 +555,8 @@ async function rewriteShortEntries(from, to) {
 async function analyzeAndRefresh() {
   // Synthetic test account only: allow AI wording of insight sentences (facts only, never journal text).
   await http('PUT', '/api/v1/me/consents/AI_PROCESSING', { body: { documentVersion: 'v1', granted: true } });
-  const { data: seeded } = await http('POST', '/api/v1/dev/analyses:seed');
+  // --reseed-analysis replaces earlier synthetic (LOCAL_FAKE) analyses of the window; real ones are never touched.
+  const { data: seeded } = await http('POST', `/api/v1/dev/analyses:seed${args['reseed-analysis'] ? '?reseed=true' : ''}`);
   console.log(`Phân tích mẫu: ${seeded.analyzed} bài (${seeded.from} → ${seeded.to}), bỏ qua ${seeded.skipped}.`);
   const { data: page } = await http('POST', '/api/v1/insights:refresh');
   const patterns = page.items.filter((i) => i.algorithmVersion?.startsWith('pattern-'));
