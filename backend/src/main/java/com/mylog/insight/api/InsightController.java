@@ -4,6 +4,8 @@ import com.mylog.identity.application.IdentityService;
 import com.mylog.insight.api.request.UpdateInsightRequest;
 import com.mylog.insight.api.response.InsightPageResponse;
 import com.mylog.insight.application.InsightService;
+import com.mylog.insight.application.MascotMoodService;
+import com.mylog.insight.api.response.MascotMoodResponse;
 import com.mylog.platform.security.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -29,9 +31,11 @@ class InsightController {
     private final InsightService insights;
     private final CurrentUserProvider current;
     private final IdentityService identity;
+    private final MascotMoodService mascot;
 
-    InsightController(InsightService insights, CurrentUserProvider current, IdentityService identity) {
-        this.insights = insights; this.current = current; this.identity = identity;
+    InsightController(InsightService insights, CurrentUserProvider current, IdentityService identity,
+                      MascotMoodService mascot) {
+        this.insights = insights; this.current = current; this.identity = identity; this.mascot = mascot;
     }
 
     @GetMapping("/insights")
@@ -40,6 +44,12 @@ class InsightController {
                              @RequestParam(required = false) String cursor,
                              @RequestParam(defaultValue = "20") int limit) {
         return InsightPageResponse.from(insights.list(user(), from, to, cursor, limit));
+    }
+
+    /** Mood the Insight-page mascot shows: the most picked mood icon in the last 7 local days. */
+    @GetMapping("/insights/mascot")
+    MascotMoodResponse mascot() {
+        return MascotMoodResponse.from(mascot.current(user()));
     }
 
     /** Recomputes the last-30-day pattern insights; rate limited because it may call an AI provider. */

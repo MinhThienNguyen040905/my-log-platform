@@ -35,7 +35,10 @@ public class UserProfileService implements UserProfileUseCase {
         this.store = store; this.cipher = cipher; this.ids = ids; this.clock = clock; this.mapper = mapper;
     }
 
-    private record ProfilePayload(String displayName, String penName, List<String> onboardingGoals) {}
+    /** {@code mascot}: the Insight-page companion (sprout|cat|coffee|off); null or a retired value (palette, book) in older payloads. */
+    private record ProfilePayload(String displayName, String penName, List<String> onboardingGoals, String mascot) {}
+
+    static final java.util.Set<String> MASCOTS = java.util.Set.of("sprout", "cat", "coffee", "off");
 
     @Override
     public void validateRegistrationPreferences(String timezone, String locale) {
@@ -48,7 +51,7 @@ public class UserProfileService implements UserProfileUseCase {
                               String privacyVersion, Instant now) {
         String zone = validTimezone(timezone);
         String language = validLocale(locale);
-        store.create(new UserStore.Profile(userId, encrypted(userId, new ProfilePayload("", "", List.of())),
+        store.create(new UserStore.Profile(userId, encrypted(userId, new ProfilePayload("", "", List.of(), null)),
                 zone, language, null, 0), now);
         store.addConsent(ids.next(), userId, "TERMS", termsVersion, true, "ONBOARDING", now);
         store.addConsent(ids.next(), userId, "PRIVACY", privacyVersion, true, "ONBOARDING", now);
@@ -61,7 +64,7 @@ public class UserProfileService implements UserProfileUseCase {
 
     @Override @Transactional
     public ProfileView update(UUID userId, String displayName, String penName, List<String> onboardingGoals, String timezone,
-                              String locale, long expectedVersion) {
+                              String locale, String mascot, long expectedVersion) {
         UserStore.Profile current = require(userId);
         if (current.version() != expectedVersion) throw new ConflictException("Hồ sơ đã được cập nhật ở nơi khác.");
         ProfilePayload old = decrypted(current);
@@ -71,8 +74,9 @@ public class UserProfileService implements UserProfileUseCase {
                 (old.onboardingGoals() == null ? List.of() : old.onboardingGoals()) : List.copyOf(onboardingGoals);
         if (goals.size() > 5 || !WELLNESS_GOALS.containsAll(goals) || new java.util.HashSet<>(goals).size() != goals.size())
             throw new InvalidRequestException();
+        if (mascot != null && !MASCOTS.contains(mascot)) throw new InvalidRequestException();
         var updated = new ProfilePayload(displayName == null ? old.displayName() : displayName.trim(),
-                penName == null ? old.penName() : penName.trim(), goals);
+                penName == null ? old.penName() : penName.trim(), goals, mascot == null ? old.mascot() : mascot);
         if (updated.displayName().length() > 120 || updated.penName().length() > 120)
             throw new InvalidRequestException();
         var next = new UserStore.Profile(userId, encrypted(userId, updated),
@@ -115,7 +119,8 @@ public class UserProfileService implements UserProfileUseCase {
     private ProfileView view(UserStore.Profile profile) {
         ProfilePayload data = decrypted(profile);
         return new ProfileView(profile.userId(), data.displayName(), data.penName(), data.onboardingGoals(), profile.timezone(),
-                profile.locale(), profile.onboardingCompletedAt(), profile.version());
+                profile.locale(), profile.onboardingCompletedAt(), profile.version(),
+                data.mascot() != null && MASCOTS.contains(data.mascot()) ? data.mascot() : "sprout");
     }
     private SensitiveDataCipher.Encrypted encrypted(UUID userId, ProfilePayload payload) {
         return cipher.encrypt("user_profiles.profile", userId, userId, mapper.writeValueAsString(payload));

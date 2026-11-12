@@ -115,6 +115,8 @@ mylog:
     enabled: ${MYLOG_REPORTS_ENABLED:false}
     poll-delay-ms: ${MYLOG_REPORTS_POLL_DELAY_MS:5000}
     schedule-delay-ms: ${MYLOG_REPORTS_SCHEDULE_DELAY_MS:3600000}
+    # true: each user may regenerate one report per local week (production). false: any time, for local testing.
+    weekly-regenerate-limit: ${MYLOG_REPORTS_WEEKLY_REGENERATE_LIMIT:true}
   exports:
     enabled: ${MYLOG_EXPORTS_ENABLED:true}
     poll-delay-ms: ${MYLOG_EXPORTS_POLL_DELAY_MS:5000}

@@ -9,6 +9,10 @@ export type Feedback = {
 export function submitFeedback(category: string, message: string): Promise<{ id: string }> {
   return apiJson('feedback', { method: 'POST', ...apiJsonBody({ category, message }) });
 }
+/** The signed-in user's own feedback, newest first. */
+export function listMyFeedback(limit = 20): Promise<Feedback[]> {
+  return apiJson(`feedback${apiQuery({ limit })}`);
+}
 export function getFeedback(id: string): Promise<Feedback> {
   return apiJson(`feedback/${encodeURIComponent(id)}`);
 }

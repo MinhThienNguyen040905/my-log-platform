@@ -6,8 +6,8 @@ import com.mylog.journal.api.response.JournalAssetUploadResponse;
 import com.mylog.journal.api.response.JournalAssetUrlResponse;
 import com.mylog.journal.application.JournalAssetService;
 import com.mylog.journal.application.JournalAssetStore;
-import com.mylog.journal.infrastructure.LocalFileAssetStorage;
-import com.mylog.journal.infrastructure.persistence.entity.JournalAsset;
+import com.mylog.journal.application.LocalAssetFiles;
+import com.mylog.journal.application.JournalAssetData;
 import com.mylog.platform.security.CurrentUserProvider;
 import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.platform.web.ResourceNotFoundException;
@@ -39,13 +39,13 @@ import java.util.UUID;
 public class JournalAssetController {
     private final JournalAssetService assetService;
     private final JournalAssetStore assetStore;
-    private final LocalFileAssetStorage localFileStorage;
+    private final LocalAssetFiles localFileStorage;
     private final CurrentUserProvider current;
 
     public JournalAssetController(
             JournalAssetService assetService,
             JournalAssetStore assetStore,
-            LocalFileAssetStorage localFileStorage,
+            LocalAssetFiles localFileStorage,
             CurrentUserProvider current
     ) {
         this.assetService = assetService;
@@ -91,9 +91,9 @@ public class JournalAssetController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        JournalAsset asset = assetStore.findById(assetId)
+        JournalAssetData asset = assetStore.findById(assetId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hình ảnh."));
-        if (JournalAsset.STATUS_DELETED.equals(asset.status)) {
+        if (JournalAssetData.STATUS_DELETED.equals(asset.status)) {
             return ResponseEntity.status(HttpStatus.GONE).build();
         }
 

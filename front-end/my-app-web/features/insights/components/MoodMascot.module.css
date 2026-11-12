@@ -1,0 +1,92 @@
+/* Mascot animation. Each expression has one cycle (--d) shared by all three mascots. */
+.art { display: block; width: 100%; height: 100%; overflow: visible; --ink: #3b2f2f; }
+.happy { --d: 1.2s; }
+.sad { --d: 3.2s; }
+.angry { --d: 1.4s; }
+.tired { --d: 4s; }
+.normal { --d: 2.8s; }
+
+.o { stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.fb { transform-box: fill-box; transform-origin: center; }
+.shadow { fill: var(--ink); opacity: .16; }
+.say { font-weight: 600; font-size: 13px; fill: var(--ink); }
+.zz { font-weight: 800; fill: #6d62a8; }
+
+.char { transform-origin: 100px 178px; }
+.tail { transform-origin: 140px 164px; }
+.head { transform-origin: 100px 112px; }
+.earL { transform-origin: 78px 54px; }
+.earR { transform-origin: 122px 54px; }
+
+@keyframes hop { 0%, 100% { transform: translateY(0) scale(1, 1); } 12% { transform: translateY(0) scale(1.05, .94); } 45% { transform: translateY(-12px) scale(.97, 1.04); } 78% { transform: translateY(0) scale(1.04, .95); } }
+@keyframes sink { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(3px) scale(1.01, .975); } }
+@keyframes tremble { 0%, 38%, 100% { transform: translate(0, 0) rotate(0); } 4% { transform: translate(-1.6px, .4px) rotate(-.7deg); } 8% { transform: translate(1.6px, -.4px) rotate(.7deg); } 12% { transform: translate(-1.6px, .2px) rotate(-.6deg); } 16% { transform: translate(1.5px, -.3px) rotate(.6deg); } 20% { transform: translate(-1.2px, .3px) rotate(-.5deg); } 24% { transform: translate(1.2px, -.2px) rotate(.5deg); } 28% { transform: translate(-.8px, .2px) rotate(-.3deg); } 32% { transform: translate(.8px, 0) rotate(.3deg); } }
+@keyframes breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.015, .975); } }
+@keyframes slump { 0%, 100% { transform: translateY(1px) scale(1.02, .965); } 50% { transform: translateY(3px) scale(1.03, .935); } }
+@keyframes shad { 0%, 100% { transform: scaleX(1); opacity: .16; } 45% { transform: scaleX(.78); opacity: .09; } }
+
+.happy .char { animation: hop var(--d) infinite ease-in-out; }
+.sad .char { animation: sink var(--d) infinite ease-in-out; }
+.angry .char { animation: tremble var(--d) infinite linear; }
+.tired .char { animation: slump var(--d) infinite ease-in-out; }
+.normal .char { animation: breathe var(--d) infinite ease-in-out; }
+.happy .shadow { animation: shad var(--d) infinite ease-in-out; }
+
+/* Cat */
+@keyframes wag { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(14deg); } }
+@keyframes sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(6deg); } }
+@keyframes lazy { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(3deg); } }
+@keyframes flick { 0%, 55%, 100% { transform: rotate(0); } 65% { transform: rotate(9deg); } 75% { transform: rotate(-6deg); } 85% { transform: rotate(7deg); } }
+@keyframes tilt { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes bob { 0%, 100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(3deg) translateY(-1px); } }
+@keyframes lower { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(2px) rotate(2deg); } }
+@keyframes nod { 0%, 55%, 100% { transform: rotate(0) translateY(0); } 25% { transform: rotate(7deg) translateY(2px); } }
+@keyframes blink { 0%, 90%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.08); } }
+@keyframes twitch { 0%, 84%, 100% { transform: rotate(0); } 89% { transform: rotate(9deg); } 94% { transform: rotate(0); } }
+.normal .tail { animation: sway var(--d) infinite ease-in-out; }
+.happy .tail { animation: wag calc(var(--d) / 2) infinite ease-in-out; }
+.sad .tail, .tired .tail { animation: lazy var(--d) infinite ease-in-out; }
+.angry .tail { animation: flick var(--d) infinite ease-in-out; }
+.normal .head { animation: tilt calc(var(--d) * 2) infinite ease-in-out; }
+.happy .head { animation: bob var(--d) infinite ease-in-out; }
+.sad .head { animation: lower var(--d) infinite ease-in-out; }
+.tired .head { animation: nod calc(var(--d) * 1.5) infinite ease-in-out; }
+.blink { animation: blink calc(var(--d) * 1.6) infinite ease-in-out; }
+.normal .earR, .happy .earR { animation: twitch calc(var(--d) * 3) infinite ease-in-out; }
+
+/* Sprout: --a is the resting leaf angle, --amp the sway amplitude (both set inline per leaf). */
+.leaf { transform: rotate(calc(var(--a) * 1deg)); }
+@keyframes lsway { 0%, 100% { transform: rotate(calc((var(--a) - var(--amp)) * 1deg)); } 50% { transform: rotate(calc((var(--a) + var(--amp)) * 1deg)); } }
+.normal .leaf { animation: lsway calc(var(--d) * 1.2) infinite ease-in-out; }
+.happy .leaf { animation: lsway var(--d) infinite ease-in-out; }
+.sad .leaf { animation: lsway calc(var(--d) * 1.5) infinite ease-in-out; }
+.angry .leaf { animation: lsway calc(var(--d) / 6) infinite ease-in-out; }
+.tired .leaf { animation: lsway var(--d) infinite ease-in-out; }
+.cloud { animation: tremble var(--d) infinite linear; }
+
+/* Effects */
+@keyframes twinkle { 0%, 100% { transform: scale(.25); opacity: 0; } 50% { transform: scale(1); opacity: 1; } }
+@keyframes rise { 0% { transform: translateY(8px) scale(.5); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-22px) scale(1.1); opacity: 0; } }
+@keyframes drip { 0% { transform: translateY(-4px) scale(.6); opacity: 0; } 15% { transform: translateY(0) scale(1); opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(18px); opacity: 0; } }
+@keyframes zap { 0%, 100% { opacity: 0; } 8%, 16% { opacity: 1; } 24% { opacity: .1; } 32% { opacity: 1; } 44% { opacity: 0; } }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+@keyframes steam { 0% { transform: translateY(6px); opacity: 0; } 30% { opacity: .85; } 100% { transform: translateY(-10px); opacity: 0; } }
+@keyframes zfloat { 0% { transform: translate(0, 6px); opacity: 0; } 30% { opacity: .95; } 100% { transform: translate(8px, -14px); opacity: 0; } }
+@keyframes saying { 0%, 100% { opacity: .55; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-3px); } }
+@keyframes wobble { 0%, 100% { transform: translateX(-2px); } 50% { transform: translateX(2px); } }
+.sparkle { animation: twinkle calc(var(--d) * 1.5) infinite ease-in-out; }
+.heart { animation: rise calc(var(--d) * 2) infinite ease-out; }
+.tear { animation: drip calc(var(--d) * .7) infinite ease-in; }
+.zap { animation: zap var(--d) infinite linear; }
+.anger { animation: pulse calc(var(--d) / 3) infinite ease-in-out; }
+.steam { animation: steam calc(var(--d) * 1.2) infinite ease-out; }
+.angry .steam { animation-duration: calc(var(--d) * .7); }
+.sad .steam { animation: steam calc(var(--d) * 1.2) infinite ease-out, wobble var(--d) infinite ease-in-out; }
+.zz { animation: zfloat var(--d) infinite ease-out; }
+.say { animation: saying var(--d) infinite ease-in-out; }
+
+/* Calm (high-risk week) and reduced motion: the mascot stays still. */
+.still, .still * { animation: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .art, .art * { animation: none !important; }
+}

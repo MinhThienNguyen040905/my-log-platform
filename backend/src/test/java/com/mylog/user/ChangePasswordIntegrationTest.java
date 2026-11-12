@@ -112,7 +112,8 @@ class ChangePasswordIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("CURRENT_PASSWORD_INCORRECT"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.detail").value("CURRENT_PASSWORD_INCORRECT"));
     }
 
     @Test
@@ -127,7 +128,8 @@ class ChangePasswordIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("NEW_PASSWORD_SAME_AS_OLD"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.detail").value("NEW_PASSWORD_SAME_AS_OLD"));
     }
 
     @Test
@@ -143,7 +145,8 @@ class ChangePasswordIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("PASSWORD_CONTAINS_USER_INFO"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.detail").value("PASSWORD_CONTAINS_USER_INFO"));
     }
 
     @Test
@@ -158,7 +161,8 @@ class ChangePasswordIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("PASSWORD_LENGTH_INVALID"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.detail").value("PASSWORD_LENGTH_INVALID"));
     }
 
     @Test
@@ -188,7 +192,8 @@ class ChangePasswordIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("OAUTH_ONLY_ACCOUNT"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.detail").value("OAUTH_ONLY_ACCOUNT"));
     }
 
     @Test
@@ -204,7 +209,8 @@ class ChangePasswordIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.code").value("CURRENT_PASSWORD_INCORRECT"));
+                    .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                    .andExpect(jsonPath("$.detail").value("CURRENT_PASSWORD_INCORRECT"));
         }
 
         // Lần thứ 6 bị chặn 429

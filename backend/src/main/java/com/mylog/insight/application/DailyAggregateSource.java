@@ -21,6 +21,9 @@ public interface DailyAggregateSource {
     /** Saved entries in the window with scores, current analysis codes (if ANALYZED) and tag IDs. */
     List<EntrySignal> entrySignals(UUID userId, LocalDate from, LocalDate to);
     List<ActivitySignal> activities(UUID userId, LocalDate from, LocalDate to);
+    /** Most picked mood icon in the window (ties: the most recent entry's), or null; plus the entry count. */
+    record DominantMood(String code, int count, int entries) {}
+    DominantMood dominantMood(UUID userId, LocalDate from, LocalDate to);
     /** True when any saved entry in the window was screened HIGH or CRITICAL. */
     boolean hasElevatedRisk(UUID userId, LocalDate from, LocalDate to);
 }

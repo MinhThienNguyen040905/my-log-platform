@@ -57,6 +57,19 @@ export function latestPerPeriod(reports: Report[]): Report[] {
   return reports.filter((report) => latest.get(`${report.type}|${report.from}|${report.to}`) === report);
 }
 
+const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/**
+ * First day of the most recent finished period, matching the backend (`ReportPeriod.previousWeek/Month`):
+ * last week's Monday or last month's 1st. Uses the browser date; the backend still decides the real period.
+ */
+export function lastFinishedPeriodStart(type: 'WEEKLY' | 'MONTHLY', today: Date = new Date()): string {
+  if (type === 'MONTHLY') return isoDay(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - ((today.getDay() + 6) % 7));
+  monday.setDate(monday.getDate() - 7);
+  return isoDay(monday);
+}
+
 export function formatScore(value: number | null, locale: string): string {
   if (value === null) return '–';
   return new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'vi-VN', { maximumFractionDigits: 1 }).format(value);

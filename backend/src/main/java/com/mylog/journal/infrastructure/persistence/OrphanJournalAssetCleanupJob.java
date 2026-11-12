@@ -2,7 +2,7 @@ package com.mylog.journal.infrastructure.persistence;
 
 import com.mylog.journal.application.JournalAssetStorage;
 import com.mylog.journal.application.JournalAssetStore;
-import com.mylog.journal.infrastructure.persistence.entity.JournalAsset;
+import com.mylog.journal.application.JournalAssetData;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -34,8 +34,8 @@ public class OrphanJournalAssetCleanupJob {
         Instant now = clock.instant();
         // 1. Purge PENDING_ATTACH orphans older than 72 hours
         Instant draftCutoff = now.minus(Duration.ofHours(72));
-        List<JournalAsset> orphans = store.findOrphansBefore(draftCutoff, 50);
-        for (JournalAsset orphan : orphans) {
+        List<JournalAssetData> orphans = store.findOrphansBefore(draftCutoff, 50);
+        for (JournalAssetData orphan : orphans) {
             storage.delete(orphan.publicId, orphan.assetType, orphan.deliveryType);
             store.markDeleted(orphan.id, now);
         }

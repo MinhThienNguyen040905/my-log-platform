@@ -10,12 +10,14 @@ const routes: AllowedRoute[] = [
   { methods: ['GET'], pattern: new RegExp(`^journal-entries/${uuid}/analysis$`) },
   { methods: ['POST'], pattern: new RegExp(`^journal-entries/${uuid}/analysis:retry$`) },
   { methods: ['GET'], pattern: /^(dashboard|insights|reports)$/ },
+  { methods: ['GET'], pattern: /^insights\/mascot$/ },
   { methods: ['POST'], pattern: /^insights:refresh$/ },
   { methods: ['PATCH'], pattern: new RegExp(`^insights/${uuid}$`) },
   { methods: ['GET'], pattern: /^check-ins$/ },
   { methods: ['GET', 'PUT'], pattern: new RegExp(`^check-ins/${date}$`) },
   { methods: ['GET'], pattern: new RegExp(`^reports/${uuid}$`) },
   { methods: ['POST'], pattern: /^reports$/ },
+  { methods: ['GET'], pattern: /^reports\/regeneration$/ },
   { methods: ['POST'], pattern: new RegExp(`^reports/${uuid}:regenerate$`) },
   { methods: ['GET', 'POST'], pattern: /^self-care\/goals$/ },
   { methods: ['PATCH'], pattern: new RegExp(`^self-care/goals/${uuid}$`) },
@@ -30,9 +32,7 @@ const routes: AllowedRoute[] = [
   { methods: ['GET'], pattern: new RegExp(`^exports/${uuid}$`) },
   { methods: ['POST'], pattern: new RegExp(`^exports/${uuid}:authorize-download$`) },
   { methods: ['GET'], pattern: new RegExp(`^exports/${uuid}/file$`), file: true },
-  { methods: ['POST'], pattern: /^account-deletion-requests$/ },
-  { methods: ['POST'], pattern: new RegExp(`^account-deletion-requests/${uuid}:(status|cancel)$`), public: true },
-  { methods: ['POST'], pattern: /^feedback$/ },
+  { methods: ['GET', 'POST'], pattern: /^feedback$/ },
   { methods: ['GET'], pattern: new RegExp(`^feedback/${uuid}$`) },
   { methods: ['GET'], pattern: /^admin\/feedback$/ },
   { methods: ['GET'], pattern: /^admin\/dashboard$/ },
@@ -76,7 +76,6 @@ export async function securedProxy(request: Request, segments: string[]) {
       response = await send(token);
     }
     if (response.status === 401 && !route.public) await clearTokens();
-    if (path === 'account-deletion-requests' && response.ok) await clearTokens();
 
     const headers = new Headers({ 'Cache-Control': 'no-store' });
     for (const name of ['content-type', 'etag']) {

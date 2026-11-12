@@ -13,7 +13,7 @@ public interface UserProfileUseCase {
                        String privacyVersion, Instant now);
     ProfileView get(UUID userId);
     ProfileView update(UUID userId, String displayName, String penName, List<String> onboardingGoals, String timezone,
-                       String locale, long expectedVersion);
+                       String locale, String mascot, long expectedVersion);
     ProfileView completeOnboarding(UUID userId, long expectedVersion);
     void decideConsent(UUID userId, String type, String documentVersion, boolean granted);
     List<ConsentView> consents(UUID userId);

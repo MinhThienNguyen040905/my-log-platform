@@ -3,6 +3,7 @@ package com.mylog.journal.api;
 import com.mylog.journal.api.request.CreateJournalEntryRequest;
 import com.mylog.journal.api.request.UpdateJournalEntryRequest;
 import com.mylog.journal.api.response.JournalEntryResponse;
+import com.mylog.journal.api.response.JournalDailyCountsResponse;
 import com.mylog.journal.api.response.JournalPageResponse;
 import com.mylog.journal.application.JournalService;
 import com.mylog.identity.application.IdentityService;
@@ -47,6 +48,12 @@ public class JournalController {
                                       @RequestParam(required = false) String cursor,
                                       @RequestParam(defaultValue = "5") int limit) {
         return JournalPageResponse.from(journal.searchByTitle(user(), query, cursor, limit));
+    }
+
+    /** Entries per local day for the calendar (max 92 days); reads no journal content. */
+    @GetMapping("/daily-counts")
+    public JournalDailyCountsResponse dailyCounts(@RequestParam LocalDate from, @RequestParam LocalDate to) {
+        return JournalDailyCountsResponse.from(from, to, journal.dailyCounts(user(), from, to));
     }
 
     @GetMapping("/{entryId}")

@@ -9,6 +9,7 @@ import type { Checkin } from '../api/checkin';
 import { useDailyCheckin } from '../hooks/useDailyCheckin';
 import { CHECKIN_LIMITS, CHECKIN_MOOD_CODES, emotionFromMoodCode, localDateIn, roundScore } from '../utils/checkin-values';
 import { activitiesForSave, activityChoices } from '../utils/checkin-activities';
+import { summarizeCheckin } from '../utils/checkin-summary';
 
 type Draft = { emotion: JournalEmotion | null; stress: number; energy: number; sleepHours: number; note: string; activities: string[] };
 
@@ -203,14 +204,7 @@ export function DailyCheckinCard({ userId, timezone }: { userId: string; timezon
 
 function CheckinSummary({ checkin }: { checkin: Checkin }) {
   const { t } = useTranslation();
-  const emotion = emotionFromMoodCode(checkin.moodCode);
-  const items = [
-    emotion ? JOURNAL_EMOTIONS[emotion].label : null,
-    checkin.stressScore !== null ? `${t('checkin.stress')} ${checkin.stressScore}/10` : null,
-    checkin.energyScore !== null ? `${t('checkin.energy')} ${checkin.energyScore}/10` : null,
-    checkin.sleepMinutes !== null ? `${t('checkin.sleep')} ${Math.round((checkin.sleepMinutes / 60) * 10) / 10}h` : null,
-    ...checkin.activities.map((activity) => t(`checkin.activityLabels.${activity.code}`, { defaultValue: activity.code.replace(/-/g, ' ') })),
-  ].filter((value): value is string => value !== null);
+  const items = summarizeCheckin(checkin, t);
   return (
     <div className="flex flex-col gap-2" role="status">
       <p className="inline-flex items-center gap-1.5 font-space text-sm font-bold">

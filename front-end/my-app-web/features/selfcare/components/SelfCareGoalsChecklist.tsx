@@ -10,7 +10,6 @@ import {
   Wind,
   X,
 } from 'lucide-react';
-import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { useTranslation } from 'react-i18next';
 import { getHabitTodayDate, useSelfCareGoals } from '../hooks/useSelfCareGoals';
 import { CreateHabitFromTemplateModal, type HabitTemplatePreset } from './CreateHabitFromTemplateModal';
@@ -148,7 +147,6 @@ export function SelfCareGoalsChecklist() {
 
   return (
     <div className="bg-surface-card border-neo rounded-3xl p-6 shadow-neo relative">
-      <WashiTape color="lavender" rotate={-2} className="absolute -top-3 left-6 w-28" />
 
       <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b-2 border-black mb-4">
         <div className="flex items-center gap-2">

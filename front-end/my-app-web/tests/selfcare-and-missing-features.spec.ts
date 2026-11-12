@@ -298,13 +298,12 @@ test.describe('Part 1 & Part 2 Web Features Verification (KT-03..KT-07)', () => 
     expect(recordedCalls).toContain('POST /habits:Nghe tiếng mưa 5 phút:DAILY:none');
   });
 
-  test('KT-04 & KT-05: SettingsView User Feedback submission + Account Deletion request & cancel', async ({
+  test('KT-04: SettingsView User Feedback submission; account deletion is not offered in the web UI', async ({
     page,
   }) => {
     await setupAuthenticatedSession(page);
 
     const feedbackId = '01950000-0000-7000-8000-000000000401';
-    const deletionId = '01950000-0000-7000-8000-000000000501';
     const actions: string[] = [];
 
     await page.route('**/api/me/consents', (route) =>
@@ -321,80 +320,38 @@ test.describe('Part 1 & Part 2 Web Features Verification (KT-03..KT-07)', () => 
       }),
     );
 
-    await page.route('**/api/backend/feedback', async (route) => {
+    const submitted: Array<Record<string, unknown>> = [];
+    await page.route('**/api/backend/feedback**', async (route) => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(submitted) });
+      }
       const body = route.request().postDataJSON() as { category: string; message: string };
       actions.push(`POST /feedback:${body.category}:${body.message}`);
-      return route.fulfill({
-        status: 202,
-        contentType: 'application/json',
-        body: JSON.stringify({ id: feedbackId }),
+      submitted.unshift({
+        id: feedbackId, userId: TEST_USER_ID, category: body.category, status: 'OPEN', message: body.message,
+        assignedTo: null, createdAt: '2026-11-11T10:00:00Z', updatedAt: '2026-11-11T10:00:00Z', resolvedAt: null, version: 1,
       });
+      return route.fulfill({ status: 202, contentType: 'application/json', body: JSON.stringify({ id: feedbackId }) });
     });
 
-    await page.route(`**/api/backend/feedback/${feedbackId}`, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: feedbackId,
-          userId: TEST_USER_ID,
-          category: 'IDEA',
-          status: 'OPEN',
-          message: 'Thêm chế độ xem lịch theo quý',
-          assignedTo: null,
-          createdAt: '2026-11-11T10:00:00Z',
-          updatedAt: '2026-11-11T10:00:00Z',
-          resolvedAt: null,
-          version: 1,
-        }),
-      }),
-    );
+    await page.goto('/setting?tab=feedback');
 
-    await page.route('**/api/backend/account-deletion-requests', async (route) => {
-      const body = route.request().postDataJSON() as { password: string };
-      actions.push(`POST /account-deletion-requests:${body.password.length > 0}`);
-      return route.fulfill({
-        status: 202,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: deletionId,
-          status: 'PENDING',
-          requestedAt: '2026-11-11T10:00:00Z',
-          scheduledFor: '2026-11-18T10:00:00Z',
-          completedAt: null,
-        }),
-      });
-    });
-
-    await page.route(`**/api/backend/account-deletion-requests/${deletionId}:cancel`, async (route) => {
-      actions.push('POST /account-deletion-requests:cancel');
-      return route.fulfill({ status: 204 });
-    });
-
-    await page.goto('/setting');
-
-    // KT-04: Submit user feedback
+    // KT-04: Submit user feedback; it shows up in "Góp ý của bạn" with its status, no ticket id needed.
+    await expect(page.getByText('Bạn chưa gửi góp ý nào.')).toBeVisible();
     await page.getByLabel('Nội dung góp ý').fill('Thêm chế độ xem lịch theo quý');
     await page.getByRole('button', { name: 'Gửi góp ý' }).click();
     await expect(page.getByText(/Đã gửi góp ý thành công/)).toBeVisible();
-    await expect(page.getByText('Mới tiếp nhận (OPEN)')).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: 'Thêm chế độ xem lịch theo quý' })).toContainText('Mới tiếp nhận');
+    await expect(page.getByLabel(/UUID/)).toHaveCount(0);
 
-    // KT-05: Request account deletion & cancel within grace period
-    const deletionSection = page.getByRole('region', { name: 'Xóa tài khoản vĩnh viễn' });
-    await deletionSection.getByRole('checkbox').check();
-    await deletionSection.getByLabel('Mật khẩu xác nhận xóa tài khoản').fill('ValidPassword123!');
-    await deletionSection.getByRole('button', { name: 'Yêu cầu xóa tài khoản' }).click();
-    await expect(deletionSection.getByText(deletionId)).toBeVisible();
-
-    await deletionSection.getByLabel('Email xác thực yêu cầu xóa').fill('synthetic-user@example.test');
-    await deletionSection.getByLabel('Mật khẩu quản lý yêu cầu xóa').fill('ValidPassword123!');
-    await deletionSection.getByRole('button', { name: 'Hủy yêu cầu xóa' }).click();
-    await expect(deletionSection.getByText('Đã hủy yêu cầu xóa tài khoản thành công.')).toBeVisible();
+    // Account deletion is handled by an admin on request (email); the web no longer offers it.
+    await page.getByRole('tab', { name: 'Dữ liệu & quyền riêng tư' }).click();
+    await expect(page).toHaveURL(/tab=data/);
+    await expect(page.getByRole('region', { name: 'Xóa tài khoản vĩnh viễn' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Yêu cầu xóa tài khoản' })).toHaveCount(0);
 
     expect(actions).toEqual([
       'POST /feedback:IDEA:Thêm chế độ xem lịch theo quý',
-      'POST /account-deletion-requests:true',
-      'POST /account-deletion-requests:cancel',
     ]);
   });
 

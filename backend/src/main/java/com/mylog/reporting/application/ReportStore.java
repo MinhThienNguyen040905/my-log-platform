@@ -22,6 +22,14 @@ public interface ReportStore {
     List<UserZone> usersAfter(UUID cursor, int limit);
     UUID enqueue(UUID userId, String type, LocalDate from, LocalDate to,
                  String timezone, boolean regenerate, Instant now);
+    /** Reports the user regenerated (version > 1) created at or after {@code since}. */
+    int regenerationsSince(UUID userId, Instant since);
+    /**
+     * Atomically checks the user's weekly regeneration allowance and enqueues a new version of the report
+     * ({@code weekStart} null = no weekly limit, local testing only).
+     * Returns null when the user already regenerated a report since {@code weekStart}.
+     */
+    UUID regenerateOnce(UUID userId, UUID reportId, Instant weekStart, Instant now);
     Task claim(String workerId, Instant now);
     void complete(UUID reportId, String workerId, Result result, Instant now);
     void fail(UUID reportId, String workerId, Instant now);

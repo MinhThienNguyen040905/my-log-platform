@@ -174,13 +174,52 @@
   padding-left: 1.5rem;
   margin-bottom: 0.75rem;
 }
+/* "Trích dẫn suy ngẫm" (blockquote): a warm paper note slightly askew, with a large opening quote mark.
+   CSS only — the backend accepts blockquote without attributes — and shared by the editor and the history view. */
 .tiptap blockquote {
-  border-left: 4px solid #111111;
-  padding: 0.5rem 1rem;
-  margin: 1rem 0;
-  background-color: rgba(0, 0, 0, 0.04);
-  border-radius: 0 0.75rem 0.75rem 0;
+  position: relative;
+  margin: 1.5rem 0.5rem 1.5rem 0.25rem;
+  padding: 1rem 1.25rem 1rem 3.25rem;
+  background-color: var(--color-paper-warm);
+  border: 2px solid #111111;
+  border-radius: 0.875rem;
+  box-shadow: 3px 3px 0 #111111;
+  transform: rotate(-0.5deg);
+  font-family: var(--font-serif);
   font-style: italic;
+  font-size: 1.05em;
+  line-height: 1.65;
+  color: #1c1b1b;
+}
+.tiptap blockquote::before {
+  content: '\201C';
+  position: absolute;
+  top: 0.15rem;
+  left: 0.7rem;
+  font-family: var(--font-serif);
+  font-style: normal;
+  font-size: 3.25rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-primary);
+  pointer-events: none;
+}
+.tiptap blockquote p {
+  margin-bottom: 0.5rem;
+}
+.tiptap blockquote p:last-child {
+  margin-bottom: 0;
+}
+@media (max-width: 639px) {
+  .tiptap blockquote {
+    margin-left: 0;
+    margin-right: 0.25rem;
+    padding-left: 2.75rem;
+  }
+  .tiptap blockquote::before {
+    font-size: 2.75rem;
+    left: 0.55rem;
+  }
 }
 /* Câu hỏi gợi ý chèn từ trợ lý (khối promptQuestion) — thẻ gợi ý, khác hẳn trích dẫn thường. */
 .tiptap .prompt-question {
@@ -274,3 +313,8 @@
   }
 }
 
+
+/* Static mascot fallback: a gentle bob, off for reduced motion. */
+@keyframes mascot-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.mascot-bob { animation: mascot-bob 2.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .mascot-bob { animation: none; } }

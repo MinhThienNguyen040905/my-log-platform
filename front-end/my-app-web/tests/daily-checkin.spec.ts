@@ -25,6 +25,15 @@ test.describe('daily check-in', () => {
     await page.locator('#login-password').fill(password);
     await page.locator('#login-password').locator('xpath=ancestor::form[1]').locator('button[type="submit"]').click();
     await page.waitForURL(/\/dashboard/, { timeout: 20000 });
+    await openCheckin(page);
+  }
+
+  /** On the home page the check-in opens in a dialog from the hero's check-in button. */
+  async function openCheckin(page: Page) {
+    const care = page.getByTestId('checkin-open');
+    await expect(care).toHaveAttribute('aria-expanded', 'false');
+    await care.click();
+    await expect(care).toHaveAttribute('aria-expanded', 'true');
   }
 
   const card = (page: Page) => page.getByRole('region', { name: /Check-in hôm nay|Today’s check-in/ });
@@ -66,6 +75,7 @@ test.describe('daily check-in', () => {
 
     // Persisted: a reload still shows the summary.
     await page.reload();
+    await openCheckin(page);
     await expect(card(page).getByText(/Bạn đã check-in hôm nay|You have checked in today/)).toBeVisible();
     await expect(card(page).getByRole('listitem').filter({ hasText: /^Rất tệ$/ })).toBeVisible();
 

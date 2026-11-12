@@ -37,6 +37,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      // With local asset storage (Cloudinary off) the backend returns signed image URLs as backend paths
+      // (`/api/v1/journal-assets/raw/{id}?expires=&sig=`). In the browser those resolve against the web origin,
+      // so route them to the existing signed-image proxy; the query string (expires, sig) is kept.
+      { source: '/api/v1/journal-assets/raw/:id', destination: '/api/journal-assets/raw/:id' },
+    ];
+  },
 };
 
 export default nextConfig;

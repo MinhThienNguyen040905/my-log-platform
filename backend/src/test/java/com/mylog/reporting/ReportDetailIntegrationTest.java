@@ -35,6 +35,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -106,8 +107,27 @@ class ReportDetailIntegrationTest {
         assertEquals(id, reports.requestLatest(owner, "WEEKLY").id());
         mvc.perform(post("/api/v1/reports/{id}:regenerate", id).with(jwt().jwt(j -> j.subject(stranger.toString()))))
                 .andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/reports/regeneration").with(jwt().jwt(j -> j.subject(owner.toString()))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.available").value(true));
         mvc.perform(post("/api/v1/reports/{id}:regenerate", id).with(jwt().jwt(j -> j.subject(owner.toString()))))
                 .andExpect(status().isAccepted()).andExpect(jsonPath("$.version").value(2));
+
+        // One regeneration per local week: the second click is refused until next Monday (2026-11-16).
+        worker.poll();
+        mvc.perform(post("/api/v1/reports/{id}:regenerate", id).with(jwt().jwt(j -> j.subject(owner.toString()))))
+                .andExpect(status().isConflict());
+        mvc.perform(get("/api/v1/reports/regeneration").with(jwt().jwt(j -> j.subject(owner.toString()))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.available").value(false))
+                .andExpect(jsonPath("$.availableFrom").value("2026-11-16"));
+        assertEquals(2, jdbc.queryForObject("select count(*) from reports where user_id=? and period_start=?",
+                Integer.class, owner, LocalDate.of(2026, 11, 2)), "no extra version was created");
+
+        // A new week resets the allowance (simulated by moving last week's regeneration back 7 days).
+        jdbc.update("update reports set created_at=created_at - interval '7 days' where user_id=? and version>1", owner);
+        mvc.perform(get("/api/v1/reports/regeneration").with(jwt().jwt(j -> j.subject(owner.toString()))))
+                .andExpect(jsonPath("$.available").value(true));
+        mvc.perform(post("/api/v1/reports/{id}:regenerate", id).with(jwt().jwt(j -> j.subject(owner.toString()))))
+                .andExpect(status().isAccepted()).andExpect(jsonPath("$.version").value(3));
     }
 
     @Test void nightlyRefreshRunsOncePerLocalDayAndOnlyWithNewData() {

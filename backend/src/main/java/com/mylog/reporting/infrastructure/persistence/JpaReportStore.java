@@ -79,6 +79,26 @@ class JpaReportStore implements ReportStore {
         return report.id;
     }
 
+    @Override @Transactional(readOnly = true)
+    public int regenerationsSince(UUID userId, Instant since) {
+        return ((Number) em.createNativeQuery("""
+                SELECT count(*) FROM reports WHERE user_id=?1 AND version>1 AND created_at>=?2
+                """).setParameter(1, userId).setParameter(2, since).getSingleResult()).intValue();
+    }
+
+    @Override @Transactional
+    public UUID regenerateOnce(UUID userId, UUID reportId, Instant weekStart, Instant now) {
+        // One lock per user so two clicks at the same time cannot both use the weekly regeneration.
+        em.createNativeQuery("SELECT pg_advisory_xact_lock(hashtextextended(?1,0))")
+                .setParameter(1, userId + ":report-regenerate").getSingleResult();
+        if (weekStart != null && regenerationsSince(userId, weekStart) > 0) return null;
+        Report report = em.createQuery("select r from Report r where r.id=:id and r.userId=:userId", Report.class)
+                .setParameter("id", reportId).setParameter("userId", userId).getResultStream().findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy báo cáo."));
+        if (!"READY".equals(report.status) && !"FAILED".equals(report.status)) throw new InvalidRequestException();
+        return enqueue(userId, report.reportType, report.periodStart, report.periodEnd, report.timezone, true, now);
+    }
+
     @Override public Task claim(String workerId, Instant now) {
         @SuppressWarnings("unchecked")
         List<UUID> ids = em.createNativeQuery("""

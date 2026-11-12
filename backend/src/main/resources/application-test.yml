@@ -29,6 +29,7 @@ mylog:
       enabled: false
   reports:
     enabled: false
+    weekly-regenerate-limit: true
   safety:
     classifier:
       url: ""

@@ -21,3 +21,14 @@ export function refreshInsights(): Promise<InsightPage> {
 export async function hideInsight(id: string): Promise<void> {
   await apiResponse(`insights/${encodeURIComponent(id)}`, { method: 'PATCH', ...apiJsonBody({ status: 'HIDDEN' }) });
 }
+
+/** Mood the user picked most in the last 7 local days (null when none), shown by the Insight-page mascot. */
+export type MascotMoodSummary = {
+  mood: string | null; moodCount: number; entryCount: number; from: string; to: string;
+  /** True when an entry in the window was screened high-risk: the mascot stays gentle. */
+  calm: boolean;
+};
+
+export function getMascotMood(): Promise<MascotMoodSummary> {
+  return apiJson('insights/mascot');
+}

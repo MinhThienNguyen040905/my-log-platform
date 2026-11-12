@@ -1,6 +1,7 @@
 package com.mylog.journal.infrastructure;
 
 import com.mylog.journal.application.AssetStoredResult;
+import com.mylog.journal.application.LocalAssetFiles;
 import com.mylog.journal.application.JournalAssetStorage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -18,7 +19,7 @@ import java.util.Base64;
 import java.util.UUID;
 
 @Component
-public class LocalFileAssetStorage implements JournalAssetStorage {
+public class LocalFileAssetStorage implements JournalAssetStorage, LocalAssetFiles {
     private final Path rootPath;
     private final byte[] secretKey;
 
@@ -75,6 +76,7 @@ public class LocalFileAssetStorage implements JournalAssetStorage {
         }
     }
 
+    @Override
     public boolean verifyToken(UUID assetId, long expires, String sig) {
         if (sig == null || sig.isBlank()) return false;
         long nowSeconds = System.currentTimeMillis() / 1000L;
@@ -86,6 +88,7 @@ public class LocalFileAssetStorage implements JournalAssetStorage {
         );
     }
 
+    @Override
     public Path resolveLocalFile(UUID userId, UUID assetId, String format) {
         Path userDir = rootPath.resolve(userId.toString());
         return userDir.resolve(assetId.toString() + "." + format).normalize();

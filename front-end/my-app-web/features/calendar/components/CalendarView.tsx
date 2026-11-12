@@ -1,16 +1,19 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { DayPicker, type DayButtonProps } from 'react-day-picker';
-import { getDetailedJournalPage, getSearchJournalPage, JOURNAL_PAGE_SIZE, useJournal, LegacyJournalImport, journalEmotionLabel, JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, normalizeJournalEmotion, EntryAnalysisPanel } from '@/features/journal';
+import { getDetailedJournalPage, getJournalDailyCounts, getSearchJournalPage, JOURNAL_PAGE_SIZE, useJournal, LegacyJournalImport, journalEmotionLabel, JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, normalizeJournalEmotion, EntryAnalysisPanel } from '@/features/journal';
 import { useToast } from '@/providers/ToastProvider';
+import { useAppLanguage } from '@/providers/AppLanguageProvider';
+import { useTranslation } from 'react-i18next';
+import { formatDate } from '@/lib/date/format-date';
 import { JournalEntry, JournalEmotion, MoodType } from '@/types';
 import { WashiTape, PolaroidCard } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { NotificationModal } from '@/components/ui/NotificationModal';
-import { averageMoodScore, EMPTY_FILTERS, filterEntries, indexEntriesByDate, type HistoryFilters } from '../utils/calendar-entries';
+import { averageMoodScore, EMPTY_FILTERS, filterEntries, indexEntriesByDate, monthGridRange, MOOD_BADGE_CLASS, type HistoryFilters } from '../utils/calendar-entries';
 import {
   Trash2,
   ChevronLeft,
@@ -29,6 +32,8 @@ import {
 export function CalendarView() {
   const { userId, entries, deleteEntry, toggleFavorite, loadEntry, entriesLoading, entriesError, reloadEntries, hasMoreEntries, entriesLoadingMore, loadMoreEntries } = useJournal();
   const { showToast } = useToast();
+  const { t } = useTranslation();
+  const { locale } = useAppLanguage();
 
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
@@ -44,7 +49,6 @@ export function CalendarView() {
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<HistoryFilters>(EMPTY_FILTERS);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
-  const [showPreviews, setShowPreviews] = useState(false);
   const hasActiveFilters = !!appliedFilters.date || appliedFilters.favorites || appliedFilters.emotion !== 'all' || !!appliedFilters.search;
   const hasPendingFilters = (filterByDate ? selectedDate : null) !== appliedFilters.date
     || onlyFavorites !== appliedFilters.favorites
@@ -104,6 +108,18 @@ export function CalendarView() {
 
   // Index entries by date for fast calendar queries and stats [FR-JOURNAL-07]
   const entriesByDate = useMemo(() => indexEntriesByDate(entries), [entries]);
+  // Day marks come from a lightweight per-day count for the visible month grid, so days whose entries are not
+  // in the loaded list pages are still marked. The loaded entries are only a fallback while it loads.
+  const gridRange = useMemo(() => monthGridRange(currentMonth), [currentMonth]);
+  const dailyCountsQuery = useQuery({
+    queryKey: ['journal', userId, 'daily-counts', gridRange.from, gridRange.to],
+    queryFn: () => getJournalDailyCounts(gridRange.from, gridRange.to),
+  });
+  const dayCounts = useMemo(() => {
+    const byDate: Record<string, { count: number; latestMoodCode: string | null }> = {};
+    for (const day of dailyCountsQuery.data?.days ?? []) byDate[day.date] = day;
+    return byDate;
+  }, [dailyCountsQuery.data]);
   const selectedDayQuery = useInfiniteQuery({
     queryKey: ['journal', userId, 'entries', selectedDate],
     initialPageParam: null as string | null,
@@ -233,8 +249,10 @@ export function CalendarView() {
     const { day, modifiers, ...buttonProps } = props;
     const isoDate = day.isoDate;
     const dayNum = day.date.getDate();
-    const dayEntries = entriesByDate[isoDate] || [];
-    const hasEntries = dayEntries.length > 0;
+    const dayCount = dailyCountsQuery.data ? dayCounts[isoDate]?.count ?? 0 : (entriesByDate[isoDate] || []).length;
+    const dayMood = dayCounts[isoDate]?.latestMoodCode ?? null;
+    const hasEntries = dayCount > 0;
+    const badgeClass = dayMood && MOOD_BADGE_CLASS[dayMood] ? MOOD_BADGE_CLASS[dayMood] : 'bg-black text-white';
     const isSelected = filterByDate && selectedDate === isoDate;
     const isToday = modifiers.today;
     const isOutside = modifiers.outside;
@@ -254,7 +272,7 @@ export function CalendarView() {
             setAppliedFilters((prev) => ({ ...prev, date: isoDate }));
           }
         }}
-        aria-label={`${dayNum}/${day.date.getMonth() + 1}/${day.date.getFullYear()}: ${dayEntries.length} bài viết`}
+        aria-label={`${dayNum}/${day.date.getMonth() + 1}/${day.date.getFullYear()}: ${dayCount} bài viết`}
         aria-pressed={isSelected}
         className={`w-full aspect-square p-1 border rounded-xl flex flex-col items-center justify-between text-xs transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${
           isOutside
@@ -270,8 +288,8 @@ export function CalendarView() {
       >
         <span className="font-mono text-[10px] font-bold">{dayNum}</span>
         {hasEntries && (
-          <span className="leading-none flex items-center justify-center w-5 h-5 rounded-full bg-black text-white text-[10px] font-mono font-bold" aria-hidden="true">
-            {dayEntries.length}
+          <span className={`leading-none flex items-center justify-center w-5 h-5 rounded-full border border-black text-[10px] font-mono font-bold ${badgeClass}`} aria-hidden="true">
+            {dayCount}
           </span>
         )}
       </button>
@@ -284,7 +302,7 @@ export function CalendarView() {
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b-2 border-on-background">
         <div>
           <h1 className="font-space text-2xl sm:text-4xl font-extrabold text-on-surface">
-            History & Calendar
+            {t('nav.history')}
           </h1>
           <p className="font-sans text-xs sm:text-sm text-on-surface-variant">
             Xem lại những ngày bạn đã viết và tìm trang nhật ký theo cảm xúc.
@@ -524,12 +542,6 @@ export function CalendarView() {
             </button>
           </div>}
 
-          {entriesForFilters.length > 0 && (
-            <label className="inline-flex min-h-11 items-center gap-2 self-start font-space text-xs font-bold text-gray-700 cursor-pointer">
-              <input type="checkbox" checked={showPreviews} onChange={(event) => setShowPreviews(event.target.checked)} className="h-4 w-4 accent-black" />
-              Hiện cảm xúc và chỉ số
-            </label>
-          )}
 
           {!listLoading && !listError && filteredEntries.length === 0 ? (
             <div className="bg-surface-card border-neo rounded-3xl p-10 text-center flex flex-col items-center justify-center gap-3 shadow-neo">
@@ -542,23 +554,17 @@ export function CalendarView() {
             </div>
           ) : (
             <div className="flex flex-col gap-6">
-              {filteredEntries.map((entry, idx) => (
+              {filteredEntries.map((entry) => (
                 <article
                   key={entry.id}
                   className="bg-surface-card border-neo rounded-3xl p-6 sm:p-7 shadow-neo hover:shadow-neo-lg transition-all relative flex flex-col gap-4 group hover:-translate-y-0.5"
                 >
-                  {/* Scrapbook Tape decoration on alternating items */}
-                  {idx % 2 === 0 ? (
-                    <WashiTape color="peach" rotate={2} className="absolute -top-3 right-10 w-28" />
-                  ) : (
-                    <WashiTape color="blue" rotate={-1.5} className="absolute -top-3 left-10 w-28" />
-                  )}
 
                   {/* Entry Header */}
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-border-soft pb-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <span className="w-10 h-10 rounded-2xl bg-paper-warm border-neo-sm flex items-center justify-center shadow-neo-sm shrink-0">
-                        {showPreviews ? renderMoodIcon(entry.mood, 'w-5 h-5', entry.emotion) : <BookOpen className="w-5 h-5" />}
+                        {renderMoodIcon(entry.mood, 'w-5 h-5', entry.emotion)}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -571,12 +577,12 @@ export function CalendarView() {
                               {entry.title}
                             </button>
                           </h2>
-                          {showPreviews && entry.status === 'ANALYSIS_OUTDATED' && (
+                          {entry.status === 'ANALYSIS_OUTDATED' && (
                             <span className="px-2 py-0.5 bg-amber-200 text-amber-900 border border-black rounded text-[10px] font-space font-extrabold shadow-neo-sm shrink-0">
                               Gợi ý cần cập nhật
                             </span>
                           )}
-                          {showPreviews && entry.status === 'ANALYSIS_FAILED' && (
+                          {entry.status === 'ANALYSIS_FAILED' && (
                             <span className="px-2 py-0.5 bg-red-200 text-red-900 border border-black rounded text-[10px] font-space font-extrabold shadow-neo-sm shrink-0">
                               Chưa thể tạo gợi ý
                             </span>
@@ -586,7 +592,7 @@ export function CalendarView() {
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-space font-bold text-on-surface-variant mt-1">
                           <span className="flex items-center gap-1 shrink-0">
                             <Calendar className="w-3.5 h-3.5" />
-                            {entry.date}
+                            {formatDate(entry.date, locale)}
                           </span>
                           <span>•</span>
                           <span className="flex items-center gap-1 shrink-0">
@@ -627,7 +633,7 @@ export function CalendarView() {
                         <span className="hidden sm:inline">Sửa</span>
                       </Link>
 
-                      {showPreviews && <span className="px-2.5 py-1 bg-primary-container text-black border border-black rounded-lg text-xs font-space font-extrabold whitespace-nowrap shadow-neo-sm">{journalEmotionLabel(entry)}{entry.moodScore !== null ? ` · ${entry.moodScore}/10` : ''}</span>}
+                      <span className="px-2.5 py-1 bg-primary-container text-black border border-black rounded-lg text-xs font-space font-extrabold whitespace-nowrap shadow-neo-sm">{journalEmotionLabel(entry)}{entry.moodScore !== null ? ` · ${entry.moodScore}/10` : ''}</span>
 
                       <button
                         type="button"
@@ -644,10 +650,10 @@ export function CalendarView() {
                   </div>
 
                   {/* Entry Snippet Content */}
-                  {showPreviews && entry.content && <p className="font-sans text-sm sm:text-base text-on-surface leading-relaxed line-clamp-3 italic">&ldquo;{entry.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}&rdquo;</p>}
+                  {entry.content && <p className="font-sans text-sm sm:text-base text-on-surface leading-relaxed line-clamp-3 italic">&ldquo;{entry.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}&rdquo;</p>}
 
                   {/* Optional Polaroid thumbnail preview */}
-                  {showPreviews && entry.photoUrl && (
+                  {entry.photoUrl && (
                     <div className="flex items-center gap-4 p-3 bg-paper-warm rounded-2xl border-neo-sm">
                       <img
                         src={entry.photoUrl}
@@ -667,7 +673,7 @@ export function CalendarView() {
 
                   {/* Footer tags and AI badge */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border-soft">
-                    {showPreviews && <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1.5">
                       {entry.tags.map((tag, tIdx) => (
                         <span
                           key={tIdx}
@@ -676,7 +682,7 @@ export function CalendarView() {
                           #{tag}
                         </span>
                       ))}
-                    </div>}
+                    </div>
 
                     <button type="button" onClick={(event) => { entryTriggerRef.current = event.currentTarget; void openEntry(entry); }} className="min-h-11 px-2 text-xs font-space font-extrabold text-primary flex items-center gap-1 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
                       <BookOpen className="w-3.5 h-3.5" /> Xem bài viết →
@@ -800,7 +806,7 @@ export function CalendarView() {
                   <PolaroidCard
                     imageUrl={selectedEntry.photoUrl}
                     caption={selectedEntry.photoCaption || selectedEntry.title}
-                    date={selectedEntry.date}
+                    date={formatDate(selectedEntry.date, locale)}
                     rotate={1}
                     className="w-72"
                   />

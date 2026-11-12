@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -49,7 +50,9 @@ public final class GlobalExceptionHandler {
         return response(ErrorCode.VALIDATION_ERROR, "Một hoặc nhiều trường không hợp lệ.", request, violations);
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
+    // A missing required query parameter is a client error (400), not an unexpected server failure.
+    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class})
     ResponseEntity<ApiProblem> handleMalformedRequest(Exception ignored, HttpServletRequest request) {
         return response(ErrorCode.MALFORMED_REQUEST, "Cấu trúc hoặc kiểu dữ liệu của yêu cầu không hợp lệ.", request, List.of());
     }

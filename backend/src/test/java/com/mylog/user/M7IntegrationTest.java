@@ -177,6 +177,13 @@ class M7IntegrationTest {
                 .contains("Synthetic private feedback"));
         mvc.perform(get("/api/v1/feedback/{id}",id).with(jwt().jwt(j->j.subject(other.toString()))))
                 .andExpect(status().isNotFound());
+        UUID newer=feedback.submit(owner,"IDEA","Synthetic newer idea");
+        mvc.perform(get("/api/v1/feedback").with(jwt().jwt(j->j.subject(owner.toString()))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(newer.toString()))
+                .andExpect(jsonPath("$[1].message").value("Synthetic private feedback"));
+        mvc.perform(get("/api/v1/feedback").with(jwt().jwt(j->j.subject(other.toString()))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
         mvc.perform(get("/api/v1/admin/feedback/{id}",id).with(jwt().jwt(j->j.subject(other.toString()))))
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/admin/feedback/{id}",id).with(jwt().jwt(j->j.subject(other.toString()))

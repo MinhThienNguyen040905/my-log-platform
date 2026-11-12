@@ -14,10 +14,11 @@ export function useAccountProfile(profile: Profile) {
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: profile.displayName || profile.penName || 'Bạn',
     penName: profile.penName || profile.displayName || 'Bạn',
-    email: '',
+    email: profile.email ?? '',
     plan: 'FREE',
     timezone: profile.timezone,
     avatarUrl: '/avatar.png',
+    mascot: profile.mascot ?? 'sprout',
     language: profile.locale === 'en' ? 'en' : 'vi',
     isOnboarded: profile.onboardingCompletedAt !== null,
     journalingGoals: profile.onboardingGoals,
@@ -31,6 +32,7 @@ export function useAccountProfile(profile: Profile) {
       ...(data.penName !== undefined ? { penName: data.penName } : {}),
       ...(data.timezone !== undefined ? { timezone: data.timezone } : {}),
       ...(data.language !== undefined ? { locale: data.language } : {}),
+      ...(data.mascot !== undefined ? { mascot: data.mascot } : {}),
       ...(data.journalingGoals !== undefined ? { onboardingGoals: data.journalingGoals.map((goal) => goal.toUpperCase()) } : {}),
     }, profileVersion.current);
     profileVersion.current = saved.version;
@@ -44,6 +46,7 @@ export function useAccountProfile(profile: Profile) {
       timezone: saved.timezone,
       language: saved.locale === 'en' ? 'en' : 'vi',
       journalingGoals: saved.onboardingGoals,
+      mascot: saved.mascot ?? previous.mascot,
       isAdmin: saved.isAdmin ?? previous.isAdmin,
     }));
     void queryClient.invalidateQueries({ queryKey: ['dashboard', profile.userId] });
@@ -65,6 +68,8 @@ export function useAccountProfile(profile: Profile) {
       timezone: fresh.timezone,
       language: fresh.locale === 'en' ? 'en' : 'vi',
       journalingGoals: fresh.onboardingGoals,
+      mascot: fresh.mascot ?? previous.mascot,
+      email: fresh.email ?? previous.email,
       isOnboarded: fresh.onboardingCompletedAt !== null,
       isAdmin: fresh.isAdmin ?? previous.isAdmin,
       canChangePassword: fresh.canChangePassword ?? previous.canChangePassword ?? true,

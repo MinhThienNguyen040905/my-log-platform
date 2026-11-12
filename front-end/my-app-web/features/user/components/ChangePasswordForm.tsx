@@ -132,8 +132,8 @@ export function ChangePasswordForm({ canChangePassword = true, userEmail = '' }:
             className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center justify-between"
           >
             <span>{t('settings.newPassword')}</span>
-            <span className="font-mono text-[11px] font-normal text-gray-500">
-              {byteLength} / 72 bytes
+            <span className="text-[11px] font-normal normal-case tracking-normal text-gray-500">
+              {t('settings.passwordMinHint')}
             </span>
           </label>
           <div className="relative">

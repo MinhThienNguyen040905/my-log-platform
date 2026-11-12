@@ -9,6 +9,10 @@ export type Profile = {
   version: number;
   isAdmin?: boolean;
   canChangePassword?: boolean;
+  /** Insight-page mascot: sprout | cat | coffee | off. */
+  mascot?: string;
+  /** The account's own email; missing from older backends. */
+  email?: string | null;
 };
 
 export type Consent = { type: string; documentVersion: string; granted: boolean; decidedAt: string };
@@ -50,6 +54,18 @@ export async function getProfile(): Promise<Profile> { return (await accountRequ
 
 export async function getConsents(): Promise<Consent[]> { return (await accountRequest('/consents')).json(); }
 
+/**
+ * "Start a new journey": permanently deletes the user's journal data and keeps the account. Refusals come back as
+ * 403 with detail PASSWORD_INCORRECT or RECENT_LOGIN_REQUIRED, and 429 after too many wrong passwords.
+ */
+export async function resetAccountData(password: string | null): Promise<void> {
+  await accountRequest('/data-reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...(password ? { password } : {}), confirm: true }),
+  });
+}
+
 export async function setConsent(type: string, documentVersion: string, granted: boolean): Promise<void> {
   await accountRequest(`/consents/${encodeURIComponent(type)}`, {
     method: 'PUT',
@@ -58,7 +74,7 @@ export async function setConsent(type: string, documentVersion: string, granted:
   });
 }
 
-export async function updateProfile(data: Partial<Pick<Profile, 'displayName' | 'penName' | 'timezone' | 'locale' | 'onboardingGoals'>>, version: number): Promise<Profile> {
+export async function updateProfile(data: Partial<Pick<Profile, 'displayName' | 'penName' | 'timezone' | 'locale' | 'onboardingGoals' | 'mascot'>>, version: number): Promise<Profile> {
   if (data.onboardingGoals?.some((goal) => !supportedOnboardingGoals.has(goal))
     || (data.onboardingGoals && new Set(data.onboardingGoals).size !== data.onboardingGoals.length)) {
     throw new Error('Mục tiêu không còn được hỗ trợ. Vui lòng tải lại trang và chọn lại.');

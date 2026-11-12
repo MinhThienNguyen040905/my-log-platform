@@ -13,7 +13,6 @@ import {
   Star,
   Wind,
 } from 'lucide-react';
-import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { useJournal } from '@/features/journal';
 import { getHabitTodayDate, useSelfCareGoals } from '../hooks/useSelfCareGoals';
 import { CreateHabitFromTemplateModal, type HabitTemplatePreset } from './CreateHabitFromTemplateModal';
@@ -168,7 +167,6 @@ export function HabitTrackerCard() {
       aria-label="Bảng theo dõi thói quen"
       className="bg-surface-card border-neo rounded-3xl p-6 shadow-neo relative flex flex-col gap-4"
     >
-      <WashiTape color="lime" rotate={-1.5} className="absolute -top-3 left-10 w-28" />
 
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b-2 border-black">

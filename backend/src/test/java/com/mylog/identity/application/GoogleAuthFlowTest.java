@@ -158,7 +158,7 @@ class GoogleAuthFlowTest {
                 profileCreated[0] = true;
             }
             @Override public ProfileView get(UUID userId) { return null; }
-            @Override public ProfileView update(UUID userId, String displayName, String penName, List<String> onboardingGoals, String timezone, String locale, long expectedVersion) { return null; }
+            @Override public ProfileView update(UUID userId, String displayName, String penName, List<String> onboardingGoals, String timezone, String locale, String mascot, long expectedVersion) { return null; }
             @Override public ProfileView completeOnboarding(UUID userId, long expectedVersion) { return null; }
             @Override public void decideConsent(UUID userId, String type, String documentVersion, boolean granted) {}
             @Override public List<ConsentView> consents(UUID userId) { return List.of(); }

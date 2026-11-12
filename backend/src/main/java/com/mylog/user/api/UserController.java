@@ -7,6 +7,8 @@ import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.user.application.UserProfileUseCase;
 import com.mylog.user.application.query.ProfileView;
 import com.mylog.user.api.request.ConsentDecisionRequest;
+import com.mylog.user.api.request.ResetDataRequest;
+import com.mylog.user.application.DataResetService;
 import com.mylog.user.api.request.UpdateProfileRequest;
 import com.mylog.user.api.response.ConsentResponse;
 import com.mylog.user.api.response.ProfileResponse;
@@ -31,8 +33,10 @@ public class UserController {
     private final UserProfileUseCase profiles;
     private final IdentityService identity;
     private final CurrentUserProvider current;
-    public UserController(UserProfileUseCase profiles, IdentityService identity, CurrentUserProvider current) {
-        this.profiles = profiles; this.identity = identity; this.current = current;
+    private final DataResetService dataReset;
+    public UserController(UserProfileUseCase profiles, IdentityService identity, CurrentUserProvider current,
+                          DataResetService dataReset) {
+        this.profiles = profiles; this.identity = identity; this.current = current; this.dataReset = dataReset;
     }
 
     @GetMapping
@@ -42,7 +46,7 @@ public class UserController {
     public ResponseEntity<ProfileResponse> update(@Valid @RequestBody UpdateProfileRequest request,
                                                                   @RequestHeader("If-Match") String ifMatch) {
         return etag(profiles.update(user(), request.displayName(), request.penName(), request.onboardingGoals(), request.timezone(),
-                request.locale(), version(ifMatch)), isAdmin());
+                request.locale(), request.mascot(), version(ifMatch)), isAdmin());
     }
 
     @PostMapping("/onboarding:complete")
@@ -62,8 +66,9 @@ public class UserController {
     }
 
     @GetMapping("/sessions")
-    public List<SessionResponse> sessions() {
-        return identity.sessions(user()).stream().map(SessionResponse::from).toList();
+    public List<SessionResponse> sessions(@AuthenticationPrincipal Jwt jwt) {
+        UUID currentSession = sessionId(jwt);
+        return identity.sessions(user()).stream().map(s -> SessionResponse.from(s, currentSession)).toList();
     }
 
     @DeleteMapping("/sessions/{sessionId}")
@@ -81,21 +86,29 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    /** "Start a new journey": deletes the user's journal and everything derived from it, keeping the account. */
+    @PostMapping("/data:reset")
+    public ResponseEntity<Void> resetData(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ResetDataRequest request) {
+        dataReset.reset(user(), sessionId(jwt), request.password());
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/password")
     public ResponseEntity<Void> changePassword(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody ChangePasswordRequest request,
             HttpServletRequest http) {
-        UUID session = null;
-        if (jwt != null && jwt.hasClaim("sid")) {
-            try { session = UUID.fromString(jwt.getClaimAsString("sid")); }
-            catch (RuntimeException ignored) {}
-        }
-        identity.changePassword(user(), session, request, http.getRemoteAddr());
+        identity.changePassword(user(), sessionId(jwt), request, http.getRemoteAddr());
         return ResponseEntity.noContent().build();
     }
 
     private UUID user() { return current.requireCurrent().userId(); }
+    /** Session id from the JWT {@code sid} claim; null when absent or malformed. */
+    private static UUID sessionId(Jwt jwt) {
+        if (jwt == null || !jwt.hasClaim("sid")) return null;
+        try { return UUID.fromString(jwt.getClaimAsString("sid")); }
+        catch (RuntimeException ignored) { return null; }
+    }
     private boolean isAdmin() {
         return current.findCurrent()
                 .map(u -> u.authorities().stream().anyMatch(a ->
@@ -110,6 +123,6 @@ public class UserController {
         catch (NumberFormatException e) { throw new InvalidRequestException(); }
     }
     private ResponseEntity<ProfileResponse> etag(ProfileView p, boolean isAdmin) {
-        return ResponseEntity.ok().eTag("\"" + p.version() + "\"").body(ProfileResponse.from(p, isAdmin, identity.hasPassword(user())));
+        return ResponseEntity.ok().eTag("\"" + p.version() + "\"").body(ProfileResponse.from(p, isAdmin, identity.hasPassword(user()), identity.exportEmail(user())));
     }
 }
