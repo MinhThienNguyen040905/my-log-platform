@@ -27,6 +27,9 @@ test.describe('pattern insights panel', () => {
     const account = await createOnboardedAccount(request, 'pattern-empty');
     const panel = await openPatterns(page, account.email, account.password);
     await expect(panel).toContainText('Chưa thấy nhịp nào đủ rõ');
+    // The former "Mối liên hệ cảm xúc" card is merged into this panel, including its no-causation reminder.
+    await expect(page.getByRole('heading', { name: 'Mối liên hệ cảm xúc' })).toHaveCount(0);
+    await expect(panel).toContainText('Lời nhắn nhỏ:');
     const refreshed = page.waitForResponse((r) => r.url().includes('/api/backend/insights:refresh'));
     await panel.getByRole('button', { name: 'Làm mới' }).click();
     expect((await refreshed).status()).toBe(200);
@@ -51,6 +54,8 @@ test.describe('pattern insights panel', () => {
       }] }),
     }));
     await page.route('**/api/backend/insights/*', (route) => {
+      // Only the hide call; GET insights/mascot (the Insight-page mascot) goes to the backend.
+      if (route.request().method() !== 'PATCH') return route.fallback();
       patchBody = route.request().postData() ?? '';
       hidden = true;
       return route.fulfill({ status: 204 });

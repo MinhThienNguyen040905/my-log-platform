@@ -1,6 +1,7 @@
 package com.mylog.journal.application;
 
 import java.time.Instant;
+import com.mylog.journal.application.query.DailyEntryCountView;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +13,8 @@ public interface JournalStore {
     List<JournalEntrySnapshot> list(UUID userId, LocalDate from, LocalDate to, UUID tagId,
                                     Boolean favorite, Instant cursorTime, UUID cursorId, int limit);
     List<JournalEntrySnapshot> exportAll(UUID userId, int limit);
+    /** Saved, non-deleted entries per local day in [from, to], only days that have entries, oldest first. */
+    List<DailyEntryCountView> dailyCounts(UUID userId, LocalDate from, LocalDate to);
     boolean update(JournalEntrySnapshot entry, long expectedVersion);
     boolean setFavorite(UUID userId, UUID entryId, boolean favorite, Instant now);
     boolean softDelete(UUID userId, UUID entryId, long expectedVersion, Instant now);

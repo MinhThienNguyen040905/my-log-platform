@@ -3,8 +3,10 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, EyeOff, HeartPulse, Layers, Moon, RefreshCw, Sparkles, Tag, TrendingUp, Footprints, BarChart3 } from 'lucide-react';
+import { CalendarDays, EyeOff, HeartPulse, Layers, Moon, RefreshCw, Sparkles, Tag, TrendingUp, Footprints, BarChart3, ShieldCheck } from 'lucide-react';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
+import { formatDateRange } from '@/lib/date/format-date';
+import { useAppLanguage } from '@/providers/AppLanguageProvider';
 import { hideInsight, refreshInsights, type Insight } from '../api/insights';
 import { summarizeEvidence } from '../utils/pattern-insights';
 
@@ -47,6 +49,11 @@ export function PatternInsightsPanel({ insights, loading, error, onRetry }: Prop
         </button>
       </div>
       <p className="font-sans text-xs text-on-surface-variant">{t('pattern.description')}</p>
+      {/* No-causation reminder (FR-INSIGHT-03), moved here from the former "Mối liên hệ cảm xúc" card. */}
+      <div className="p-3 bg-blue-50 border border-blue-300 rounded-xl text-xs font-sans text-blue-900 flex items-start gap-2">
+        <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" aria-hidden="true" />
+        <span><strong>{t('insight.science')}</strong> {t('insight.scienceDescription')}</span>
+      </div>
 
       {refresh.isError && <p role="alert" className="text-sm text-red-700">{t('pattern.refreshError')}</p>}
       {loading && <p role="status">{t('status.loadingAnalysis')}</p>}
@@ -64,6 +71,7 @@ export function PatternInsightsPanel({ insights, loading, error, onRetry }: Prop
 
 function PatternCard({ insight }: { insight: Insight }) {
   const { t } = useTranslation();
+  const { locale } = useAppLanguage();
   const queryClient = useQueryClient();
   const [showEvidence, setShowEvidence] = useState(false);
   const hide = useMutation({
@@ -89,8 +97,8 @@ function PatternCard({ insight }: { insight: Insight }) {
         )}
       </div>
       <p className="font-sans text-sm leading-relaxed">{insight.narrative}</p>
-      <p className="font-mono text-xs text-gray-600">
-        {t(sampleKey, { count: insight.sampleSize })} · {insight.from} – {insight.to}
+      <p className="text-xs text-gray-600">
+        {t(sampleKey, { count: insight.sampleSize })} · {formatDateRange(insight.from, insight.to, locale)}
       </p>
       <div className="flex flex-wrap gap-3">
         <button type="button" className="inline-flex items-center gap-1 text-xs font-bold underline cursor-pointer"

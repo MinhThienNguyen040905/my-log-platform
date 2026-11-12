@@ -154,7 +154,8 @@ class IdentityFlowIntegrationTest {
         org.junit.jupiter.api.Assertions.assertNotEquals("Correct Horse Battery Staple!", storedPassword);
 
         mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + access))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.locale").value("vi"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.locale").value("vi"))
+                .andExpect(jsonPath("$.email").value(email));
         mvc.perform(patch("/api/v1/me").header("Authorization", "Bearer " + access)
                         .header("If-Match", "\"0\"").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"displayName\":\"Test User\",\"onboardingGoals\":[\"REFLECTION\"]}"))
@@ -187,6 +188,8 @@ class IdentityFlowIntegrationTest {
         String sessions = mvc.perform(get("/api/v1/me/sessions").header("Authorization", "Bearer " + access))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String firstSession = mapper.readTree(sessions).get(0).get("id").asText();
+        org.junit.jupiter.api.Assertions.assertTrue(mapper.readTree(sessions).get(0).get("current").asBoolean(),
+                "the session used for the request is marked current");
         mvc.perform(delete("/api/v1/me/sessions/" + firstSession).header("Authorization", "Bearer " + otherAccess))
                 .andExpect(status().isNotFound());
         mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + otherAccess))

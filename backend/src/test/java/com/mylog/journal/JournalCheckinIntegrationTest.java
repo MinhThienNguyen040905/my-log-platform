@@ -96,6 +96,54 @@ class JournalCheckinIntegrationTest {
         assertEquals(0, jdbc.queryForObject("select count(*) from journal_entries where id=?", Integer.class, created.id()));
     }
 
+    @Test void dailyCountsForCalendarAreOwnerScopedByLocalDateAndSkipDeleted() throws Exception {
+        UUID owner = user();
+        UUID stranger = user();
+        var content = mapper.readTree("""
+                {"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Synthetic calendar day"}]}]}
+                """);
+        java.util.function.BiFunction<Instant, String, UUID> write = (at, mood) -> journal.create(owner,
+                new CreateJournalEntryCommand("Synthetic", content, null, at, "Asia/Ho_Chi_Minh", mood,
+                        null, null, null, null), "calendar-" + UUID.randomUUID()).id();
+        write.apply(Instant.parse("2026-01-05T02:00:00Z"), "happy");   // 09:00 local
+        write.apply(Instant.parse("2026-01-05T14:00:00Z"), "sad");     // 21:00 local: latest of the day
+        write.apply(Instant.parse("2026-01-06T20:00:00Z"), "neutral"); // 03:00 local on 2026-01-07
+        UUID deleted = write.apply(Instant.parse("2026-01-08T05:00:00Z"), "happy");
+        journal.delete(owner, deleted, journal.get(owner, deleted).version());
+        journal.create(stranger, new CreateJournalEntryCommand("Synthetic", content, null,
+                Instant.parse("2026-01-05T05:00:00Z"), "Asia/Ho_Chi_Minh", "angry", null, null, null, null),
+                "calendar-" + UUID.randomUUID());
+
+        var days = journal.dailyCounts(owner, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
+        assertEquals(2, days.size(), days.toString());
+        assertEquals(LocalDate.of(2026, 1, 5), days.get(0).date());
+        assertEquals(2, days.get(0).count());
+        assertEquals("sad", days.get(0).latestMoodCode());
+        assertEquals(LocalDate.of(2026, 1, 7), days.get(1).date(), "grouped by the local date, not UTC");
+        assertEquals(1, days.get(1).count());
+        assertEquals(1, journal.dailyCounts(stranger, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)).size());
+
+        String path = "/api/v1/journal-entries/daily-counts";
+        mvc.perform(get(path).param("from", "2026-01-01").param("to", "2026-01-31")).andExpect(status().isUnauthorized());
+        mvc.perform(get(path).param("from", "2026-01-01").param("to", "2026-01-31")
+                        .with(jwt().jwt(jwt -> jwt.subject(owner.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.days.length()").value(2))
+                .andExpect(jsonPath("$.days[0].date").value("2026-01-05"))
+                .andExpect(jsonPath("$.days[0].count").value(2))
+                .andExpect(jsonPath("$.days[0].latestMoodCode").value("sad"))
+                .andExpect(jsonPath("$.days[0].title").doesNotExist());
+        for (String[] range : new String[][] {{"2026-01-31", "2026-01-01"}, {"2026-01-01", "2026-04-03"}}) {
+            mvc.perform(get(path).param("from", range[0]).param("to", range[1])
+                    .with(jwt().jwt(jwt -> jwt.subject(owner.toString())))).andExpect(status().isBadRequest());
+        }
+        mvc.perform(get(path).param("from", "2026-01-01").with(jwt().jwt(jwt -> jwt.subject(owner.toString()))))
+                .andExpect(status().isBadRequest());
+        // 92 days inclusive (2026-01-01..2026-04-02: 31+28+31+2) is the largest accepted range; 04-03 is rejected above.
+        mvc.perform(get(path).param("from", "2026-01-01").param("to", "2026-04-02")
+                .with(jwt().jwt(jwt -> jwt.subject(owner.toString())))).andExpect(status().isOk());
+    }
+
     @Test void checkinUpsertsPerOwnerAndDateWithEncryptedNote() {
         UUID owner = user();
         UUID stranger = user();

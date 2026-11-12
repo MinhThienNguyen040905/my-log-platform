@@ -2,6 +2,7 @@ package com.mylog.journal.application;
 
 import com.mylog.journal.application.command.CreateJournalEntryCommand;
 import com.mylog.journal.application.command.UpdateJournalEntryCommand;
+import com.mylog.journal.application.query.DailyEntryCountView;
 import com.mylog.journal.application.query.JournalEntryView;
 import com.mylog.journal.application.query.JournalPage;
 import com.mylog.journal.application.query.JournalSummaryView;
@@ -141,6 +142,17 @@ public class JournalService implements JournalAnalysisAccess {
                     return summary(e, tagsByEntry.getOrDefault(e.id(), List.of()), photoUrl);
                 })
                 .toList(), next);
+    }
+
+    /** Longest calendar range accepted: a month view with leading/trailing days fits comfortably. */
+    public static final int DAILY_COUNTS_MAX_DAYS = 92;
+
+    /** Saved entries per local day for the calendar; owner-scoped, no content is decrypted. */
+    @Transactional(readOnly = true)
+    public List<DailyEntryCountView> dailyCounts(UUID userId, LocalDate from, LocalDate to) {
+        if (from == null || to == null || from.isAfter(to) || to.isAfter(from.plusDays(DAILY_COUNTS_MAX_DAYS - 1L)))
+            throw new InvalidRequestException();
+        return store.dailyCounts(userId, from, to);
     }
 
     @Transactional(readOnly = true)

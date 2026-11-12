@@ -7,8 +7,8 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
-import Image from '@tiptap/extension-image';
 import { JournalBubbleMenu } from './JournalBubbleMenu';
+import { IMAGE_DELETE_META, JournalImage } from '../extensions/journal-image';
 import { createSlashCommandExtension } from '../extensions/slash-command';
 import { PromptQuestion } from '../extensions/prompt-question';
 
@@ -28,22 +28,6 @@ interface JournalTipTapEditorProps {
   editorRef?: React.Ref<JournalTipTapEditorRef>;
 }
 
-const CustomImage = Image.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      'data-asset-id': {
-        default: null,
-        parseHTML: (element) => element.getAttribute('data-asset-id'),
-        renderHTML: (attributes) => {
-          if (!attributes['data-asset-id']) return {};
-          return { 'data-asset-id': attributes['data-asset-id'] };
-        },
-      },
-    };
-  },
-});
-
 export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTipTapEditorProps>(
   ({ initialContent, onChange, onOpenImageModal }, ref) => {
     // Memoize custom slash command extension with dynamic onOpenImageModal trigger
@@ -57,11 +41,7 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
           heading: {
             levels: [2, 3],
           },
-          blockquote: {
-            HTMLAttributes: {
-              class: 'border-l-4 border-black pl-4 py-1.5 my-3 italic bg-black/5 rounded-r-xl font-sans text-on-surface',
-            },
-          },
+          // Styled in globals.css (`.tiptap blockquote`) so the editor and the history view look the same.
           bulletList: {
             HTMLAttributes: {
               class: 'list-disc list-outside ml-6 my-2 space-y-1',
@@ -87,7 +67,8 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
           },
         }),
         Underline,
-        CustomImage.configure({
+        // Removed only with the X button on the image (see extensions/journal-image.tsx), not with Backspace.
+        JournalImage.configure({
           inline: false,
           allowBase64: true,
           HTMLAttributes: {
@@ -114,7 +95,8 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
     // Synchronize initialContent when loaded asynchronously (e.g. from localStorage/editId)
     useEffect(() => {
       if (editor && initialContent && editor.isEmpty) {
-        editor.commands.setContent(initialContent);
+        // Loading content on purpose: allowed to replace images (see IMAGE_DELETE_META).
+        editor.chain().setMeta(IMAGE_DELETE_META, true).setContent(initialContent).run();
       }
     }, [editor, initialContent]);
 

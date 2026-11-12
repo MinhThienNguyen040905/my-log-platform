@@ -27,6 +27,18 @@ Onboarding đọc trạng thái đồng ý từ backend. `TERMS` và `PRIVACY` �
 
 Khi thử nghiệm local, mở `http://localhost:3000/dev/users` để xem email của các tài khoản đang hoạt động. Cấu hình cùng giá trị `MYLOG_DEV_USERS_KEY` trong `backend/.env` và `front-end/my-app-web/.env.local`. Trang tự tải danh sách, chỉ hoạt động khi Next.js chạy `npm run dev` trên `127.0.0.1`; khóa chỉ được server web dùng để gọi backend. Backend phải chạy profile `local`. Xem [hướng dẫn backend](../../backend/README.md).
 
+## Linh vật
+
+Trang chủ (`/dashboard`) hiển thị linh vật user chọn ở Cài đặt (Mầm Xanh, Mèo Cam, Ly Cà Phê), mang cảm xúc chọn nhiều nhất 7 ngày qua. Nút dưới linh vật (tưới nước / cho ăn / thêm hạt cà phê) mở check-in hôm nay trong hộp thoại (pop-up); khi user chọn "Ẩn linh vật", check-in hiện thẳng trên trang chủ. Hình vẽ là SVG inline (`features/insights/components/MascotArt.tsx`), chuyển động bằng CSS (`MoodMascot.module.css`), không cần asset hay runtime ngoài. Cảm xúc → biểu cảm: Vui → vui, Bình thường/chưa có dữ liệu → bình thường, Tức giận → tức giận, Buồn → buồn, Rất tệ → mệt mỏi. Tuần có bài rủi ro cao (`calm`) hoặc thiết bị bật giảm chuyển động thì linh vật đứng yên; khi `calm` không hiện mặt tức giận.
+
+## Bắt đầu hành trình mới
+
+Cài đặt → "Dữ liệu & quyền riêng tư" có thẻ "Bắt đầu hành trình mới": xóa vĩnh viễn toàn bộ dữ liệu nhật ký (qua `POST /api/me/data-reset`), giữ tài khoản. Xác nhận bằng ô đồng ý, gõ `BẮT ĐẦU LẠI` và mật khẩu; xong thì dọn bản nháp/khóa `mylog…` của user trên trình duyệt và tải lại trang chủ. Test: `tests/data-reset.spec.ts`.
+
+## Xóa tài khoản
+
+Web không có chức năng xóa tài khoản. User gửi email cho admin; API xóa vẫn còn ở backend (xem [backend/README.md](../../backend/README.md)). Đặt địa chỉ admin vào `NEXT_PUBLIC_SUPPORT_EMAIL` trong `.env.local` để tab "Dữ liệu & quyền riêng tư" ở Cài đặt hiện dòng liên hệ; không đặt thì dòng này ẩn. Không commit địa chỉ thật.
+
 ## Chạy và kiểm tra
 
 ```powershell

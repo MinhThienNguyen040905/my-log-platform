@@ -1,23 +1,24 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useJournal } from '@/features/journal';
 import { getDashboard } from '@/features/dashboard';
 import { HabitTrackerCard, SelfCareGoalsChecklist } from '@/features/selfcare';
 import { listInsights } from '../api/insights';
 import { isPatternInsight } from '../utils/pattern-insights';
+import { INSIGHT_HISTORY_RANGE, INSIGHT_MIN_JOURNAL_DAYS } from '../utils/insight-unlock';
 import { PatternInsightsPanel } from './PatternInsightsPanel';
-import { createReport, latestPerPeriod, listReports, type ReportType } from '@/features/reporting';
+import { createReport, getReport, lastFinishedPeriodStart, latestPerPeriod, listReports, ReportDetailContent, type ReportType } from '@/features/reporting';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
+import { formatDateRange } from '@/lib/date/format-date';
+import { useAppLanguage } from '@/providers/AppLanguageProvider';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import {
   Sparkles,
-  ShieldCheck,
   Sprout,
   BarChart3,
   Layers,
@@ -26,25 +27,27 @@ import {
 
 export function InsightView() {
   const { t } = useTranslation();
+  const { locale } = useAppLanguage();
   const { userId } = useJournal();
 
   const [activeTab, setActiveTab] = useState<'weekly-report' | 'evidence-matrix'>('weekly-report');
   const insightsQuery = useQuery({ queryKey: ['insights', userId, 20], queryFn: () => listInsights({ limit: 20 }) });
   const [reportType, setReportType] = useState<ReportType>('WEEKLY');
-  const router = useRouter();
   const queryClient = useQueryClient();
-  const reportsQuery = useQuery({ queryKey: ['reports', userId, reportType, 20], queryFn: () => listReports({ type: reportType, limit: 20 }) });
-  const createReportMutation = useMutation({
-    mutationFn: () => createReport(reportType),
-    onSuccess: (created) => {
-      void queryClient.invalidateQueries({ queryKey: ['reports'] });
-      router.push(`/reports/${created.id}/print`);
-    },
+  const reportsQuery = useQuery({
+    queryKey: ['reports', userId, reportType, 20],
+    queryFn: () => listReports({ type: reportType, limit: 20 }),
+    // While a reflection is being prepared by the worker, check again every few seconds.
+    refetchInterval: (query) => query.state.data?.items.some((r) => r.status === 'PENDING' || r.status === 'PROCESSING') ? 4000 : false,
   });
-  const historyQuery = useQuery({ queryKey: ['dashboard', userId, '90d'], queryFn: () => getDashboard('90d') });
+  const createReportMutation = useMutation({
+    mutationFn: (type: ReportType) => createReport(type),
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['reports'] }); },
+  });
+  const { mutate: createReportNow } = createReportMutation;
+  const historyQuery = useQuery({ queryKey: ['dashboard', userId, INSIGHT_HISTORY_RANGE], queryFn: () => getDashboard(INSIGHT_HISTORY_RANGE) });
   const insights = insightsQuery.data?.items ?? [];
   const patternInsights = insights.filter(isPatternInsight);
-  const reportInsights = insights.filter((insight) => !isPatternInsight(insight));
   const reports = latestPerPeriod(reportsQuery.data?.items ?? []);
   const insightsLoading = insightsQuery.isPending;
   const reportsLoading = reportsQuery.isPending;
@@ -63,6 +66,34 @@ export function InsightView() {
   const distinctDays = historyQuery.data?.timeline.filter((day) => day.journalCount > 0).length ?? 0;
 
   const effectiveDistinctDays = distinctDays;
+
+  // The reflection of the last finished week/month appears by itself: if it does not exist yet, ask for it once
+  // per opening of the tab (the backend returns the existing one and never recomputes it). Users with fewer than
+  // three journal days see the unlock card instead.
+  const expectedFrom = lastFinishedPeriodStart(reportType);
+  const hasLatestPeriod = reports.some((report) => report.from === expectedFrom);
+  const canAutoCreate = activeTab === 'weekly-report' && reportsQuery.isSuccess && historyQuery.isSuccess
+    && !hasLatestPeriod && effectiveDistinctDays >= INSIGHT_MIN_JOURNAL_DAYS;
+  const autoCreated = useRef(new Set<string>());
+  useEffect(() => {
+    const key = `${reportType}|${expectedFrom}`;
+    if (!canAutoCreate || autoCreated.current.has(key)) return;
+    autoCreated.current.add(key);
+    createReportNow(reportType);
+  }, [canAutoCreate, reportType, expectedFrom, createReportNow]);
+
+  // The newest reflection is shown in full (the list endpoint has no evidence or entry titles, so load it).
+  const latestReport = reports[0] ?? null;
+  const latestDetailQuery = useQuery({
+    queryKey: ['report', userId, latestReport?.id],
+    queryFn: () => getReport(latestReport!.id),
+    enabled: !!latestReport && latestReport.status === 'READY',
+  });
+  const latestFull = latestDetailQuery.data?.id === latestReport?.id ? latestDetailQuery.data : null;
+  // "Các kỳ trước": the 4 weeks or the 1 month before the newest reflection; older ones are not listed.
+  const OLDER_PERIODS: Record<ReportType, number> = { WEEKLY: 4, MONTHLY: 1 };
+  const olderReports = reports.slice(1, 1 + OLDER_PERIODS[reportType]);
+  const preparing = createReportMutation.isPending || (!!latestReport && ['PENDING', 'PROCESSING'].includes(latestReport.status));
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8 selection:bg-primary-container selection:text-black">
@@ -116,7 +147,7 @@ export function InsightView() {
       </div>
 
       {/* [BR-08] & [FR-INSIGHT-01]: Insufficient Data Empty State on Weekly Report Tab */}
-      {activeTab === 'weekly-report' && effectiveDistinctDays < 3 && reports.length === 0 && insights.length === 0 && !historyQuery.isPending && !historyQuery.isError && !reportsLoading && !insightsLoading && !reportsError && !insightsError ? (
+      {activeTab === 'weekly-report' && effectiveDistinctDays < INSIGHT_MIN_JOURNAL_DAYS && reports.length === 0 && insights.length === 0 && !historyQuery.isPending && !historyQuery.isError && !reportsLoading && !insightsLoading && !reportsError && !insightsError ? (
         <div className="bg-surface-card border-neo rounded-3xl p-8 sm:p-12 shadow-neo relative flex flex-col items-center text-center gap-6 max-w-3xl mx-auto my-6">
           <WashiTape color="lime" rotate={-2} className="absolute -top-3 left-12 w-36" />
           <div className="w-20 h-20 rounded-3xl bg-paper-warm border-2 border-black flex items-center justify-center shadow-neo">
@@ -139,11 +170,11 @@ export function InsightView() {
           <div className="w-full max-w-md bg-paper-warm p-4 rounded-2xl border-2 border-black shadow-neo-sm flex flex-col gap-3">
             <div className="flex items-center justify-between text-xs font-space font-bold">
               <span>{t('insight.progress')}</span>
-              <span className="font-extrabold font-mono text-sm">{t('insight.dayProgress', { count: effectiveDistinctDays, percent: Math.round((effectiveDistinctDays / 3) * 100) })}</span>
+              <span className="font-extrabold font-mono text-sm">{t('insight.dayProgress', { count: effectiveDistinctDays, percent: Math.round((effectiveDistinctDays / INSIGHT_MIN_JOURNAL_DAYS) * 100) })}</span>
             </div>
             <div className="w-full h-3.5 bg-white rounded-full border-2 border-black overflow-hidden p-0.5">
               <div
-                style={{ width: `${Math.min(100, (effectiveDistinctDays / 3) * 100)}%` }}
+                style={{ width: `${Math.min(100, (effectiveDistinctDays / INSIGHT_MIN_JOURNAL_DAYS) * 100)}%` }}
                 className="h-full bg-primary-container rounded-full transition-all duration-500 border border-black"
               />
             </div>
@@ -201,30 +232,55 @@ export function InsightView() {
                   </button>
                 ))}
               </div>
-              <button type="button" onClick={() => createReportMutation.mutate()} disabled={createReportMutation.isPending}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-black bg-primary-container shadow-neo-sm font-space text-xs font-extrabold disabled:opacity-60 cursor-pointer">
-                <Sparkles className="w-3.5 h-3.5" />
-                {createReportMutation.isPending ? t('insight.reportCreating') : reportType === 'WEEKLY' ? t('insight.reportCreateWeekly') : t('insight.reportCreateMonthly')}
-              </button>
             </div>
           </div>
-          {createReportMutation.isError && <p role="alert" className="text-sm text-red-700">{t('insight.reportCreateError')}</p>}
           {reportsLoading && <p role="status">{t('status.loadingReport')}</p>}
           {reportsError && <p role="alert">{t('insight.reportError')} <button type="button" className="underline" onClick={() => void reportsQuery.refetch()}>{t('common.retry')}</button></p>}
-          {!reportsLoading && !reportsError && reports.length === 0 && (
+          {createReportMutation.isError && (
+            <p role="alert" className="text-sm text-red-700">
+              {t('insight.reportCreateError')}{' '}
+              <button type="button" className="underline" onClick={() => createReportNow(reportType)}>{t('common.retry')}</button>
+            </p>
+          )}
+          {preparing && (
+            <p role="status" className="inline-flex items-center gap-2 font-space text-sm font-bold">
+              <Sparkles className="w-4 h-4 animate-pulse" aria-hidden="true" />
+              {reportType === 'WEEKLY' ? t('insight.reportPreparingWeekly') : t('insight.reportPreparingMonthly')}
+            </p>
+          )}
+          {!reportsLoading && !reportsError && !preparing && reports.length === 0 && (
             <p>{t('insight.noReports')}</p>
           )}
-          {reports.map((report) => (
-            <article key={report.id} className="p-4 bg-paper-warm rounded-2xl border-neo-sm flex flex-col gap-2">
+
+          {/* Newest reflection in full: AI/template summary, comparison, highlight days, tones, chart. */}
+          {latestReport && latestReport.status === 'READY' && (
+            <article aria-labelledby="latest-report-title" className="p-5 sm:p-6 bg-white rounded-2xl border-2 border-black shadow-neo-sm flex flex-col gap-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-space text-sm font-bold">{report.type === 'MONTHLY' ? t('insight.reportMonthly') : t('insight.reportWeekly')} · {report.from} – {report.to}</h3>
-                <span className="font-space text-xs">{report.status === 'READY' ? '' : report.status === 'FAILED' ? t('report.failed') : t('insight.reportPending')}</span>
+                <h3 id="latest-report-title" className="font-space text-base font-extrabold">
+                  {latestReport.type === 'MONTHLY' ? t('insight.reportMonthly') : t('insight.reportWeekly')} · {formatDateRange(latestReport.from, latestReport.to, locale)}
+                </h3>
+                <Link href={`/reports/${latestReport.id}/print`} className="text-sm font-bold underline">{t('insight.reportPrint')}</Link>
               </div>
-              <p className="text-xs">{t('insight.sample', { count: report.sampleSize })}</p>
-              {report.narrative && <p className="font-serif text-sm leading-relaxed">{report.narrative}</p>}
-              <Link href={`/reports/${report.id}/print`} className="self-start text-sm font-bold underline">{t('insight.reportOpen')}</Link>
+              {latestFull ? <ReportDetailContent report={latestFull} /> : <p role="status">{t('status.loadingReport')}</p>}
             </article>
-          ))}
+          )}
+          {latestReport && latestReport.status === 'FAILED' && <p role="alert">{t('report.failed')}</p>}
+
+          {olderReports.length > 0 && (
+            <section aria-labelledby="older-reports-title" className="flex flex-col gap-3">
+              <h3 id="older-reports-title" className="font-space text-sm font-extrabold uppercase text-gray-700">{t('insight.olderReports')}</h3>
+              {olderReports.map((report) => (
+                <article key={report.id} className="p-4 bg-paper-warm rounded-2xl border-neo-sm flex flex-col gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="font-space text-sm font-bold">{report.type === 'MONTHLY' ? t('insight.reportMonthly') : t('insight.reportWeekly')} · {formatDateRange(report.from, report.to, locale)}</h4>
+                    <span className="font-space text-xs">{report.status === 'READY' ? '' : report.status === 'FAILED' ? t('report.failed') : t('insight.reportPending')}</span>
+                  </div>
+                  {report.narrative && <p className="font-serif text-sm leading-relaxed line-clamp-2">{report.narrative}</p>}
+                  <Link href={`/reports/${report.id}/print`} className="self-start text-sm font-bold underline">{t('insight.reportOpen')}</Link>
+                </article>
+              ))}
+            </section>
+          )}
         </motion.section>
       )}
 
@@ -248,46 +304,6 @@ export function InsightView() {
           <div className="lg:col-span-7 flex flex-col gap-6">
             <PatternInsightsPanel insights={patternInsights} loading={insightsLoading} error={insightsError}
               onRetry={() => void insightsQuery.refetch()} />
-            {/* EVIDENCE MATRIX HEADER CARD */}
-            <div className="bg-surface-card border-neo rounded-3xl p-6 shadow-neo relative">
-              <WashiTape color="peach" rotate={2} className="absolute -top-3 right-8 w-28" />
-
-              <div className="flex items-center justify-between pb-3 border-b-2 border-black mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-full bg-primary-container border-neo-sm"></span>
-                  <h2 className="font-space text-lg font-extrabold text-on-surface">
-                    {t('insight.evidence')}
-                  </h2>
-                </div>
-                <span className="font-space text-[10px] bg-paper-warm px-2 py-0.5 rounded border border-black font-bold">
-                  {t('insight.evidenceOnly')}
-                </span>
-              </div>
-
-              {/* No Causation Disclaimer Alert (FR-INSIGHT-03) */}
-              <div className="p-3 bg-blue-50 border border-blue-300 rounded-xl text-xs font-sans text-blue-900 mb-4 flex items-start gap-2">
-                <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
-                <span>
-                  <strong>{t('insight.science')}</strong> {t('insight.scienceDescription')}
-                </span>
-              </div>
-
-              {/* Evidence Cards List */}
-              <div className="flex flex-col gap-4">
-                {insightsLoading && <p role="status">{t('status.loadingAnalysis')}</p>}
-                {insightsError && <p role="alert">{t('insight.insightError')} <button type="button" className="underline" onClick={() => void insightsQuery.refetch()}>{t('common.retry')}</button></p>}
-                {!insightsLoading && !insightsError && reportInsights.length === 0 && (
-                  <p>{t('insight.noInsights')}</p>
-                )}
-                {reportInsights.map((insight) => (
-                  <article key={insight.id} className="p-4 bg-paper-warm rounded-2xl border-neo-sm shadow-neo-sm flex flex-col gap-3">
-                    <h3 className="font-space text-sm font-bold">{insight.type}</h3>
-                    <p className="font-sans text-sm">{insight.narrative}</p>
-                    <p className="font-mono text-xs">{t('insight.sample', { count: insight.sampleSize })} · {t('insight.range')} {insight.from} – {insight.to}</p>
-                  </article>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* RIGHT COLUMN: Micro-Action & Wellness Habit Checklist (5 cols) */}

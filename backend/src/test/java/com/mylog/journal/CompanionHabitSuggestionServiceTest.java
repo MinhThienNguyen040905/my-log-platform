@@ -160,9 +160,9 @@ class CompanionHabitSuggestionServiceTest {
         @Override public void validateRegistrationPreferences(String timezone, String locale) {}
         @Override public void createDefault(UUID userId, String timezone, String locale, String termsVersion, String privacyVersion, Instant now) {}
         @Override public ProfileView get(UUID userId) {
-            return new ProfileView(userId, "User", null, List.of(), "Asia/Ho_Chi_Minh", "vi", null, 0L);
+            return new ProfileView(userId, "User", null, List.of(), "Asia/Ho_Chi_Minh", "vi", null, 0L, "sprout");
         }
-        @Override public ProfileView update(UUID userId, String displayName, String penName, List<String> onboardingGoals, String timezone, String locale, long expectedVersion) { return null; }
+        @Override public ProfileView update(UUID userId, String displayName, String penName, List<String> onboardingGoals, String timezone, String locale, String mascot, long expectedVersion) { return null; }
         @Override public ProfileView completeOnboarding(UUID userId, long expectedVersion) { return null; }
         @Override public void decideConsent(UUID userId, String type, String documentVersion, boolean granted) {}
         @Override public List<ConsentView> consents(UUID userId) { return List.of(); }

@@ -5,6 +5,7 @@ import com.mylog.platform.security.CurrentUserProvider;
 import com.mylog.reporting.api.request.CreateReportRequest;
 import com.mylog.reporting.api.response.ReportPageResponse;
 import com.mylog.reporting.api.response.ReportResponse;
+import com.mylog.reporting.api.response.RegenerationAllowanceResponse;
 import com.mylog.reporting.application.ReportService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -41,6 +42,12 @@ class ReportController {
         return ReportPageResponse.from(reports.list(user(), type, cursor, limit));
     }
 
+    /** One regeneration per user per local week; tells the client whether it is still available. */
+    @GetMapping("/regeneration")
+    RegenerationAllowanceResponse regeneration() {
+        return RegenerationAllowanceResponse.from(reports.regenerationAllowance(user()));
+    }
+
     @GetMapping("/{reportId}")
     ReportResponse get(@PathVariable UUID reportId) {
         return ReportResponse.from(reports.get(user(), reportId));
@@ -55,7 +62,10 @@ class ReportController {
                 .body(ReportResponse.from(view));
     }
 
-    /** New immutable version of an existing report; the previous version stays unchanged. */
+    /**
+     * New immutable version of an existing report; the previous version stays unchanged. Allowed once per user
+     * per local week (409 after that, until next Monday).
+     */
     @PostMapping("/{reportId}:regenerate")
     ResponseEntity<ReportResponse> regenerate(@PathVariable UUID reportId) {
         identity.checkWriteQuota(user(), "report-create", 10, 3600);

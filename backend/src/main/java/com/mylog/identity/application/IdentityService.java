@@ -250,6 +250,23 @@ public class IdentityService {
                 || !passwords.matches(password, account.passwordHash())) throw new InvalidCredentialsException();
     }
 
+    /**
+     * Re-checks the password before a destructive account action, at most 5 failures per 15 minutes for each
+     * {@code purpose}. Failed attempts are recorded in their own transaction so a rollback keeps the count.
+     */
+    @Transactional(readOnly = true)
+    public void reauthenticateLimited(UUID userId, String password, String purpose) {
+        Instant now = clock.instant();
+        byte[] subject = cipher.lookupHash(purpose + "-attempt:" + userId);
+        if (store.isRateLimited(subject, now, 5, 900)) throw new RateLimitExceededException();
+        try {
+            reauthenticate(userId, password);
+        } catch (InvalidCredentialsException e) {
+            if (rateLimitService != null) rateLimitService.recordFailedAttempt(subject, now, 5, 900);
+            throw e;
+        }
+    }
+
     @Transactional(readOnly = true)
     public String exportEmail(UUID userId) {
         Account account = store.accountById(userId).orElseThrow(InvalidCredentialsException::new);

@@ -1,5 +1,6 @@
 import { authBackend, forwardProblem, sameOrigin } from '@/features/auth/api/backend';
 import { saveTokens } from '@/features/auth/api/session';
+import { deviceNameFrom } from '@/features/auth/utils/device-name';
 
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return new Response(null, { status: 403 });
@@ -7,7 +8,7 @@ export async function POST(request: Request) {
     const { email, password, rememberMe } = await request.json();
     const response = await authBackend('/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, deviceName: 'MyLog Web' }),
+      body: JSON.stringify({ email, password, deviceName: deviceNameFrom(request.headers.get('user-agent')) }),
     });
     if (!response.ok) return forwardProblem(response);
     const tokens = await response.json();

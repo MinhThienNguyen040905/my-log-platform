@@ -4,6 +4,7 @@ import com.mylog.journal.infrastructure.persistence.entity.JournalEntry;
 
 import com.mylog.journal.application.JournalEntrySnapshot;
 import com.mylog.journal.application.JournalStore;
+import com.mylog.journal.application.query.DailyEntryCountView;
 import com.mylog.platform.crypto.SensitiveDataCipher;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -39,6 +40,21 @@ class JpaJournalStore implements JournalStore {
                 select j from JournalEntry j where j.id=:entryId and j.userId=:userId and j.deletedAt is null
                 """, JournalEntry.class).setParameter("entryId", entryId).setParameter("userId", userId)
                 .getResultStream().findFirst().map(this::snapshot);
+    }
+
+    @Override public List<DailyEntryCountView> dailyCounts(UUID userId, LocalDate from, LocalDate to) {
+        // Uses idx_journal_entries_user_date; reads only plaintext columns, never the encrypted payload.
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = entityManager.createNativeQuery("""
+                SELECT local_date, count(*), (array_agg(mood_code ORDER BY occurred_at DESC, id DESC))[1]
+                FROM journal_entries
+                WHERE user_id=?1 AND local_date BETWEEN ?2 AND ?3
+                    AND deleted_at IS NULL AND entry_status='SAVED'
+                GROUP BY local_date
+                ORDER BY local_date
+                """).setParameter(1, userId).setParameter(2, from).setParameter(3, to).getResultList();
+        return rows.stream().map(row -> new DailyEntryCountView((LocalDate) row[0],
+                ((Number) row[1]).intValue(), (String) row[2])).toList();
     }
 
     @Override public List<JournalEntrySnapshot> list(UUID userId, LocalDate from, LocalDate to, UUID tagId,

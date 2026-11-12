@@ -9,4 +9,5 @@ public record UpdateProfileRequest(@Size(max = 120) String displayName,
                                    @Size(max = 120) String penName,
                                    List<@Pattern(regexp = "[A-Z_]+") String> onboardingGoals,
                                    String timezone,
-                                   String locale) {}
+                                   String locale,
+                                   @Pattern(regexp = "sprout|cat|coffee|off") String mascot) {}

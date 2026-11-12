@@ -19,6 +19,32 @@ export function indexEntriesByDate(entries: JournalEntry[]): Record<string, Jour
   return byDate;
 }
 
+const isoDay = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+/**
+ * Dates shown by a Monday-first month grid with outside days (at most 6 weeks), as YYYY-MM-DD in the
+ * browser calendar — the same days react-day-picker renders.
+ */
+export function monthGridRange(month: Date): { from: string; to: string } {
+  const first = new Date(month.getFullYear(), month.getMonth(), 1);
+  const last = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  const start = new Date(first);
+  start.setDate(first.getDate() - ((first.getDay() + 6) % 7));
+  const end = new Date(last);
+  end.setDate(last.getDate() + ((7 - last.getDay()) % 7));
+  return { from: isoDay(start), to: isoDay(end) };
+}
+
+/** Badge colour for the day's latest mood icon (`mood_code`), used when moods are shown. */
+export const MOOD_BADGE_CLASS: Record<string, string> = {
+  happy: 'bg-mood-calm-joy text-black',
+  neutral: 'bg-mood-hope-energy text-black',
+  angry: 'bg-mood-anxiety-stress text-black',
+  sad: 'bg-mood-sadness-reflect text-white',
+  'very-bad': 'bg-mood-purple text-white',
+};
+
 export function averageMoodScore(entries: JournalEntry[]): string | null {
   const scored = entries.filter((entry) => entry.moodScore !== null);
   return scored.length

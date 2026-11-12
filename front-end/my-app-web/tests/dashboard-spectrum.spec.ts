@@ -34,9 +34,13 @@ test.describe('dashboard emotion spectrum', () => {
     await expect(moods.getByText('Bình thường', { exact: true })).toBeVisible();
     await expect(moods.getByText('Rất tệ', { exact: true })).toBeVisible();
 
+    // Each row carries its own name and value (largest first); categories with nothing are left out.
+    const moodList = moods.getByRole('list', { name: 'Phổ cảm xúc' });
+    await expect(moodList.getByRole('listitem')).toHaveText([/Bình thường\s*18 bài/, /Vui\s*10 bài/, /Rất tệ\s*2 bài/]);
+
     const tones = page.getByRole('region', { name: 'Sắc thái trong bài viết' });
-    await expect(tones.getByText('Bình yên', { exact: true })).toBeVisible();
-    await expect(tones.getByText('100%', { exact: true })).toBeVisible(); // axis runs to 100% (15/20 → 75%)
+    const toneList = tones.getByRole('list', { name: 'Sắc thái trong bài viết' });
+    await expect(toneList.getByRole('listitem')).toHaveText([/Bình yên\s*75%/, /Vui vẻ\s*25%/]);
 
     await expect(page.getByText('Công việc', { exact: true })).toBeVisible();
     const main = await page.locator('main').innerText();

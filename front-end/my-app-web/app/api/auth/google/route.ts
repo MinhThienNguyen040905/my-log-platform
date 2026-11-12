@@ -1,5 +1,6 @@
 import { authBackend, forwardProblem, sameOrigin } from '@/features/auth/api/backend';
 import { saveTokens } from '@/features/auth/api/session';
+import { deviceNameFrom } from '@/features/auth/utils/device-name';
 import { cookies } from 'next/headers';
 
 const OAUTH_STATE_COOKIE = 'mylog_oauth_state';
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
         code: body.code,
         timezone: body.timezone,
         locale: body.locale,
-        deviceName: 'MyLog Web',
+        deviceName: deviceNameFrom(request.headers.get('user-agent')),
       }),
     });
 

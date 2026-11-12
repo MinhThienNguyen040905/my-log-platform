@@ -15,6 +15,8 @@ public interface JournalAssetStore {
     Optional<JournalAsset> findByUserIdAndId(UUID userId, UUID id);
     List<JournalAsset> findAssetsByUserIdAndIds(UUID userId, Collection<UUID> ids);
     List<JournalAsset> findAssetsForEntry(UUID userId, UUID entryId);
+    /** Every asset of the user that may still have a file in storage (anything not yet DELETED). */
+    List<JournalAsset> findStoredByUser(UUID userId);
     Map<UUID, JournalAsset> findCoverAssetsForEntries(UUID userId, List<UUID> entryIds);
     long sumActiveSizeBytesByUserId(UUID userId);
     List<JournalAsset> findOrphansBefore(Instant cutoff, int limit);

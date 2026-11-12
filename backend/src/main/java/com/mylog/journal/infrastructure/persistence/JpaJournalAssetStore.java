@@ -58,6 +58,14 @@ public class JpaJournalAssetStore implements JournalAssetStore {
     }
 
     @Override
+    public List<JournalAsset> findStoredByUser(UUID userId) {
+        return em.createQuery("SELECT a FROM JournalAsset a WHERE a.userId = :userId AND a.status <> :deleted", JournalAsset.class)
+                .setParameter("userId", userId)
+                .setParameter("deleted", JournalAsset.STATUS_DELETED)
+                .getResultList();
+    }
+
+    @Override
     public List<JournalAsset> findAssetsForEntry(UUID userId, UUID entryId) {
         return em.createQuery(
                 "SELECT a FROM JournalAsset a WHERE a.userId = :userId AND a.journalEntryId = :entryId AND a.status = :ready ORDER BY a.position ASC", JournalAsset.class)

@@ -40,6 +40,13 @@ public class FeedbackService {
     }
     @Transactional(readOnly = true)
     public List<FeedbackView> exportOwn(UUID userId) {return store.listOwn(userId);}
+    /** The user's own feedback, newest first, at most {@code limit} items. */
+    @Transactional(readOnly = true)
+    public List<FeedbackView> listOwn(UUID userId,int limit) {
+        List<FeedbackView> all=new java.util.ArrayList<>(store.listOwn(userId));
+        java.util.Collections.reverse(all);
+        return all.subList(0,Math.min(Math.max(limit,1),all.size()));
+    }
     @Transactional
     public FeedbackView adminGet(UUID actor,UUID id) {
         FeedbackView view=store.find(id,actor,true).orElseThrow(() -> new ResourceNotFoundException("Feedback not found."));

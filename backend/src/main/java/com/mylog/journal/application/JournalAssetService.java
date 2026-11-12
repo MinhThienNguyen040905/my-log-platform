@@ -4,6 +4,8 @@ import com.mylog.journal.infrastructure.persistence.entity.JournalAsset;
 import com.mylog.platform.id.IdGenerator;
 import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.platform.web.ResourceNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class JournalAssetService {
+    private static final Logger log = LoggerFactory.getLogger(JournalAssetService.class);
     private final JournalAssetStore store;
     private final JournalAssetStorage storage;
     private final ImageInspectionService inspection;
@@ -156,6 +159,29 @@ public class JournalAssetService {
         if (window.count > 30) {
             throw new InvalidRequestException("Đã vượt quá giới hạn tải lên tối đa 30 ảnh mỗi giờ. Vui lòng thử lại sau.");
         }
+    }
+
+    /** A file kept in asset storage, enough to delete it after its database rows are gone. */
+    public record StoredFile(String publicId, String assetType, String deliveryType) {}
+
+    /** Files the user still has in storage; read before a data reset deletes the asset rows. */
+    @Transactional(readOnly = true)
+    public List<StoredFile> storedFiles(UUID userId) {
+        return store.findStoredByUser(userId).stream()
+                .map(asset -> new StoredFile(asset.publicId, asset.assetType, asset.deliveryType)).toList();
+    }
+
+    /**
+     * Removes files from storage once their rows are deleted. Best effort per file: a failure is logged without
+     * the file id and the remaining files are still attempted.
+     */
+    public void deleteStoredFiles(List<StoredFile> files) {
+        int failed = 0;
+        for (StoredFile file : files) {
+            try { storage.delete(file.publicId(), file.assetType(), file.deliveryType()); }
+            catch (RuntimeException e) { failed++; }
+        }
+        if (failed > 0) log.warn("Asset storage cleanup left {} of {} files", failed, files.size());
     }
 
     private record UploadWindow(Instant windowStart, int count) {}

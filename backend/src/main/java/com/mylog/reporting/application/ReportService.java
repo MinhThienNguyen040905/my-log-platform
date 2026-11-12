@@ -8,11 +8,13 @@ import com.mylog.insight.application.query.EntrySignal;
 import com.mylog.insight.application.query.TopCode;
 import com.mylog.insight.domain.JournalStreak;
 import com.mylog.journal.application.JournalService;
+import com.mylog.platform.web.ConflictException;
 import com.mylog.platform.web.InvalidRequestException;
 import com.mylog.platform.web.ResourceNotFoundException;
 import com.mylog.reporting.application.query.ReportPage;
 import com.mylog.reporting.application.query.ReportView;
 import com.mylog.reporting.domain.ReportPeriod;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +22,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -44,10 +47,15 @@ public class ReportService {
     private final JournalService journal;
     private final Clock clock;
 
+    /** true: one regeneration per user per local week; false (local testing): regenerate any time. */
+    private final boolean weeklyRegenerateLimit;
+
     public ReportService(ReportStore reports, DailyAggregateSource metrics, InsightService insights,
-                         NarrativeRewriter rewriter, JournalService journal, Clock clock) {
+                         NarrativeRewriter rewriter, JournalService journal, Clock clock,
+                         @Value("${mylog.reports.weekly-regenerate-limit:true}") boolean weeklyRegenerateLimit) {
         this.reports = reports; this.metrics = metrics; this.insights = insights;
         this.rewriter = rewriter; this.journal = journal; this.clock = clock;
+        this.weeklyRegenerateLimit = weeklyRegenerateLimit;
     }
 
     public void scheduleDue() {
@@ -156,11 +164,32 @@ public class ReportService {
         return new ReportStore.Result(moodSamples, snapshot, narrative, evidence, generatedBy, model, promptVersion);
     }
 
+    /** Whether the user may still regenerate a report this week, and the local date it opens again. */
+    public record RegenerationAllowance(boolean available, LocalDate availableFrom) {}
+
+    /** Each user may regenerate one report per local week (Monday–Sunday in the profile timezone). */
+    public RegenerationAllowance regenerationAllowance(UUID userId) {
+        if (!weeklyRegenerateLimit) return new RegenerationAllowance(true, LocalDate.now(clock.withZone(zone(userId))));
+        LocalDate thisMonday = thisMonday(userId);
+        boolean used = reports.regenerationsSince(userId, weekStart(userId, thisMonday)) > 0;
+        return new RegenerationAllowance(!used, used ? thisMonday.plusWeeks(1) : LocalDate.now(clock.withZone(zone(userId))));
+    }
+
     public UUID regenerate(UUID userId, UUID reportId) {
-        ReportView existing = reports.get(userId, reportId);
-        if (!"READY".equals(existing.status()) && !"FAILED".equals(existing.status())) throw new InvalidRequestException();
-        return reports.enqueue(userId, existing.type(), existing.from(), existing.to(),
-                existing.timezone(), true, clock.instant());
+        Instant weekStart = weeklyRegenerateLimit ? weekStart(userId, thisMonday(userId)) : null;
+        UUID id = reports.regenerateOnce(userId, reportId, weekStart, clock.instant());
+        if (id == null) throw new ConflictException("Bạn đã tạo lại bản nhìn lại trong tuần này. Tuần sau bạn có thể tạo lại.");
+        return id;
+    }
+
+    private ZoneId zone(UUID userId) { return ZoneId.of(metrics.timezone(userId)); }
+
+    private LocalDate thisMonday(UUID userId) {
+        return LocalDate.now(clock.withZone(zone(userId))).with(DayOfWeek.MONDAY);
+    }
+
+    private java.time.Instant weekStart(UUID userId, LocalDate monday) {
+        return monday.atStartOfDay(zone(userId)).toInstant();
     }
 
     public ReportPage list(UUID userId, String type, String cursor, int limit) {

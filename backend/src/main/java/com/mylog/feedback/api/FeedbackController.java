@@ -30,6 +30,10 @@ public class FeedbackController {
         return ResponseEntity.accepted().body(new FeedbackCreatedResponse(
                 feedback.submit(user(),request.category(),request.message())));
     }
+    @GetMapping("/api/v1/feedback")
+    public List<FeedbackResponse> mine(@RequestParam(defaultValue="20") int limit) {
+        return feedback.listOwn(user(),Math.min(limit,50)).stream().map(FeedbackResponse::from).toList();
+    }
     @GetMapping("/api/v1/feedback/{id}")
     public FeedbackResponse own(@PathVariable UUID id) {return FeedbackResponse.from(feedback.own(user(),id));}
     @GetMapping("/api/v1/admin/feedback/{id}") @PreAuthorize("hasAuthority('feedback:read')")

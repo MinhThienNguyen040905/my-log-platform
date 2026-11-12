@@ -43,6 +43,8 @@ export interface UserProfile {
   plan: string;
   timezone: string;
   avatarUrl: string;
+  /** Insight-page mascot id or "off". */
+  mascot?: string;
   language?: 'vi' | 'en';
   isOnboarded?: boolean;
   journalingGoals?: string[];

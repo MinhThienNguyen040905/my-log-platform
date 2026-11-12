@@ -2,7 +2,7 @@ import { generateHTML, type JSONContent } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
-import Image from '@tiptap/extension-image';
+import { JournalImageBase } from '../extensions/journal-image-base';
 import { PromptQuestion } from '../extensions/prompt-question';
 import { type JournalEntry, type JournalEmotion, type MoodType } from '@/types';
 
@@ -25,6 +25,15 @@ export const JOURNAL_PAGE_SIZE = 5;
 export async function getRecentEntries(limit = 2): Promise<JournalEntry[]> {
   const page = await journalJson<JournalPage>(`journal-entries?limit=${limit}`);
   return page.items.map(toEntry);
+}
+
+/** Saved entries per local day (`GET /journal-entries/daily-counts`, max 92 days); no journal content. */
+export type JournalDayCount = { date: string; count: number; latestMoodCode: string | null };
+export type JournalDailyCounts = { from: string; to: string; days: JournalDayCount[] };
+
+export function getJournalDailyCounts(from: string, to: string): Promise<JournalDailyCounts> {
+  const query = new URLSearchParams({ from, to });
+  return journalJson<JournalDailyCounts>(`journal-entries/daily-counts?${query.toString()}`);
 }
 
 export type DetailedJournalPage = { items: JournalEntry[]; nextCursor: string | null };
@@ -57,7 +66,8 @@ export async function getSearchJournalPage({ query, cursor, limit = JOURNAL_PAGE
 }
 
 const containers = new Set(['doc', 'paragraph', 'heading', 'blockquote', 'promptQuestion', 'bulletList', 'orderedList', 'listItem']);
-const marks = new Set(['bold', 'italic', 'underline', 'strike', 'code']);
+// Keep in sync with backend TipTapContent.MARKS (highlight is single-colour: no attributes are sent).
+const marks = new Set(['bold', 'italic', 'underline', 'strike', 'code', 'highlight']);
 
 export function prepareContent(node: JSONContent): JSONContent {
   if (node.type === 'text') {
@@ -142,7 +152,7 @@ export function toEntry(value: JournalSummary | JournalDetail): JournalEntry {
   if (detail?.contentJson) {
     // Must list every node/mark the editor can produce: an unknown one makes generateHTML throw, and the
     // entry would then open empty. Keep in sync with JournalTipTapEditor and backend TipTapContent.
-    try { content = generateHTML(detail.contentJson, [StarterKit, Underline, Highlight.configure({ multicolor: false }), Image, PromptQuestion]); }
+    try { content = generateHTML(detail.contentJson, [StarterKit, Underline, Highlight.configure({ multicolor: false }), JournalImageBase, PromptQuestion]); }
     catch { content = ''; }
   }
   return {

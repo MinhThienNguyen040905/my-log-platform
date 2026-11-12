@@ -180,6 +180,25 @@ class JpaDailyAggregateSource implements DailyAggregateSource {
     }
 
     @Override @Transactional(readOnly = true)
+    public DominantMood dominantMood(UUID userId, LocalDate from, LocalDate to) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery("""
+                WITH saved AS (
+                    SELECT mood_code, occurred_at FROM journal_entries
+                    WHERE user_id=?1 AND local_date BETWEEN ?2 AND ?3 AND deleted_at IS NULL AND entry_status='SAVED')
+                SELECT (SELECT count(*) FROM saved),
+                    m.mood_code, m.c
+                FROM (SELECT 1) one
+                LEFT JOIN LATERAL (
+                    SELECT mood_code, count(*) c, max(occurred_at) latest FROM saved WHERE mood_code IS NOT NULL
+                    GROUP BY mood_code ORDER BY count(*) DESC, max(occurred_at) DESC LIMIT 1) m ON true
+                """).setParameter(1, userId).setParameter(2, from).setParameter(3, to).getResultList();
+        Object[] row = rows.getFirst();
+        int entries = ((Number) row[0]).intValue();
+        return new DominantMood((String) row[1], row[2] == null ? 0 : ((Number) row[2]).intValue(), entries);
+    }
+
+    @Override @Transactional(readOnly = true)
     public boolean hasElevatedRisk(UUID userId, LocalDate from, LocalDate to) {
         Number count = (Number) em.createNativeQuery("""
                 SELECT count(*) FROM journal_entries

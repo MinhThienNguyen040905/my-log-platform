@@ -65,6 +65,7 @@ export function JournalProvider({ children, userId, streakCount, loadEntries }: 
     queryClient.invalidateQueries({ queryKey: ['reports', userId] }),
     queryClient.invalidateQueries({ queryKey: ['journal', userId, 'recent'] }),
     queryClient.invalidateQueries({ queryKey: ['journal', userId, 'entries'] }),
+    queryClient.invalidateQueries({ queryKey: ['journal', userId, 'daily-counts'] }),
   ]);
 
   const addEntry = async (body: Record<string, unknown>, key: string) => {

@@ -137,13 +137,15 @@ Các endpoint M1 được bật trong profile `local`, `staging`, `prod`; profil
 1. `POST /api/v1/auth/register` với email, password (tối thiểu 12 ký tự), timezone IANA, locale, `termsVersion`, `privacyVersion`, `acceptTerms=true`, `acceptPrivacy=true`. Backend trả `202` với `registrationId` và lưu lượt đăng ký trong `pending_registrations`; chưa có dòng `users`, role hoặc profile. Đăng ký lại bằng cùng email trước khi xác minh sẽ thay password/thông tin và cấp mã/link mới; mã/link cũ hết hiệu lực. Email đã có tài khoản thật vẫn trả `409`.
 2. Email HTML có nút mở trang xác minh qua liên kết `MYLOG_VERIFICATION_URL?token=...` (token dài, hạn 24 giờ); phần văn bản thuần vẫn chứa URL để dùng với ứng dụng mail không hiển thị HTML. Email cũng chứa mã 8 chữ số (hạn 10 phút). Backend không xử lý liên kết bằng `GET`: trang web/app nhận liên kết phải để người dùng bấm xác nhận rồi gọi `POST /api/v1/auth/email-verifications:confirm` với `{ "token": "..." }`. Nếu nhập mã trên thiết bị khác, gọi `POST /api/v1/auth/email-verifications:confirm-code` với `{ "email": "...", "code": "12345678" }`. Xác minh thành công mới tạo `users`, role và profile trong cùng transaction. Có thể yêu cầu gửi lại bằng `POST /api/v1/auth/email-verifications` với `{ "email": "..." }` khi lượt đăng ký tạm còn tồn tại; mã và liên kết cũ hết hiệu lực khi gửi lại. Lượt đăng ký tạm quá 24 giờ được job dọn dẹp xóa; sau đó đăng ký lại.
 3. `POST /api/v1/auth/login` trả access JWT 10 phút và refresh token opaque 30 ngày. `POST /api/v1/auth/refresh` đổi refresh token mỗi lần; dùng lại token cũ sẽ revoke session family.
-4. Dùng `Authorization: Bearer <accessToken>` cho `GET/PATCH /api/v1/me`, consent và session APIs. `PATCH /me` dùng `If-Match` từ ETag của `GET /me`.
+4. Dùng `Authorization: Bearer <accessToken>` cho `GET/PATCH /api/v1/me`, consent và session APIs. `PATCH /me` dùng `If-Match` từ ETag của `GET /me`. `GET /me` trả cả `email` của chính tài khoản (đã giải mã). `GET /me/sessions` đánh dấu `current: true` cho phiên đang gọi (claim `sid` trong JWT); `deviceName` do client gửi lúc đăng nhập (web gửi dạng `MyLog Web · Chrome · Windows`, suy ra từ User-Agent). `GET /api/v1/feedback?limit=20` trả góp ý của chính user, mới nhất trước. `POST /api/v1/me/data:reset` với `{"password", "confirm": true}` ("Bắt đầu hành trình mới") xóa ngay, không hoàn tác: nhật ký, thẻ, ảnh (cả file lưu trữ, xóa sau khi commit), check-in, phân tích/job AI, insight, report, self-care, bản xuất, góp ý, sự kiện an toàn và idempotency key của user; giữ tài khoản, hồ sơ, consent và phiên đăng nhập, ghi một dòng audit `DATA_RESET`. Tài khoản có mật khẩu phải nhập lại mật khẩu (sai trả `403` với `detail=PASSWORD_INCORRECT`, tối đa 5 lần sai/15 phút rồi `429`); tài khoản Google cần phiên hiện tại được tạo trong 10 phút gần nhất (`403 RECENT_LOGIN_REQUIRED`). Dùng 403 thay 401 để nhập sai mật khẩu không làm mất phiên.
 
 `MYLOG_VERIFICATION_URL` phải là URL HTTPS của trang xác minh trên web ở staging/prod; profile local/test cho phép HTTP. Web hiện đã hỗ trợ cả liên kết và mã 8 chữ số; mobile cần nối riêng nếu muốn xử lý liên kết bằng iOS Universal Links/Android App Links. Không xác minh tự động khi GET và không lưu token trong log, analytics hoặc lịch sử điều hướng. Mã ngắn chỉ dùng một lần, tối đa 5 lần nhập sai cho mỗi email được gửi; sau khi xác minh bằng liên kết hoặc mã, phương thức còn lại hết hiệu lực. Không tự tạo phiên đăng nhập ở bước xác minh.
 
 Đặt lại mật khẩu: `POST /api/v1/auth/password-resets` với `{ "email": "..." }` luôn trả `202` cùng một thông điệp, dù email có tồn tại hay không. Email chứa liên kết `MYLOG_PASSWORD_RESET_URL#token=...` (hạn 1 giờ) và mã 8 chữ số (hạn 15 phút); token nằm sau `#` nên không đi lên server qua request hay `Referer`. Xác nhận bằng `POST /api/v1/auth/password-resets:confirm` với `{ "token", "newPassword" }` hoặc `POST /api/v1/auth/password-resets:confirm-code` với `{ "email", "code", "newPassword" }`; mật khẩu mới dài 12–72 byte UTF-8. Thành công thì mọi phiên của tài khoản bị thu hồi. `MYLOG_PASSWORD_RESET_URL` là bắt buộc ở staging/prod và phải là URL HTTPS của trang web `/auth/reset-password`, không có query hay fragment; profile local/test mặc định `http://localhost:3000/auth/reset-password`.
 
 M1 dùng BCrypt cost 12, mã hóa email/profile bằng AES-GCM envelope, HMAC có khóa cho email lookup và token hash. Migration V17 xóa các `users.status='PENDING'` cũ để giải phóng email; chỉ áp dụng sau khi đã chấp nhận mất những lượt đăng ký chưa xác minh đó. Khóa AES dùng để mã hóa payload có thể rotate bằng `MYLOG_IDENTITY_PREVIOUS_KEYS`; `MYLOG_IDENTITY_LOOKUP_KEY` phải giữ ổn định. JWT có thể chuyển khóa ký bằng `MYLOG_JWT_PREVIOUS_PUBLIC_KEYS`. Local/test có khóa phát triển mặc định; staging/prod yêu cầu khóa và SMTP từ secret manager/environment, không có fallback.
+
+Xóa tài khoản: API `/api/v1/account-deletion-requests` (yêu cầu, xem trạng thái, hủy trong thời gian chờ) vẫn còn ở backend nhưng web không còn gọi. User muốn xóa tài khoản thì gửi email cho admin; người vận hành gọi API này khi cần.
 
 Persistence M1 dùng JPA entity trong `identity`/`user` `infrastructure/persistence/entity`, còn adapter dùng `EntityManager` trong `infrastructure/persistence`. Flyway quản lý schema PostgreSQL; Hibernate chạy ở chế độ `validate`. Các thao tác PostgreSQL đặc thù có thể dùng native SQL qua JPA.
 
@@ -154,13 +156,18 @@ Sau khi đăng nhập, gửi `Authorization: Bearer <accessToken>` cho các endp
 | Tài nguyên | Endpoint |
 |---|---|
 | Journal | `POST/GET /api/v1/journal-entries`, `GET/PATCH/DELETE /api/v1/journal-entries/{entryId}` |
+| Lịch | `GET /api/v1/journal-entries/daily-counts?from=&to=` |
 | Favorite | `PUT/DELETE /api/v1/journal-entries/{entryId}/favorite` |
 | Tag | `POST/GET /api/v1/journal-tags`, `PUT/DELETE /api/v1/journal-entries/{entryId}/tags/{tagId}` |
 | Check-in | `PUT/GET /api/v1/check-ins/{localDate}`, `GET /api/v1/check-ins?from=&to=` |
 
 `POST journal` cần `Idempotency-Key` dài 8–160 ký tự và `contentJson` là TipTap document đã allowlist. `PATCH/DELETE journal` cần `If-Match` bằng ETag trả từ GET/create; version xung đột trả `409`. Danh sách journal dùng cursor, `limit` 1–100, và lọc `from`, `to`, `tag`, `favorite`. Ngày được tính từ `occurredAt` với timezone IANA gửi trong request. Check-in dùng một bản ghi cho mỗi user/ngày; `PUT` thay cả metrics, note và activities của ngày đó. Note và journal payload được mã hóa trước khi ghi DB.
 
-Safety ingress luôn chạy lúc tạo/sửa journal. Rule HIGH/CRITICAL đặt `analysisStatus=BLOCKED_BY_SAFETY`; nếu classifier không khả dụng thì trạng thái cũng bị chặn và outbox chỉ có ID/version cho lần screen lại. Chưa có classifier hoặc bộ nội dung/nguồn hỗ trợ được duyệt; các bản ghi `safety_resources` không được tự điền hotline. Frontend hiện là prototype dùng auth mock và `localStorage`; chưa kết nối API M1/M2.
+`GET /api/v1/journal-entries/daily-counts?from=YYYY-MM-DD&to=YYYY-MM-DD` cho lịch: trả `{from, to, days:[{date, count, latestMoodCode}]}`, chỉ gồm ngày có bài `SAVED` chưa xóa của user hiện tại, nhóm theo `local_date` (ngày theo timezone lúc viết). `latestMoodCode` là icon cảm xúc của bài mới nhất trong ngày (có thể `null`). Không đọc hay giải mã nội dung nhật ký. Khoảng ngày tối đa 92 ngày tính cả hai đầu; thiếu tham số, `from > to` hoặc khoảng quá dài trả `400`. Web gọi endpoint này cho lưới tháng đang xem thay vì đếm từ danh sách bài đã tải (danh sách tải 5 bài mỗi trang).
+
+Thiếu query parameter bắt buộc ở bất kỳ endpoint nào trả `400 MALFORMED_REQUEST` (trước đây rơi vào `500`).
+
+Safety ingress luôn chạy lúc tạo/sửa journal. Rule HIGH/CRITICAL đặt `analysisStatus=BLOCKED_BY_SAFETY`; nếu classifier không khả dụng thì trạng thái cũng bị chặn và outbox chỉ có ID/version cho lần screen lại. Chưa có classifier hoặc bộ nội dung/nguồn hỗ trợ được duyệt; các bản ghi `safety_resources` không được tự điền hotline. Web đã dùng auth M1 và API journal/check-in thật qua route `/api` của Next.js.
 
 `GET /api/v1/safety/resources?locale=vi-VN&country=VN` là API công khai, chỉ trả nguồn hỗ trợ đã được duyệt, có `verified_at` và nguồn HTTPS. Frontend safety modal dùng `NEXT_PUBLIC_BACKEND_URL` để đọc API này (mặc định `http://localhost:8080` khi phát triển local) và chỉ hiện liên hệ khi API trả dữ liệu đã xác minh. Classifier trả mức rủi ro thấp cũng không mở ordinary analysis nếu `safety_policy_versions` chưa có policy `APPROVED` đang hiệu lực với rule version, classifier provider/version và ngưỡng confidence khớp. Hiện chưa có policy được duyệt nên API nguồn hỗ trợ trả danh sách rỗng và journal vẫn ở chế độ fail-safe.
 
@@ -238,6 +245,11 @@ sắc thái để thay thế cảm xúc người dùng tự chọn.
   vào `ai_usage_records` với `operation = INSIGHT_NARRATIVE`.
 - `PATCH /api/v1/insights/{id}` với `{"status":"HIDDEN"}` ẩn insight; loại insight đã ẩn vẫn ẩn khi refresh
   trong cùng cửa sổ.
+- `GET /api/v1/insights/mascot` cho linh vật ở Góc thấu hiểu: icon mood user chọn nhiều nhất trong 7 ngày
+  địa phương gần nhất (`mood` = `happy|neutral|angry|sad|very-bad` hoặc `null`; hòa thì lấy mood của bài mới
+  nhất), `moodCount`, `entryCount`, `from`, `to` và `calm = true` khi trong cửa sổ có bài risk
+  `HIGH`/`CRITICAL`. Linh vật đã chọn lưu ở hồ sơ: `PATCH /api/v1/me` với `mascot` =
+  `sprout|cat|coffee|off` (mặc định `sprout`; giá trị cũ `palette`/`book` đọc ra thành `sprout`).
 - `POST /api/v1/dev/analyses:seed` chỉ có ở profile `local`: gán cảm xúc/chủ đề **mẫu** (`provider =
   LOCAL_FAKE`) cho bài 30 ngày gần nhất của user hiện tại, suy ra từ icon mood, điểm số, giấc ngủ và thẻ;
   không đọc hay gửi nội dung nhật ký. Không phải AI phân tích thật.
@@ -257,9 +269,15 @@ sắc thái để thay thế cảm xúc người dùng tự chọn.
   AI diễn đạt lại theo cùng điều kiện với pattern insight qua `NarrativeRewriter`; kỳ có tâm trạng giảm hoặc căng
   thẳng tăng rõ luôn giữ câu mẫu. `generatedBy` là `RULE` hoặc `AI_ASSISTED`.
 - `POST /api/v1/reports` với `{"type":"WEEKLY"|"MONTHLY"}` tạo report cho tuần/tháng gần nhất đã kết thúc (trả
-  report có sẵn nếu kỳ đó đã có); `POST /api/v1/reports/{id}:regenerate` tạo phiên bản mới, bản cũ giữ nguyên. Hai
-  endpoint dùng chung giới hạn 10 lần/giờ. Worker (`MYLOG_REPORTS_ENABLED=true`) mới tính report; nếu tắt, report
-  ở trạng thái `PENDING`.
+  report có sẵn nếu kỳ đó đã có, không tính lại); `POST /api/v1/reports/{id}:regenerate` tạo phiên bản mới, bản cũ
+  giữ nguyên. **Mỗi user chỉ được tạo lại 1 lần mỗi tuần** (thứ Hai–Chủ nhật theo timezone hồ sơ, tính trên mọi report
+  của user); lần thứ hai trong tuần trả `409`. Kiểm tra và tạo nằm trong một transaction có advisory lock theo user,
+  nên hai lần bấm đồng thời cũng chỉ tạo một phiên bản. `GET /api/v1/reports/regeneration` trả
+  `{available, availableFrom}` (`availableFrom` là thứ Hai tuần sau khi đã dùng) để web khóa nút. Lượt dùng được đếm
+  từ các phiên bản `version > 1` tạo từ thứ Hai, không cần bảng mới. `MYLOG_REPORTS_WEEKLY_REGENERATE_LIMIT`
+  (mặc định `true`) bật giới hạn này; đặt `false` ở local để tạo lại bất cứ lúc nào khi test (API khi đó luôn trả
+  `available: true`). Không tắt ở staging/prod. Hai endpoint tạo vẫn dùng chung giới hạn 10 lần/giờ.
+  Worker (`MYLOG_REPORTS_ENABLED=true`) mới tính report; nếu tắt, report ở trạng thái `PENDING`.
 
 ### Check-in: hoạt động
 

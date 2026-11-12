@@ -43,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -157,6 +158,57 @@ class InsightPatternIntegrationTest {
                 .collect(Collectors.toMap(c -> c.code(), c -> c.count())), "secondary HOPE is not counted");
         assertEquals(Map.of("happy", 1L, "neutral", 1L), view.topMoods().stream()
                 .collect(Collectors.toMap(c -> c.code(), c -> c.count())));
+    }
+
+    @Test void mascotMirrorsTheMostPickedMoodOfTheLastSevenDays() throws Exception {
+        UUID owner = user();
+        java.util.function.BiConsumer<LocalDate, String> write = (day, mood) -> {
+            UUID id = insertEntry(owner, day, 6, 4, 420, null);
+            jdbc.update("update journal_entries set mood_code=? where id=?", mood, id);
+        };
+        mvc.perform(get("/api/v1/insights/mascot").with(jwt().jwt(j -> j.subject(owner.toString()))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.mood").doesNotExist())
+                .andExpect(jsonPath("$.entryCount").value(0)).andExpect(jsonPath("$.calm").value(false));
+
+        write.accept(TODAY.minusDays(20), "angry");   // outside the 7-day window
+        write.accept(TODAY.minusDays(20), "angry");
+        write.accept(TODAY.minusDays(6), "sad");
+        write.accept(TODAY.minusDays(5), "happy");
+        write.accept(TODAY.minusDays(3), "sad");
+        write.accept(TODAY.minusDays(1), "happy");    // tie 2–2: the most recent entry's mood wins
+        mvc.perform(get("/api/v1/insights/mascot").with(jwt().jwt(j -> j.subject(owner.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mood").value("happy")).andExpect(jsonPath("$.moodCount").value(2))
+                .andExpect(jsonPath("$.entryCount").value(4))
+                .andExpect(jsonPath("$.from").value(TODAY.minusDays(6).toString()))
+                .andExpect(jsonPath("$.to").value(TODAY.toString()));
+
+        insertEntry(owner, TODAY, 3, 8, 300, "HIGH");
+        mvc.perform(get("/api/v1/insights/mascot").with(jwt().jwt(j -> j.subject(owner.toString()))))
+                .andExpect(jsonPath("$.calm").value(true));
+        mvc.perform(get("/api/v1/insights/mascot")).andExpect(status().isUnauthorized());
+    }
+
+    @Test void mascotChoiceIsStoredInTheProfile() throws Exception {
+        UUID owner = user();
+        assertEquals("sprout", users.get(owner).mascot(), "default mascot");
+        long version = users.get(owner).version();
+        assertEquals("cat", users.update(owner, null, null, null, null, null, "cat", version).mascot());
+        assertEquals("cat", users.get(owner).mascot());
+        assertEquals("cat", users.update(owner, "Synthetic", null, null, null, null, null, version + 1).mascot(),
+                "omitting mascot keeps the choice");
+        mvc.perform(patch("/api/v1/me").with(jwt().jwt(j -> j.subject(owner.toString())))
+                        .header("If-Match", "\"" + (version + 2) + "\"").contentType("application/json")
+                        .content("{\"mascot\":\"dragon\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/me").with(jwt().jwt(j -> j.subject(owner.toString())))
+                        .header("If-Match", "\"" + (version + 2) + "\"").contentType("application/json")
+                        .content("{\"mascot\":\"palette\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/me").with(jwt().jwt(j -> j.subject(owner.toString())))
+                        .header("If-Match", "\"" + (version + 2) + "\"").contentType("application/json")
+                        .content("{\"mascot\":\"off\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.mascot").value("off"));
     }
 
     @Test void hiddenInsightStaysHiddenAndEndpointsRequireOwner() throws Exception {

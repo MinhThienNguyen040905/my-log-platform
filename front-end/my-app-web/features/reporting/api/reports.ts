@@ -28,7 +28,14 @@ export function createReport(type: ReportType): Promise<Report> {
   return apiJson('reports', { method: 'POST', ...apiJsonBody({ type }) });
 }
 
-/** New version of a report with the latest data; the old version stays as it was. */
+/** One regeneration per user per local week; `availableFrom` is next Monday once it has been used. */
+export type RegenerationAllowance = { available: boolean; availableFrom: string };
+
+export function getRegenerationAllowance(): Promise<RegenerationAllowance> {
+  return apiJson('reports/regeneration');
+}
+
+/** New version of a report with the latest data; the old version stays as it was. Once per week. */
 export function regenerateReport(reportId: string): Promise<Report> {
   return apiJson(`reports/${encodeURIComponent(reportId)}:regenerate`, { method: 'POST' });
 }
