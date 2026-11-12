@@ -1,5 +1,6 @@
 package com.mylog.journal.infrastructure.persistence;
 
+import com.mylog.journal.application.JournalAssetService;
 import com.mylog.journal.application.JournalAssetStore;
 import com.mylog.journal.infrastructure.persistence.entity.JournalAsset;
 import com.mylog.platform.web.ConflictException;
@@ -58,11 +59,12 @@ public class JpaJournalAssetStore implements JournalAssetStore {
     }
 
     @Override
-    public List<JournalAsset> findStoredByUser(UUID userId) {
+    public List<JournalAssetService.StoredFile> findStoredFilesByUser(UUID userId) {
         return em.createQuery("SELECT a FROM JournalAsset a WHERE a.userId = :userId AND a.status <> :deleted", JournalAsset.class)
                 .setParameter("userId", userId)
                 .setParameter("deleted", JournalAsset.STATUS_DELETED)
-                .getResultList();
+                .getResultList().stream()
+                .map(a -> new JournalAssetService.StoredFile(a.publicId, a.assetType, a.deliveryType)).toList();
     }
 
     @Override

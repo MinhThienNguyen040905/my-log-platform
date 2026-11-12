@@ -167,8 +167,7 @@ public class JournalAssetService {
     /** Files the user still has in storage; read before a data reset deletes the asset rows. */
     @Transactional(readOnly = true)
     public List<StoredFile> storedFiles(UUID userId) {
-        return store.findStoredByUser(userId).stream()
-                .map(asset -> new StoredFile(asset.publicId, asset.assetType, asset.deliveryType)).toList();
+        return store.findStoredFilesByUser(userId);
     }
 
     /**
