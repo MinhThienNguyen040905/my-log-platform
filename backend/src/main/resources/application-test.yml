@@ -12,6 +12,10 @@ spring:
 mylog:
   open-api:
     enabled: true
+  jobs:
+    enabled: false
+  cloudinary:
+    enabled: false
   ai:
     provider: none
     api-key: ""
