@@ -30,7 +30,12 @@ public interface SelfCareStore {
     Optional<Goal> goal(UUID userId, UUID id);
     List<Goal> goals(UUID userId);
     boolean updateGoal(Goal goal, long expectedVersion);
+    /** Deletes the goal; habits and completions go with it through the schema's ON DELETE CASCADE. */
+    boolean deleteGoal(UUID userId, UUID goalId);
     void createHabit(Habit habit);
+    boolean updateHabit(Habit habit, long expectedVersion);
+    /** Deletes the habit; completions go with it through the schema's ON DELETE CASCADE. */
+    boolean deleteHabit(UUID userId, UUID habitId);
     Optional<Habit> habit(UUID userId, UUID id);
     List<Habit> habits(UUID userId, UUID goalId);
     List<Completion> completions(UUID userId, UUID habitId, LocalDate from, LocalDate to);

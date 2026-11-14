@@ -122,6 +122,54 @@ public class SelfCareService implements SelfCareCompanionQuery {
         return view(habit);
     }
 
+    @Transactional
+    public void deleteGoal(UUID userId, UUID goalId) {
+        requireGoal(userId, goalId);
+        if (!store.deleteGoal(userId, goalId)) throw new ResourceNotFoundException("Goal không tồn tại.");
+    }
+
+    /**
+     * Partial update: {@code null} keeps the stored value; {@code toolCode} as a blank string clears the link.
+     * Existing completions are kept even when the new schedule or target no longer matches them.
+     */
+    @Transactional
+    public HabitView updateHabit(UUID userId, UUID habitId, String title, BigDecimal targetValue, String unit,
+                                 String frequencyType, List<Integer> daysOfWeek, String toolCode, String status,
+                                 long expectedVersion) {
+        SelfCareStore.Habit old = requireHabit(userId, habitId);
+        if (old.version() != expectedVersion) throw new ConflictException("Habit đã được cập nhật ở nơi khác.");
+        if (status != null && !Set.of("ACTIVE", "PAUSED", "ARCHIVED").contains(status))
+            throw new InvalidRequestException();
+        BigDecimal nextTarget = targetValue == null ? old.targetValue() : targetValue;
+        String nextUnit = unit == null ? old.unit() : unit;
+        if (nextTarget.signum() <= 0 || nextTarget.scale() > 2 || nextTarget.precision() > 10
+                || !nextUnit.matches("[A-Za-z0-9_]{1,32}")) throw new InvalidRequestException();
+        HabitSchedule nextSchedule;
+        if (frequencyType == null && daysOfWeek == null) nextSchedule = schedule(old);
+        else {
+            String type = frequencyType == null ? old.frequencyType() : frequencyType;
+            List<Integer> days = daysOfWeek != null ? daysOfWeek
+                    : type.equals(old.frequencyType()) ? schedule(old).daysOfWeek().stream().toList() : null;
+            nextSchedule = schedule(type, days);
+        }
+        String nextToolCode = toolCode == null ? old.toolCode() : normalizeToolCode(toolCode);
+        SelfCareStore.Habit next = new SelfCareStore.Habit(old.id(), old.goalId(), userId,
+                title == null ? old.title()
+                        : cipher.encrypt("selfcare-habit-title", userId, habitId, wellnessText(title, 160, true)),
+                nextTarget, nextUnit, nextSchedule.type(),
+                Map.of("daysOfWeek", nextSchedule.daysOfWeek().stream().sorted().toList()), old.timezone(),
+                nextToolCode, status == null ? old.status() : status, old.createdAt(), clock.instant(),
+                old.version() + 1);
+        if (!store.updateHabit(next, expectedVersion)) throw new ConflictException("Habit đã được cập nhật ở nơi khác.");
+        return view(next);
+    }
+
+    @Transactional
+    public void deleteHabit(UUID userId, UUID habitId) {
+        requireHabit(userId, habitId);
+        if (!store.deleteHabit(userId, habitId)) throw new ResourceNotFoundException("Habit không tồn tại.");
+    }
+
     @Override
     @Transactional(readOnly = true)
     public Optional<CompanionHabitCandidate> findUncompletedActiveHabitByToolCode(UUID userId, String toolCode) {

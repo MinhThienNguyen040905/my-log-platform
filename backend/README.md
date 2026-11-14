@@ -171,6 +171,19 @@ Safety ingress luôn chạy lúc tạo/sửa journal. Rule HIGH/CRITICAL đặt 
 
 `GET /api/v1/safety/resources?locale=vi-VN&country=VN` là API công khai, chỉ trả nguồn hỗ trợ đã được duyệt, có `verified_at` và nguồn HTTPS. Frontend safety modal dùng `NEXT_PUBLIC_BACKEND_URL` để đọc API này (mặc định `http://localhost:8080` khi phát triển local) và chỉ hiện liên hệ khi API trả dữ liệu đã xác minh. Classifier trả mức rủi ro thấp cũng không mở ordinary analysis nếu `safety_policy_versions` chưa có policy `APPROVED` đang hiệu lực với rule version, classifier provider/version và ngưỡng confidence khớp. Hiện chưa có policy được duyệt nên API nguồn hỗ trợ trả danh sách rỗng và journal vẫn ở chế độ fail-safe.
 
+## M5 Self-care: CRUD mục tiêu và thói quen
+
+Ngoài tạo/xem/sửa goal, tạo habit và đánh dấu completion, API có:
+
+- `PATCH /api/v1/self-care/habits/{habitId}` (cần `If-Match` từ `version`/ETag): cập nhật một phần `title`,
+  `targetValue`, `unit`, `frequencyType` + `daysOfWeek`, `toolCode`, `status` (`ACTIVE|PAUSED|ARCHIVED`). Field
+  `null` giữ nguyên; `toolCode: ""` gỡ công cụ đã gắn. Đổi lịch hoặc mức mục tiêu không xóa completion cũ. Sai
+  version trả `409`.
+- `DELETE /api/v1/self-care/habits/{habitId}` và `DELETE /api/v1/self-care/goals/{goalId}` trả `204`, xóa vĩnh
+  viễn; completion (và habit của goal) đi theo `ON DELETE CASCADE` của V10. Tài nguyên không thuộc user trả `404`.
+- Habit/goal không ở `ACTIVE` không nhận completion mới (`409`).
+- `PATCH` goal chưa xóa được `description` (giá trị `null` nghĩa là giữ nguyên).
+
 ## M4 Dashboard, insight và report
 
 Flyway V9 đã áp dụng lên Supabase. Các API cần Bearer token: `GET /api/v1/dashboard?range=7d|30d|90d`,

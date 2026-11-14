@@ -43,6 +43,23 @@ public class SelfCareController {
                 request.startDate(), request.targetDate(), version(ifMatch));
         return ResponseEntity.ok().eTag(etag(goal.version())).body(GoalResponse.from(goal));
     }
+    @DeleteMapping("/goals/{goalId}")
+    public ResponseEntity<Void> deleteGoal(@PathVariable UUID goalId) {
+        service.deleteGoal(user(), goalId);
+        return ResponseEntity.noContent().build();
+    }
+    @PatchMapping("/habits/{habitId}")
+    public ResponseEntity<HabitResponse> updateHabit(@PathVariable UUID habitId, @RequestHeader("If-Match") String ifMatch,
+                                                      @Valid @RequestBody UpdateHabitRequest request) {
+        var habit = service.updateHabit(user(), habitId, request.title(), request.targetValue(), request.unit(),
+                request.frequencyType(), request.daysOfWeek(), request.toolCode(), request.status(), version(ifMatch));
+        return ResponseEntity.ok().eTag(etag(habit.version())).body(HabitResponse.from(habit));
+    }
+    @DeleteMapping("/habits/{habitId}")
+    public ResponseEntity<Void> deleteHabit(@PathVariable UUID habitId) {
+        service.deleteHabit(user(), habitId);
+        return ResponseEntity.noContent().build();
+    }
     @PostMapping("/goals/{goalId}/habits")
     public ResponseEntity<HabitResponse> createHabit(@PathVariable UUID goalId, @Valid @RequestBody CreateHabitRequest request) {
         var habit = service.createHabit(user(), goalId, request.title(), request.targetValue(), request.unit(),

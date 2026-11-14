@@ -106,6 +106,65 @@ class M5IntegrationTest {
                 .findFirst().orElseThrow().habits().getFirst().completionCount());
     }
 
+    @Test void habitUpdateAndDeleteAreOwnerScopedVersionedAndCascade() throws Exception {
+        UUID owner = user(); UUID stranger = user();
+        var goal = service.createGoal(owner, "EXERCISE", "Vận động nhẹ", null, null, null);
+        var habit = service.createHabit(owner, goal.id(), "Đi bộ", BigDecimal.valueOf(10), "minutes", "DAILY", null);
+        service.putCompletion(owner, habit.id(), LocalDate.of(2026, 10, 5), BigDecimal.valueOf(10));
+
+        assertThrows(ResourceNotFoundException.class, () -> service.updateHabit(stranger, habit.id(), "X",
+                null, null, null, null, null, null, 0));
+        assertThrows(InvalidRequestException.class, () -> service.updateHabit(owner, habit.id(), null,
+                null, null, "WEEKLY", null, null, null, 0));
+        assertThrows(InvalidRequestException.class, () -> service.updateHabit(owner, habit.id(), null,
+                null, null, null, null, null, "COMPLETED", 0));
+        var updated = service.updateHabit(owner, habit.id(), "Đi bộ buổi tối", BigDecimal.valueOf(15), null,
+                "WEEKLY", List.of(1, 3, 5), "BREATHING_2MIN", "PAUSED", 0);
+        assertEquals("Đi bộ buổi tối", updated.title());
+        assertEquals(1, updated.version());
+        assertEquals(List.of(1, 3, 5), updated.daysOfWeek());
+        assertEquals("BREATHING_2MIN", updated.toolCode());
+        assertEquals("PAUSED", updated.status());
+        byte[] rawTitle = jdbc.queryForObject("select encrypted_title from habits where id=?", byte[].class, habit.id());
+        assertFalse(new String(rawTitle, StandardCharsets.UTF_8).contains("Đi bộ"));
+        assertThrows(ConflictException.class, () -> service.updateHabit(owner, habit.id(), "Stale",
+                null, null, null, null, null, null, 0));
+        var cleared = service.updateHabit(owner, habit.id(), null, null, null, null, null, "", "ACTIVE", 1);
+        assertNull(cleared.toolCode());
+        assertEquals(List.of(1, 3, 5), cleared.daysOfWeek());
+
+        mvc.perform(patch("/api/v1/self-care/habits/{id}", habit.id())
+                        .with(jwt().jwt(j -> j.subject(owner.toString())))
+                        .header("If-Match", "\"2\"").contentType("application/json")
+                        .content("{\"frequencyType\":\"DAILY\",\"daysOfWeek\":[]}"))
+                .andExpect(status().isOk()).andExpect(header().string("ETag", "\"3\""))
+                .andExpect(jsonPath("$.frequencyType").value("DAILY"));
+        mvc.perform(delete("/api/v1/self-care/habits/{id}", habit.id())
+                        .with(jwt().jwt(j -> j.subject(stranger.toString()))))
+                .andExpect(status().isNotFound());
+        mvc.perform(delete("/api/v1/self-care/habits/{id}", habit.id())
+                        .with(jwt().jwt(j -> j.subject(owner.toString()))))
+                .andExpect(status().isNoContent());
+        assertEquals(0, jdbc.queryForObject("select count(*) from habit_completions where habit_id=?",
+                Integer.class, habit.id()));
+        mvc.perform(delete("/api/v1/self-care/habits/{id}", habit.id())
+                        .with(jwt().jwt(j -> j.subject(owner.toString()))))
+                .andExpect(status().isNotFound());
+
+        var second = service.createHabit(owner, goal.id(), "Giãn cơ", BigDecimal.ONE, "sessions", "DAILY", null);
+        service.putCompletion(owner, second.id(), LocalDate.of(2026, 10, 5), BigDecimal.ONE);
+        assertThrows(ResourceNotFoundException.class, () -> service.deleteGoal(stranger, goal.id()));
+        mvc.perform(delete("/api/v1/self-care/goals/{id}", goal.id()))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(delete("/api/v1/self-care/goals/{id}", goal.id())
+                        .with(jwt().jwt(j -> j.subject(owner.toString()))))
+                .andExpect(status().isNoContent());
+        assertEquals(0, jdbc.queryForObject("select count(*) from habits where goal_id=?", Integer.class, goal.id()));
+        assertEquals(0, jdbc.queryForObject("select count(*) from habit_completions where habit_id=?",
+                Integer.class, second.id()));
+        assertTrue(service.goals(owner).isEmpty());
+    }
+
     private UUID user() {
         UUID id = UUID.randomUUID(); String email = "m5-" + id + "@example.test";
         var encrypted = cipher.encrypt("users.email", id, id, email);
