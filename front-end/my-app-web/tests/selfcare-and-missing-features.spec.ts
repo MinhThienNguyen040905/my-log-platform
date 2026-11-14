@@ -210,6 +210,30 @@ test.describe('Part 1 & Part 2 Web Features Verification (KT-03..KT-07)', () => 
       return route.fulfill({ status: 204 });
     });
 
+    await page.route('**/api/backend/self-care/habits/*', async (route) => {
+      const request = route.request();
+      const habitId = request.url().split('/').pop() ?? '';
+      if (request.method() === 'DELETE') {
+        recordedCalls.push(`DELETE /habits/${habitId}`);
+        for (const goal of goalsState) goal.habits = goal.habits.filter((h) => h.id !== habitId);
+        return route.fulfill({ status: 204 });
+      }
+      const body = request.postDataJSON() as { title?: string };
+      recordedCalls.push(`PATCH /habits:${body.title}:${request.headers()['if-match']}`);
+      const habit = goalsState.flatMap((g) => g.habits).find((h) => h.id === habitId)!;
+      Object.assign(habit, body, { version: habit.version + 1 });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(habit) });
+    });
+
+    await page.route('**/api/backend/self-care/goals/*', async (route) => {
+      const request = route.request();
+      const goalId = request.url().split('/').pop() ?? '';
+      if (request.method() !== 'DELETE') return route.fallback();
+      recordedCalls.push(`DELETE /goals/${goalId}`);
+      goalsState.splice(goalsState.findIndex((g) => g.id === goalId), 1);
+      return route.fulfill({ status: 204 });
+    });
+
     await page.route('**/api/backend/recommendations?topicCode=**', (route) =>
       route.fulfill({
         status: 200,
@@ -265,35 +289,47 @@ test.describe('Part 1 & Part 2 Web Features Verification (KT-03..KT-07)', () => 
       'true',
     );
 
-    // Verify existing goal + habit + moodAssociation
+    // Goal card only shows goals; habits live in the habit table (with their mood association).
     await expect(page.getByText('Thư giãn buổi tối')).toBeVisible();
+    await expect(page.getByText('1 thói quen gắn với mục tiêu này', { exact: false })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Thêm thói quen' })).toHaveCount(0);
     await expect(page.getByText('Những ngày thực hiện, tâm trạng trung bình cao hơn.')).toBeVisible();
 
-    // Complete habit today (PUT) then Undo completion (DELETE)
-    await page.getByRole('button', { name: 'Đánh dấu hoàn thành hôm nay cho Thở chậm 2 phút' }).click();
-    await expect(
-      page.getByRole('button', { name: 'Bỏ đánh dấu hoàn thành hôm nay cho Thở chậm 2 phút' }),
-    ).toBeVisible();
+    // Complete habit today in the habit table (PUT) then undo (DELETE)
+    // All real days of the month are in the scrollable day area; today is scrolled into view on load.
+    const todayDay = Number(today.slice(8, 10));
+    await expect(page.getByRole('button', { name: /^Ngày \d+–/ })).toHaveCount(0);
+    await page.getByRole('button', { name: `Đánh dấu Thở chậm 2 phút ngày ${todayDay}`, exact: true }).click();
+    await expect.poll(() => recordedCalls).toContain(`PUT /completions/${today}`);
+    await page.getByRole('button', { name: `Bỏ đánh dấu Thở chậm 2 phút ngày ${todayDay}`, exact: true }).click();
+    await expect.poll(() => recordedCalls).toContain(`DELETE /completions/${today}`);
 
-    await page.getByRole('button', { name: 'Bỏ đánh dấu hoàn thành hôm nay cho Thở chậm 2 phút' }).click();
-    await expect(
-      page.getByRole('button', { name: 'Đánh dấu hoàn thành hôm nay cho Thở chậm 2 phút' }),
-    ).toBeVisible();
+    // Edit the habit from the habit table
+    await page.getByRole('button', { name: 'Sửa thói quen Thở chậm 2 phút' }).click();
+    await page.getByLabel('Tên thói quen', { exact: true }).fill('Thở chậm 3 phút');
+    await page.getByRole('button', { name: 'Lưu thay đổi' }).click();
+    await expect.poll(() => recordedCalls).toContain('PATCH /habits:Thở chậm 3 phút:"1"');
 
-    // Create new goal
+    // Create a new goal from the goal card
     await page.getByRole('button', { name: 'Thêm mục tiêu' }).click();
     await page.getByLabel('Tên mục tiêu').fill('Ngủ trước 23h');
     await page.getByRole('button', { name: 'Lưu mục tiêu' }).click();
     await expect(page.getByText('Ngủ trước 23h')).toBeVisible();
 
-    // Create new habit inside first goal
-    await page.getByRole('button', { name: 'Thêm thói quen' }).first().click();
-    await page.getByLabel('Tên thói quen mới').fill('Nghe tiếng mưa 5 phút');
+    // Create a new habit from the habit table
+    await page.getByRole('button', { name: 'Thêm vào bảng' }).click();
+    await page.getByLabel('Tên thói quen', { exact: true }).fill('Nghe tiếng mưa 5 phút');
     await page.getByRole('button', { name: 'Lưu thói quen' }).click();
     await expect(page.getByText('Nghe tiếng mưa 5 phút').first()).toBeVisible();
 
-    expect(recordedCalls).toContain(`PUT /completions/${today}`);
-    expect(recordedCalls).toContain(`DELETE /completions/${today}`);
+    // Delete habit (habit table) and goal (goal card), both behind a confirmation
+    await page.getByRole('button', { name: 'Xóa thói quen Nghe tiếng mưa 5 phút' }).click();
+    await page.getByRole('button', { name: 'Xóa vĩnh viễn' }).click();
+    await expect.poll(() => recordedCalls).toContain('DELETE /habits/01950000-0000-7000-8000-000000000202');
+    await page.getByRole('button', { name: 'Xóa mục tiêu Ngủ trước 23h' }).click();
+    await page.getByRole('button', { name: 'Xóa vĩnh viễn' }).click();
+    await expect.poll(() => recordedCalls).toContain('DELETE /goals/01950000-0000-7000-8000-000000000102');
+
     expect(recordedCalls).toContain('POST /self-care/goals:MINDFULNESS:Ngủ trước 23h');
     expect(recordedCalls).toContain('POST /habits:Nghe tiếng mưa 5 phút:DAILY:none');
   });

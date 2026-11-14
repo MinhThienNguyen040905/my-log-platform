@@ -527,7 +527,10 @@ GET    /reports/{reportId}
 POST   /self-care/goals
 GET    /self-care/goals
 PATCH  /self-care/goals/{goalId}
+DELETE /self-care/goals/{goalId}
 POST   /self-care/goals/{goalId}/habits
+PATCH  /self-care/habits/{habitId}
+DELETE /self-care/habits/{habitId}
 PUT    /self-care/habits/{habitId}/completions/{localDate}
 DELETE /self-care/habits/{habitId}/completions/{localDate}
 

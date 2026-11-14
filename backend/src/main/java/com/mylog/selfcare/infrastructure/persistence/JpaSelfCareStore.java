@@ -62,6 +62,36 @@ class JpaSelfCareStore implements SelfCareStore {
         em.clear();
         return changed == 1;
     }
+    public boolean deleteGoal(UUID userId, UUID goalId) {
+        int changed = em.createQuery("delete from SelfCareGoal g where g.userId=:user and g.id=:id")
+                .setParameter("user", userId).setParameter("id", goalId).executeUpdate();
+        em.clear();
+        return changed == 1;
+    }
+    public boolean updateHabit(Habit habit, long expectedVersion) {
+        // Row lock + version check instead of a bulk JPQL update so the jsonb frequency_config keeps its JSON mapping.
+        var row = em.createQuery("select h from Habit h where h.userId=:user and h.id=:id and h.rowVersion=:expected",
+                        com.mylog.selfcare.infrastructure.persistence.entity.Habit.class)
+                .setParameter("user", habit.userId()).setParameter("id", habit.id())
+                .setParameter("expected", expectedVersion)
+                .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+                .getResultStream().findFirst().orElse(null);
+        if (row == null) return false;
+        row.encryptedTitle = habit.title().ciphertext(); row.titleIv = habit.title().iv();
+        row.titleWrappedKey = habit.title().wrappedKey(); row.titleKeyVersion = habit.title().keyVersion();
+        row.targetValue = habit.targetValue(); row.unit = habit.unit(); row.frequencyType = habit.frequencyType();
+        row.frequencyConfig = habit.frequencyConfig(); row.toolCode = habit.toolCode(); row.status = habit.status();
+        row.updatedAt = habit.updatedAt(); row.rowVersion = expectedVersion + 1;
+        em.flush();
+        em.clear();
+        return true;
+    }
+    public boolean deleteHabit(UUID userId, UUID habitId) {
+        int changed = em.createQuery("delete from Habit h where h.userId=:user and h.id=:id")
+                .setParameter("user", userId).setParameter("id", habitId).executeUpdate();
+        em.clear();
+        return changed == 1;
+    }
     public void createHabit(Habit habit) {
         com.mylog.selfcare.infrastructure.persistence.entity.Habit row = new com.mylog.selfcare.infrastructure.persistence.entity.Habit();
         row.id = habit.id(); row.goalId = habit.goalId(); row.userId = habit.userId();
