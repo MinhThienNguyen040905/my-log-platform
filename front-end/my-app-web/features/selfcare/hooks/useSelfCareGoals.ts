@@ -6,13 +6,18 @@ import {
   completeHabit,
   createGoal,
   createHabit,
+  deleteGoal,
+  deleteHabit,
   listGoals,
   undoHabitCompletion,
   updateGoal,
+  updateHabit,
   type CreateGoal,
   type CreateHabit,
   type Goal,
   type Habit,
+  type UpdateGoal,
+  type UpdateHabit,
 } from '../api/self-care';
 
 export function getHabitTodayDate(timezone?: string): string {
@@ -51,6 +56,27 @@ export function useSelfCareGoals() {
       updateGoal(goal.id, goal.version, {
         status: goal.status === 'COMPLETED' ? 'ACTIVE' : 'COMPLETED',
       }),
+    onSuccess: invalidateAll,
+  });
+
+  const editGoalMutation = useMutation({
+    mutationFn: ({ goal, input }: { goal: Goal; input: UpdateGoal }) => updateGoal(goal.id, goal.version, input),
+    onSuccess: invalidateAll,
+  });
+
+  const deleteGoalMutation = useMutation({
+    mutationFn: (goalId: string) => deleteGoal(goalId),
+    onSuccess: invalidateAll,
+  });
+
+  const editHabitMutation = useMutation({
+    mutationFn: ({ habit, input }: { habit: Habit; input: UpdateHabit }) =>
+      updateHabit(habit.id, habit.version, input),
+    onSuccess: invalidateAll,
+  });
+
+  const deleteHabitMutation = useMutation({
+    mutationFn: (habitId: string) => deleteHabit(habitId),
     onSuccess: invalidateAll,
   });
 
@@ -95,6 +121,10 @@ export function useSelfCareGoals() {
 
   const mutationError =
     update.error ??
+    editGoalMutation.error ??
+    deleteGoalMutation.error ??
+    editHabitMutation.error ??
+    deleteHabitMutation.error ??
     createGoalMutation.error ??
     createHabitMutation.error ??
     toggleHabitMutation.error ??
@@ -105,6 +135,10 @@ export function useSelfCareGoals() {
     loading: goalsQuery.isPending,
     mutating:
       update.isPending ||
+      editGoalMutation.isPending ||
+      deleteGoalMutation.isPending ||
+      editHabitMutation.isPending ||
+      deleteHabitMutation.isPending ||
       createGoalMutation.isPending ||
       createHabitMutation.isPending ||
       toggleHabitMutation.isPending,
@@ -116,6 +150,10 @@ export function useSelfCareGoals() {
           : null,
     toggleGoal: (goal: Goal) => update.mutateAsync(goal),
     createNewGoal: (input: CreateGoal) => createGoalMutation.mutateAsync(input),
+    editGoal: (goal: Goal, input: UpdateGoal) => editGoalMutation.mutateAsync({ goal, input }),
+    removeGoal: (goalId: string) => deleteGoalMutation.mutateAsync(goalId),
+    editHabit: (habit: Habit, input: UpdateHabit) => editHabitMutation.mutateAsync({ habit, input }),
+    removeHabit: (habitId: string) => deleteHabitMutation.mutateAsync(habitId),
     createNewHabit: (goalId: string, input: CreateHabit) =>
       createHabitMutation.mutateAsync({ goalId, input }),
     toggleHabitToday: (habit: Habit) => toggleHabitMutation.mutateAsync(habit),
@@ -123,6 +161,10 @@ export function useSelfCareGoals() {
       toggleHabitDateMutation.mutateAsync({ habit, date }),
     refetch: async () => {
       update.reset();
+      editGoalMutation.reset();
+      deleteGoalMutation.reset();
+      editHabitMutation.reset();
+      deleteHabitMutation.reset();
       createGoalMutation.reset();
       createHabitMutation.reset();
       toggleHabitMutation.reset();

@@ -27,6 +27,20 @@ export function updateGoal(goalId: string, version: number, input: UpdateGoal): 
 export function createHabit(goalId: string, input: CreateHabit): Promise<Habit> {
   return apiJson(`self-care/goals/${encodeURIComponent(goalId)}/habits`, { method: 'POST', ...apiJsonBody(input) });
 }
+export async function deleteGoal(goalId: string): Promise<void> {
+  await apiResponse(`self-care/goals/${encodeURIComponent(goalId)}`, { method: 'DELETE' });
+}
+/** Partial update: omitted fields stay as they are; `toolCode: ''` removes the linked tool. */
+export type UpdateHabit = {
+  title?: string; targetValue?: number; unit?: string; frequencyType?: string;
+  daysOfWeek?: number[]; toolCode?: HabitToolCode | ''; status?: string;
+};
+export function updateHabit(habitId: string, version: number, input: UpdateHabit): Promise<Habit> {
+  return apiJson(`self-care/habits/${encodeURIComponent(habitId)}`, { method: 'PATCH', ...apiJsonBody(input, { 'If-Match': `"${version}"` }) });
+}
+export async function deleteHabit(habitId: string): Promise<void> {
+  await apiResponse(`self-care/habits/${encodeURIComponent(habitId)}`, { method: 'DELETE' });
+}
 export function completeHabit(habitId: string, localDate: string, value: number): Promise<Habit> {
   return apiJson(`self-care/habits/${encodeURIComponent(habitId)}/completions/${encodeURIComponent(localDate)}`, { method: 'PUT', ...apiJsonBody({ value }) });
 }

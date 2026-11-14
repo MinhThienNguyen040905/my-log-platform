@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Apple,
   BookOpen,
@@ -8,14 +8,19 @@ import {
   Droplets,
   Dumbbell,
   Flame,
+  Pencil,
   Plus,
   Sparkles,
   Star,
+  Trash2,
   Wind,
 } from 'lucide-react';
+import { NotificationModal } from '@/components/ui/NotificationModal';
 import { useJournal } from '@/features/journal';
 import { getHabitTodayDate, useSelfCareGoals } from '../hooks/useSelfCareGoals';
 import { CreateHabitFromTemplateModal, type HabitTemplatePreset } from './CreateHabitFromTemplateModal';
+import { HabitEditForm } from './HabitEditForm';
+import { HABIT_STATUS_LABELS } from '../constants/habit-options';
 import type { Habit } from '../api/self-care';
 
 interface DefaultHabitRow {
@@ -23,13 +28,27 @@ interface DefaultHabitRow {
   title: string;
   iconKey: 'exercise' | 'study' | 'water' | 'food' | 'breath' | 'default';
   backendHabit?: Habit;
+  /** False when the habit or its goal is not ACTIVE: the backend refuses new completions then. */
+  trackable: boolean;
 }
 
+const WEEKDAY_SHORT = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as const;
+
+/** Goal category used when a starter suggestion is turned into a real habit. */
+const STARTER_CATEGORY: Record<DefaultHabitRow['iconKey'], string> = {
+  exercise: 'EXERCISE',
+  breath: 'MINDFULNESS',
+  study: 'CUSTOM',
+  water: 'CUSTOM',
+  food: 'CUSTOM',
+  default: 'CUSTOM',
+};
+
 const DEFAULT_HABIT_ROWS: DefaultHabitRow[] = [
-  { id: 'default-exercise', title: 'Tập thể dục', iconKey: 'exercise' },
-  { id: 'default-study', title: 'Học tập / Làm việc hiệu quả', iconKey: 'study' },
-  { id: 'default-water', title: 'Uống đủ nước', iconKey: 'water' },
-  { id: 'default-food', title: 'Ăn uống lành mạnh', iconKey: 'food' },
+  { id: 'default-exercise', title: 'Tập thể dục', iconKey: 'exercise', trackable: true },
+  { id: 'default-study', title: 'Học tập / Làm việc hiệu quả', iconKey: 'study', trackable: true },
+  { id: 'default-water', title: 'Uống đủ nước', iconKey: 'water', trackable: true },
+  { id: 'default-food', title: 'Ăn uống lành mạnh', iconKey: 'food', trackable: true },
 ];
 
 function resolveIconKey(habit: Habit): DefaultHabitRow['iconKey'] {
@@ -71,9 +90,10 @@ function HabitRowIcon({ iconKey }: { iconKey: DefaultHabitRow['iconKey'] }) {
 
 export function HabitTrackerCard() {
   const { userId } = useJournal();
-  const { goals, toggleHabitOnDate, refetch } = useSelfCareGoals();
-  const [half, setHalf] = useState<'FIRST' | 'SECOND'>('FIRST');
+  const { goals, mutating, toggleHabitOnDate, editHabit, removeHabit, refetch } = useSelfCareGoals();
   const [modalPreset, setModalPreset] = useState<HabitTemplatePreset | null>(null);
+  const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Habit | null>(null);
 
   const todayStr = useMemo(() => getHabitTodayDate('Asia/Ho_Chi_Minh'), []);
   const [yearStr, monthStr, dayStr] = todayStr.split('-');
@@ -94,30 +114,81 @@ export function HabitTrackerCard() {
     }
   });
 
-  const dayColumns = useMemo(() => {
-    if (half === 'FIRST') {
-      return Array.from({ length: 15 }, (_, i) => i + 1);
+  // Starter suggestions are frontend-only; hiding one is a per-device preference, not backend data.
+  const hiddenStartersKey = `mylog_hidden_habit_starters_${userId}`;
+  const [hiddenStarters, setHiddenStarters] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(hiddenStartersKey);
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+    } catch {
+      return [];
     }
-    const count = Math.max(1, daysInMonth - 15);
-    return Array.from({ length: count }, (_, i) => i + 16);
-  }, [half, daysInMonth]);
+  });
+  const saveHiddenStarters = (next: string[]) => {
+    setHiddenStarters(next);
+    try {
+      window.localStorage.setItem(hiddenStartersKey, JSON.stringify(next));
+    } catch {
+      // Ignore storage errors; the choice just won't persist.
+    }
+  };
+
+  const [starterSourceId, setStarterSourceId] = useState<string | null>(null);
+  const editStarter = (row: DefaultHabitRow) => {
+    setStarterSourceId(row.id);
+    setModalPreset({
+      templateCode: 'CUSTOM_HABIT',
+      category: STARTER_CATEGORY[row.iconKey],
+      presetTitle: row.title,
+      presetTargetValue: 1,
+      presetUnit: 'sessions',
+      presetToolCode: null,
+    });
+  };
+
+  // Every real day of the current month, with its weekday; the day area scrolls on its own.
+  const dayColumns = useMemo(
+    () =>
+      Array.from({ length: daysInMonth }, (_, i) => {
+        const day = i + 1;
+        const weekday = new Date(currentYear, currentMonth - 1, day).getDay(); // 0 = Sunday
+        return { day, weekdayLabel: WEEKDAY_SHORT[weekday], weekend: weekday === 0 || weekday === 6 };
+      }),
+    [currentYear, currentMonth, daysInMonth],
+  );
+
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const todayHeaderRef = useRef<HTMLTableCellElement>(null);
+  const habitColumnRef = useRef<HTMLTableCellElement>(null);
+  useEffect(() => {
+    // Open with today in view: put it just right of the sticky habit column, a few days of context before it.
+    const area = scrollAreaRef.current;
+    const todayCell = todayHeaderRef.current;
+    if (!area || !todayCell) return;
+    const stickyWidth = habitColumnRef.current?.offsetWidth ?? 0;
+    area.scrollLeft = Math.max(0, todayCell.offsetLeft - stickyWidth - todayCell.offsetWidth * 3);
+  }, []);
 
   const rows: DefaultHabitRow[] = useMemo(() => {
-    const backendHabits = goals.flatMap((g) => g.habits ?? []);
-    const backendRows: DefaultHabitRow[] = backendHabits.map((h) => ({
-      id: h.id,
-      title: h.title,
-      iconKey: resolveIconKey(h),
-      backendHabit: h,
-    }));
+    const backendRows: DefaultHabitRow[] = goals.flatMap((g) =>
+      (g.habits ?? []).map((h) => ({
+        id: h.id,
+        title: h.title,
+        iconKey: resolveIconKey(h),
+        backendHabit: h,
+        trackable: g.status === 'ACTIVE' && h.status === 'ACTIVE',
+      })),
+    );
 
     const existingTitles = new Set(backendRows.map((r) => r.title.trim().toLowerCase()));
     const starters = DEFAULT_HABIT_ROWS.filter(
-      (d) => !existingTitles.has(d.title.trim().toLowerCase()),
+      (d) => !existingTitles.has(d.title.trim().toLowerCase()) && !hiddenStarters.includes(d.id),
     );
 
     return [...backendRows, ...starters];
-  }, [goals]);
+  }, [goals, hiddenStarters]);
 
   const formatDateForDay = (day: number): string => {
     const mm = String(currentMonth).padStart(2, '0');
@@ -138,6 +209,7 @@ export function HabitTrackerCard() {
   };
 
   const handleToggleCell = async (row: DefaultHabitRow, day: number) => {
+    if (!row.trackable || day > currentDay) return;
     const dateIso = formatDateForDay(day);
     const key = `${row.id}:${dateIso}`;
     const currentVal = isChecked(row, day);
@@ -188,34 +260,19 @@ export function HabitTrackerCard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center rounded-xl border-2 border-black bg-white p-0.5 shadow-neo-xs">
+          {hiddenStarters.length > 0 && (
             <button
               type="button"
-              onClick={() => setHalf('FIRST')}
-              className={`px-2.5 py-1 rounded-lg font-space text-xs font-extrabold transition-all cursor-pointer ${
-                half === 'FIRST'
-                  ? 'bg-primary-container text-black border border-black'
-                  : 'text-gray-600 hover:text-black'
-              }`}
+              onClick={() => saveHiddenStarters([])}
+              className="font-space text-xs font-bold text-gray-700 underline hover:text-black cursor-pointer"
             >
-              Ngày 1–15
+              Hiện lại gợi ý mẫu
             </button>
-            <button
-              type="button"
-              onClick={() => setHalf('SECOND')}
-              className={`px-2.5 py-1 rounded-lg font-space text-xs font-extrabold transition-all cursor-pointer ${
-                half === 'SECOND'
-                  ? 'bg-primary-container text-black border border-black'
-                  : 'text-gray-600 hover:text-black'
-              }`}
-            >
-              Ngày 16–{daysInMonth}
-            </button>
-          </div>
-
+          )}
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
+              setStarterSourceId(null);
               setModalPreset({
                 templateCode: 'CUSTOM_HABIT',
                 category: 'MINDFULNESS',
@@ -223,8 +280,8 @@ export function HabitTrackerCard() {
                 presetTargetValue: 1,
                 presetUnit: 'sessions',
                 presetToolCode: null,
-              })
-            }
+              });
+            }}
             className="inline-flex items-center gap-1 rounded-xl border-2 border-black bg-primary-container px-3 py-1.5 font-space text-xs font-extrabold text-black shadow-neo-xs hover:bg-lime-200 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -233,69 +290,170 @@ export function HabitTrackerCard() {
         </div>
       </div>
 
-      {/* Bảng lưới Thói quen theo ngày (giống mẫu sổ tay) */}
-      <div className="w-full overflow-x-auto rounded-2xl border-2 border-black bg-white shadow-neo-sm">
-        <table className="w-full border-collapse text-xs min-w-[680px]">
+      {/* Bảng lưới Thói quen theo ngày: cột tên dính bên trái, phần ngày cuộn ngang riêng */}
+      {/* The border lives on this wrapper; its bottom padding keeps the scrollbar off the rounded border. */}
+      <div className="w-full overflow-hidden rounded-2xl border-2 border-black bg-white shadow-neo-sm pb-3">
+      <div
+        ref={scrollAreaRef}
+        role="region"
+        aria-label={`Các ngày trong tháng ${currentMonth}/${currentYear}, cuộn ngang để xem thêm`}
+        tabIndex={0}
+        className="w-full overflow-x-auto pb-1 [scrollbar-width:thin] [scrollbar-color:rgb(0_0_0/0.45)_transparent] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-black"
+      >
+        <table className="w-max min-w-full border-separate border-spacing-0 text-xs">
           <thead>
-            <tr className="bg-paper-warm border-b-2 border-black">
-              <th className="py-3 px-4 text-left font-space text-sm font-extrabold text-black border-r-2 border-black min-w-[220px]">
+            <tr className="bg-paper-warm">
+              <th
+                ref={habitColumnRef}
+                className="sticky left-0 z-20 bg-paper-warm py-3 px-4 text-left font-space text-sm font-extrabold text-black border-b-2 border-r-2 border-black min-w-[200px] sm:min-w-[260px]"
+              >
                 <div className="flex items-center gap-2">
                   <Star className="w-4 h-4 fill-black text-black shrink-0" />
                   <span>Thói quen</span>
                 </div>
               </th>
-              {dayColumns.map((day) => {
+              {dayColumns.map(({ day, weekdayLabel, weekend }) => {
                 const isToday = day === currentDay;
                 return (
                   <th
                     key={day}
-                    className={`py-2.5 px-1 text-center font-space text-xs font-extrabold border-r last:border-r-0 border-black/60 w-9 ${
-                      isToday ? 'bg-primary-container text-black' : 'text-black'
+                    ref={isToday ? todayHeaderRef : undefined}
+                    aria-current={isToday ? 'date' : undefined}
+                    className={`py-1.5 px-1 text-center font-space border-b-2 border-r last:border-r-0 border-black border-r-black/40 min-w-[2.5rem] ${
+                      isToday ? 'bg-primary-container text-black' : weekend ? 'bg-paper-warm text-gray-700' : 'text-black'
                     }`}
                   >
-                    {day}
+                    <span className="block text-[10px] font-bold opacity-70">{weekdayLabel}</span>
+                    <span className="block text-xs font-extrabold">{day}</span>
                   </th>
                 );
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-black/60">
-            {rows.map((row) => (
-              <tr key={row.id} className="hover:bg-paper-warm/30 transition-colors">
-                <td className="py-3 px-4 border-r-2 border-black font-sans text-xs sm:text-sm font-semibold text-black">
+          <tbody>
+            {rows.map((row, rowIndex) => {
+              const habit = row.backendHabit;
+              // The last row closes the grid with a solid line above the scrollbar gap.
+              const rowBorder = rowIndex < rows.length - 1 ? 'border-b border-b-black/60' : 'border-b-2 border-b-black';
+              if (habit && editingHabitId === habit.id) {
+                return (
+                  <tr key={row.id}>
+                    <td colSpan={dayColumns.length + 1} className={`p-3 ${rowBorder}`}>
+                      {/* Keep the form pinned to the visible area while the day grid is scrolled. */}
+                      <div className="sticky left-3 max-w-xl">
+                      <HabitEditForm
+                        habit={habit}
+                        saving={mutating}
+                        onCancel={() => setEditingHabitId(null)}
+                        onSave={async (input) => {
+                          await editHabit(habit, input);
+                          setEditingHabitId(null);
+                        }}
+                      />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
+              return (
+              <tr key={row.id} className={`group transition-colors ${row.trackable ? '' : 'opacity-60'}`}>
+                <td className={`sticky left-0 z-10 bg-white group-hover:bg-paper-warm py-3 px-4 border-r-2 border-r-black ${rowBorder} font-sans text-xs sm:text-sm font-semibold text-black`}>
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <HabitRowIcon iconKey={row.iconKey} />
-                      <span>{row.title}</span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="truncate">{row.title}</span>
+                        {habit?.moodAssociation?.interpretation && (
+                          <span className="text-[10px] font-normal text-emerald-900">
+                            {habit.moodAssociation.interpretation}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    {row.backendHabit && row.backendHabit.streak > 0 && (
-                      <span
-                        title="Chuỗi ngày liên tiếp"
-                        className="inline-flex items-center gap-0.5 text-[10px] font-space font-extrabold px-1.5 py-0.5 rounded bg-amber-100 border border-black text-black shrink-0"
-                      >
-                        <Flame className="w-3 h-3 text-amber-600" />
-                        {row.backendHabit.streak}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {habit && habit.streak > 0 && (
+                        <span
+                          title="Chuỗi ngày liên tiếp"
+                          className="inline-flex items-center gap-0.5 text-[10px] font-space font-extrabold px-1.5 py-0.5 rounded bg-amber-100 border border-black text-black"
+                        >
+                          <Flame className="w-3 h-3 text-amber-600" />
+                          {habit.streak}
+                        </span>
+                      )}
+                      {habit && !row.trackable && (
+                        <span className="text-[10px] font-space font-bold px-1.5 py-0.5 rounded bg-black/10">
+                          {habit.status === 'ACTIVE' ? 'Mục tiêu tạm dừng' : HABIT_STATUS_LABELS[habit.status] ?? habit.status}
+                        </span>
+                      )}
+                      {!habit && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => editStarter(row)}
+                            aria-label={`Sửa gợi ý ${row.title}`}
+                            title="Sửa và lưu thành thói quen của bạn"
+                            className="p-1 rounded-md border border-black/30 bg-white hover:bg-paper-warm cursor-pointer"
+                          >
+                            <Pencil className="w-3 h-3 text-black" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => saveHiddenStarters([...hiddenStarters, row.id])}
+                            aria-label={`Ẩn gợi ý ${row.title}`}
+                            title="Ẩn gợi ý này"
+                            className="p-1 rounded-md border border-black/30 bg-white hover:bg-red-50 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3 text-red-700" />
+                          </button>
+                        </>
+                      )}
+                      {habit && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setEditingHabitId(habit.id)}
+                            disabled={mutating}
+                            aria-label={`Sửa thói quen ${habit.title}`}
+                            title="Sửa thói quen"
+                            className="p-1 rounded-md border border-black/30 bg-white hover:bg-paper-warm cursor-pointer disabled:opacity-50"
+                          >
+                            <Pencil className="w-3 h-3 text-black" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPendingDelete(habit)}
+                            disabled={mutating}
+                            aria-label={`Xóa thói quen ${habit.title}`}
+                            title="Xóa thói quen"
+                            className="p-1 rounded-md border border-black/30 bg-white hover:bg-red-50 cursor-pointer disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3 h-3 text-red-700" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </td>
 
-                {dayColumns.map((day) => {
+                {dayColumns.map(({ day, weekend }) => {
                   const checked = isChecked(row, day);
                   const isToday = day === currentDay;
+                  const isFuture = day > currentDay;
                   return (
                     <td
                       key={day}
-                      className={`py-2.5 px-1 text-center border-r last:border-r-0 border-black/60 ${
-                        isToday ? 'bg-primary-container/20' : ''
+                      className={`py-2.5 px-1 text-center border-r last:border-r-0 border-r-black/40 ${rowBorder} group-hover:bg-paper-warm/40 ${
+                        isToday ? 'bg-primary-container/20' : weekend ? 'bg-paper-warm/40' : ''
                       }`}
                     >
                       <button
                         type="button"
                         onClick={() => void handleToggleCell(row, day)}
+                        disabled={!row.trackable || isFuture}
                         aria-pressed={checked}
                         aria-label={`${ checked ? 'Bỏ đánh dấu' : 'Đánh dấu' } ${row.title} ngày ${day}`}
-                        className={`w-5 h-5 rounded-full border-[1.75px] border-black flex items-center justify-center mx-auto transition-all cursor-pointer ${
+                        title={isFuture ? 'Ngày này chưa tới' : undefined}
+                        className={`w-5 h-5 rounded-full border-[1.75px] border-black flex items-center justify-center mx-auto transition-all cursor-pointer disabled:cursor-not-allowed ${isFuture ? 'opacity-30' : ''} ${
                           checked
                             ? 'bg-primary-container text-black shadow-neo-xs scale-105'
                             : 'bg-white hover:bg-paper-warm'
@@ -307,16 +465,44 @@ export function HabitTrackerCard() {
                   );
                 })}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
+      </div>
+
+      <NotificationModal
+        isOpen={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        type="danger"
+        title="Xóa thói quen này?"
+        description={`"${pendingDelete?.title ?? ''}" và lịch sử đánh dấu của nó sẽ bị xóa vĩnh viễn.`}
+        confirmLabel="Xóa vĩnh viễn"
+        cancelLabel="Giữ lại"
+        onConfirm={async () => {
+          if (!pendingDelete) return;
+          try {
+            await removeHabit(pendingDelete.id);
+          } catch {
+            return false;
+          }
+        }}
+      />
 
       <CreateHabitFromTemplateModal
         isOpen={!!modalPreset}
         preset={modalPreset}
-        onClose={() => setModalPreset(null)}
+        onClose={() => {
+          setModalPreset(null);
+          setStarterSourceId(null);
+        }}
         onCreated={() => {
+          // A starter turned into a real habit is replaced by it, even if the title was changed.
+          if (starterSourceId && !hiddenStarters.includes(starterSourceId)) {
+            saveHiddenStarters([...hiddenStarters, starterSourceId]);
+          }
+          setStarterSourceId(null);
           setModalPreset(null);
           void refetch();
         }}
