@@ -2,7 +2,7 @@
 
 Backend modular monolith của **mylog**, được khởi tạo bằng Java 21 và Spring Boot 4.1.1.
 
-Đối chiếu ngày **2026-11-15**: repository có Flyway V1–V21, gồm Google auth, embedding indexes, pending assets và Companion habit linking ngoài các milestone ban đầu. Kiểm tra tên 21 migration và 68 test được chọn đạt; chưa chạy lại full `verify`/PostgreSQL integration vì Docker daemon không hoạt động. Kiểm tra DB trực tiếp bổ sung cùng ngày bằng cấu hình backend xác nhận kết nối thành công, V1–V21 đều `SUCCESS`, Flyway checksum/validation và Hibernate validation 46 entity đạt. Chỉ đọc metadata, không migrate/repair hoặc sửa dữ liệu; chưa kiểm chứng giải mã/E2E và không suy rộng kết quả sang database khác. Xem [báo cáo tiến độ](../PROJECT_STATUS.md) và [kế hoạch backend](docs/BACKEND_DEVELOPMENT_PLAN.md); M8 chưa đạt release gate.
+Đối chiếu ngày **2026-11-15**: repository có Flyway V1–V21, gồm Google auth, embedding indexes, pending assets và Companion habit linking ngoài các milestone ban đầu. Kiểm tra tên 21 migration và 68 test được chọn đạt; chưa chạy lại full `verify`/PostgreSQL integration vì Docker daemon không hoạt động. Sau lần đổi database, đã nâng DB theo cấu hình backend từ **V17 lên V21 bằng 4 migration Flyway** theo yêu cầu người dùng; checksum/validation và Hibernate validation 46 entity sau nâng cấp đạt. Số bản ghi ở 5 bảng chính được đối chiếu trước/sau không đổi; không seed hay bật worker. Chưa kiểm chứng giải mã/E2E và không suy rộng kết quả sang database khác. Xem [báo cáo tiến độ](../PROJECT_STATUS.md) và [kế hoạch backend](docs/BACKEND_DEVELOPMENT_PLAN.md); M8 chưa đạt release gate.
 
 Tài liệu thiết kế:
 

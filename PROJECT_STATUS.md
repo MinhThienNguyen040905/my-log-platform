@@ -16,26 +16,36 @@
 | Safety model | Pipeline train và inference có cổng manifest approval/checksum | Chưa có bằng chứng artifact/model được duyệt hoặc đạt tiêu chí release |
 | Recommend model | 42 card duy nhất: 7 `approved`, 35 `pending`; công cụ curation, demo và importer corpus riêng | 3 test không khớp trạng thái dữ liệu; approval metadata không tự chứng minh quyền dùng production |
 
-Flyway hiện có **21 migration V1–V21**. Kiểm tra trực tiếp database đang cấu hình trong `backend/.env` ngày 2026-11-15 xác nhận cả 21 migration đã áp dụng thành công, Flyway validation khớp repository và Hibernate validation đạt. Kết quả chỉ áp dụng cho database đã kiểm tra, không suy rộng sang môi trường khác. Migration đã áp dụng phải giữ bất biến.
+Flyway hiện có **21 migration V1–V21**. Database kiểm tra ban đầu ngày 2026-11-15 đã đạt V21. Sau khi người dùng đổi database cùng ngày, kiểm tra lại xác nhận DB mới ở V17. **Theo yêu cầu cập nhật tiếp theo, đã áp dụng thành công V18–V21 bằng Flyway trên DB hiện tại; checksum và Hibernate validation sau nâng cấp đều đạt.** Bảng bên dưới phản ánh kết nối mới nhất theo `backend/.env`. Migration đã áp dụng phải giữ bất biến.
 
 ## Đối chiếu database ngày 2026-11-15
 
 | Kiểm tra | Kết quả |
 | --- | --- |
-| Kết nối JDBC bằng cấu hình backend | Thành công; PostgreSQL 17.11, schema `public` |
+| Kết nối JDBC bằng cấu hình backend | Thành công; PostgreSQL 17.6, schema `public`; transaction metadata read-only |
 | Extensions | `pgcrypto` 1.3 và `vector` 0.8.2 |
 | Lịch sử Flyway | V1–V21 đều `SUCCESS`, không có bản ghi thất bại hoặc migration pending |
-| `Flyway.validateWithResult()` | Đạt, không có migration không hợp lệ hoặc checksum mismatch |
-| Hibernate schema validation | Đạt với 46 entity; Maven compile xác nhận compiled classes hiện hành |
+| `Flyway.validateWithResult()` | Đạt sau nâng cấp, không có lỗi checksum hoặc migration chưa áp dụng |
+| Hibernate schema validation | Đạt với 46 entity hiện hành; Maven compile trước nâng cấp xác nhận compiled classes không cũ |
 | Bảng ứng dụng | Đủ 46 bảng khai báo bởi migration; 47 bảng nếu tính `flyway_schema_history` |
-| Index/trigger có tên trong migration | Có đủ 63 index khai báo rõ và 3 trigger; kiểm tra sự tồn tại, không đo query plan/hiệu năng |
-| V16–V18 | Có cột mã xác minh, `pending_registrations` và các index embedding/HNSW 768/1536 |
-| V19 — Google auth | Có `user_oauth_identities`, `password_hash` nullable và constraint bắt buộc mật khẩu với tài khoản LOCAL |
-| V20 — ảnh bản nháp | Có `position`, `is_cover`, FK entry nullable, trạng thái `PENDING_ATTACH` và index liên quan |
-| V21 — Companion/habit | Có `habits.tool_code`, check constraint danh mục công cụ và `companion_habit_preferences` |
+| Index có tên trong migration | Có đủ 63 index khai báo rõ, gồm 6 index trước đó còn thiếu ở V18/V20; chưa đo query plan/hiệu năng |
+| V16–V17 | Đã có cột mã xác minh và `pending_registrations` |
+| V18 — embedding indexes | Đã có `idx_knowledge_embeddings_chunk_model` và hai HNSW cosine index 768/1536 |
+| V19 — Google auth | Đã có `user_oauth_identities`, `password_hash` nullable và các constraint LOCAL/GOOGLE tương ứng |
+| V20 — ảnh bản nháp | Đã có `position`, `is_cover`, 3 index, FK entry nullable và status `PENDING_ATTACH` |
+| V21 — Companion/habit | Đã có `habits.tool_code` và `companion_habit_preferences` |
 | Quyền truy cập trực tiếp | 46/46 bảng ứng dụng bật RLS; metadata không có table grant cho `anon`, `authenticated` hoặc `PUBLIC` |
 
-Không chạy `migrate`, `repair`, DDL, seed hay job ứng dụng. Truy vấn metadata chạy trong transaction read-only rồi rollback; Flyway chỉ dùng `info`/`validate`, Hibernate chỉ bootstrap validation, không khởi động Spring hoặc worker. Schema hiện khớp các kiểm tra trên nên **không cần nâng version DB cho code V21**. Chưa kiểm chứng tính mới/đúng của dữ liệu nghiệp vụ, khả năng giải mã với key hiện tại hoặc E2E đăng nhập/ghi nhật ký; kiểm tra schema không thay thế các bước này.
+Đã chạy **4 migration V18 → V19 → V20 → V21** theo yêu cầu người dùng, trong một Flyway transaction group. Preflight xác nhận V1–V17 thành công và chỉ V18–V21 pending; không sửa migration cũ, không chạy `repair`/`clean`, seed hoặc worker. Số bản ghi trước/sau ở `users`, `journal_entries`, `journal_assets`, `habits`, `knowledge_embeddings` không đổi. Kiểm tra hậu nâng cấp dùng transaction metadata read-only và Hibernate bootstrap độc lập, không khởi động Spring. **Schema hiện khớp code V21 qua các kiểm tra trên.** Chưa kiểm chứng khả năng giải mã với key hiện tại, toàn bộ dữ liệu nghiệp vụ hoặc E2E đăng nhập/ghi nhật ký; nâng schema không thay thế các bước này.
+
+## Redis ngày 2026-11-15
+
+- Lần kiểm tra ban đầu dùng Redis local `redis://localhost:6379`, SSL tắt. Lettuce thất bại với `CONNECTION_REFUSED`; kiểm tra TCP riêng xác nhận Windows error 10061, DNS localhost hoạt động.
+- Sau khi người dùng thêm Redis online cùng ngày, đã bỏ hai cấu hình trùng trong `.env`, giữ một `MYLOG_REDIS_URL` dạng `rediss://` và `MYLOG_REDIS_SSL_ENABLED=true`. Không lưu endpoint/credential vào tài liệu.
+- URL online đầu tiên không phân giải DNS (`UnknownHost`, resolver hệ điều hành trả lỗi 11001). Sau khi người dùng cập nhật URL mới, kiểm tra lại bằng Lettuce **kết nối thành công**, TLS và xác minh certificate bật, cả **3/3 lệnh `PING` trả `PONG`**. Thời gian mở kết nối khoảng 1.917 ms; round trip lần lượt 77, 66 và 71 ms. Đây là đo nhanh kết nối, không phải load test; không đọc key/cache hoặc ghi dữ liệu.
+- Docker daemon chưa hoạt động, nên Redis của Docker Compose chưa được kiểm chứng/chạy trong đợt này. Không khởi động dịch vụ, đọc key/cache hay ghi dữ liệu để kiểm tra.
+- Source hiện chưa có adapter nghiệp vụ dùng Redis: rate limit dùng PostgreSQL (`auth_rate_limits`), outbox/AI jobs dùng DB/lease. Redis chưa kết nối không đồng nghĩa schema PostgreSQL bị lệch; backend health vẫn có thể báo Redis DOWN nếu health contributor được bật.
+- Để kiểm tra lại Redis local: mở Docker Desktop, chạy `docker compose up -d redis` trong `backend/`, rồi `docker compose exec redis redis-cli ping`; kết quả cần là `PONG`. Đổi sang dịch vụ Redis cloud cần cấu hình endpoint/credential tương ứng, không dùng địa chỉ local hoặc đưa token vào tài liệu.
 
 ## Kiểm tra thực tế ngày 2026-11-15
 
@@ -43,7 +53,8 @@ Không chạy `migrate`, `repair`, DDL, seed hay job ứng dụng. Truy vấn me
 | --- | --- |
 | Backend Maven: 17 lớp test được chọn | **68 test đạt**, không fail/error/skip; chạy trên Java 25 local, chưa thay thế full `verify` trên Java 21/CI |
 | `backend/scripts/check-migrations.ps1` | Đạt, kiểm tra tên/phiên bản của 21 file; không chạy Flyway lên database |
-| Database cấu hình backend | Kết nối và schema validation đạt; xem đối chiếu trực tiếp ở trên. Không thay đổi schema hoặc dữ liệu |
+| Database cấu hình backend sau lần đổi mới nhất | Đã nâng V17 → V21 bằng 4 migration; kết nối, Flyway checksum/validation, Hibernate 46 entity đạt; số bản ghi ở 5 bảng được đối chiếu không đổi |
+| Redis cấu hình backend | Kết nối online thành công bằng URL mới, TLS/certificate verification bật; 3/3 `PING` trả `PONG`, round trip 66–77 ms |
 | Web `npm run build` | Đạt production build và bước TypeScript của Next.js |
 | Web `tsc --noEmit --incremental false` | Đạt sau khi sinh lại route types/build; lần đầu gặp type sinh cũ tham chiếu route đã bỏ |
 | Web `npm run lint` | Đạt với 0 lỗi, 4 cảnh báo về font và thẻ `img` |
