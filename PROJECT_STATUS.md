@@ -1,6 +1,6 @@
 # Tiến độ mylog — 2026-11-15
 
-Ảnh chụp từ đợt rà soát tài liệu, code, migration và kiểm tra local ngày 2026-11-15. Có implementation hoặc test trong repository không đồng nghĩa đã triển khai, được duyệt xử lý dữ liệu thật hay đạt điều kiện phát hành. Không kiểm tra database từ xa hoặc đọc secret để lập báo cáo này.
+Ảnh chụp từ đợt rà soát tài liệu, code, migration và kiểm tra local ngày 2026-11-15; bổ sung kiểm tra database theo yêu cầu người dùng cùng ngày. Có implementation hoặc test trong repository không đồng nghĩa đã triển khai toàn bộ ứng dụng, được duyệt xử lý dữ liệu thật hay đạt điều kiện phát hành. Kiểm tra DB dùng cấu hình kết nối backend, chỉ đọc metadata/lịch sử Flyway, không đọc nội dung người dùng hoặc công bố thông tin xác thực.
 
 ## Tiến độ theo phần
 
@@ -16,7 +16,26 @@
 | Safety model | Pipeline train và inference có cổng manifest approval/checksum | Chưa có bằng chứng artifact/model được duyệt hoặc đạt tiêu chí release |
 | Recommend model | 42 card duy nhất: 7 `approved`, 35 `pending`; công cụ curation, demo và importer corpus riêng | 3 test không khớp trạng thái dữ liệu; approval metadata không tự chứng minh quyền dùng production |
 
-Flyway hiện có **21 migration V1–V21**. Đợt rà soát chỉ xác nhận file và tên migration; không xác nhận V16–V21 đã áp dụng trên database triển khai. Migration đã áp dụng phải giữ bất biến.
+Flyway hiện có **21 migration V1–V21**. Kiểm tra trực tiếp database đang cấu hình trong `backend/.env` ngày 2026-11-15 xác nhận cả 21 migration đã áp dụng thành công, Flyway validation khớp repository và Hibernate validation đạt. Kết quả chỉ áp dụng cho database đã kiểm tra, không suy rộng sang môi trường khác. Migration đã áp dụng phải giữ bất biến.
+
+## Đối chiếu database ngày 2026-11-15
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Kết nối JDBC bằng cấu hình backend | Thành công; PostgreSQL 17.11, schema `public` |
+| Extensions | `pgcrypto` 1.3 và `vector` 0.8.2 |
+| Lịch sử Flyway | V1–V21 đều `SUCCESS`, không có bản ghi thất bại hoặc migration pending |
+| `Flyway.validateWithResult()` | Đạt, không có migration không hợp lệ hoặc checksum mismatch |
+| Hibernate schema validation | Đạt với 46 entity; Maven compile xác nhận compiled classes hiện hành |
+| Bảng ứng dụng | Đủ 46 bảng khai báo bởi migration; 47 bảng nếu tính `flyway_schema_history` |
+| Index/trigger có tên trong migration | Có đủ 63 index khai báo rõ và 3 trigger; kiểm tra sự tồn tại, không đo query plan/hiệu năng |
+| V16–V18 | Có cột mã xác minh, `pending_registrations` và các index embedding/HNSW 768/1536 |
+| V19 — Google auth | Có `user_oauth_identities`, `password_hash` nullable và constraint bắt buộc mật khẩu với tài khoản LOCAL |
+| V20 — ảnh bản nháp | Có `position`, `is_cover`, FK entry nullable, trạng thái `PENDING_ATTACH` và index liên quan |
+| V21 — Companion/habit | Có `habits.tool_code`, check constraint danh mục công cụ và `companion_habit_preferences` |
+| Quyền truy cập trực tiếp | 46/46 bảng ứng dụng bật RLS; metadata không có table grant cho `anon`, `authenticated` hoặc `PUBLIC` |
+
+Không chạy `migrate`, `repair`, DDL, seed hay job ứng dụng. Truy vấn metadata chạy trong transaction read-only rồi rollback; Flyway chỉ dùng `info`/`validate`, Hibernate chỉ bootstrap validation, không khởi động Spring hoặc worker. Schema hiện khớp các kiểm tra trên nên **không cần nâng version DB cho code V21**. Chưa kiểm chứng tính mới/đúng của dữ liệu nghiệp vụ, khả năng giải mã với key hiện tại hoặc E2E đăng nhập/ghi nhật ký; kiểm tra schema không thay thế các bước này.
 
 ## Kiểm tra thực tế ngày 2026-11-15
 
@@ -24,6 +43,7 @@ Flyway hiện có **21 migration V1–V21**. Đợt rà soát chỉ xác nhận 
 | --- | --- |
 | Backend Maven: 17 lớp test được chọn | **68 test đạt**, không fail/error/skip; chạy trên Java 25 local, chưa thay thế full `verify` trên Java 21/CI |
 | `backend/scripts/check-migrations.ps1` | Đạt, kiểm tra tên/phiên bản của 21 file; không chạy Flyway lên database |
+| Database cấu hình backend | Kết nối và schema validation đạt; xem đối chiếu trực tiếp ở trên. Không thay đổi schema hoặc dữ liệu |
 | Web `npm run build` | Đạt production build và bước TypeScript của Next.js |
 | Web `tsc --noEmit --incremental false` | Đạt sau khi sinh lại route types/build; lần đầu gặp type sinh cũ tham chiếu route đã bỏ |
 | Web `npm run lint` | Đạt với 0 lỗi, 4 cảnh báo về font và thẻ `img` |
