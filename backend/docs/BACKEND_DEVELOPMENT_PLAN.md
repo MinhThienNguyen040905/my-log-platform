@@ -39,6 +39,8 @@ Kế hoạch này biến blueprint kiến trúc thành các increment có thể 
 
 ## 3. Trạng thái hiện tại
 
+Đối chiếu code ngày **2026-11-15**: repository có migration V1–V21; web đã tích hợp các luồng chính và Companion, mobile đã tích hợp nhiều slice nhưng còn khoảng thiếu. Xem [báo cáo kiểm tra](../../PROJECT_STATUS.md) để phân biệt implementation, kiểm thử local và release gate. Các lần áp dụng Supabase/Testcontainers ghi ngày cũ dưới đây là bằng chứng lịch sử, chưa được chạy lại trong đợt rà soát này.
+
 ### Đã hoàn thành
 
 - [x] Bootstrap Spring Boot 4.1.1 và Java 21.
@@ -47,7 +49,7 @@ Kế hoạch này biến blueprint kiến trúc thành các increment có thể 
 - [x] Spring Boot Externalized Configuration bằng `.env`.
 - [x] Profile `local`, `test`, `prod`.
 - [x] Flyway V1 bật `vector` và `pgcrypto`.
-- [x] Security fail-closed: chỉ health endpoint public.
+- [x] Security mặc định deny, các endpoint public được allowlist theo contract (health, auth, safety resources và những đường dẫn được cấu hình); không coi toàn bộ API là public.
 - [x] CORS cấu hình bằng biến môi trường.
 - [x] Package/module skeleton.
 - [x] ArchUnit rule nền tảng.
@@ -245,9 +247,9 @@ POST  /api/v1/me/onboarding:complete
 - [x] Versioned TERMS/PRIVACY/AI_PROCESSING consent.
 - [x] Optional analytics/model-training mặc định false.
 - [x] Withdraw consent không xóa lịch sử quyết định.
-- [ ] AI use case kiểm tra consent tại execution time, không chỉ enqueue time.
+- [x] AI use case kiểm tra consent tại execution time, không chỉ enqueue time.
 
-`UserProfileUseCase.isConsentGranted` đã có để M3 kiểm tra consent khi worker thực thi; chưa có AI worker trong M1 nên mục trên vẫn mở.
+`AnalysisJobHandler` của M3 kiểm tra consent trước khi gọi analyzer và trước khi kích hoạt kết quả; Companion cũng kiểm tra consent trước screening/responder. M8 có integration test thu hồi consent sau enqueue; kiểm chứng lại full suite cần Docker.
 
 ### Test bắt buộc
 
@@ -268,10 +270,10 @@ POST  /api/v1/me/onboarding:complete
 ### Bằng chứng và giới hạn M1 backend
 
 - Persistence M1 dùng JPA entity trong `identity`/`user` `infrastructure/persistence/entity`, adapter `EntityManager` trong `infrastructure/persistence`, với native SQL qua JPA cho rate-limit upsert và truy vấn consent mới nhất. Flyway V2–V4 vẫn là schema nguồn; Hibernate chỉ `validate`.
-- Flyway V2–V4, register → email verification → login → profile/consent → refresh/reuse chạy qua PostgreSQL Testcontainers. V16 bổ sung mã xác minh email; V17 chuyển đăng ký chưa xác minh sang bảng tạm, xác minh mới tạo user. Web đã xử lý liên kết và form nhập mã; mobile chưa nối. Test có registration race, account chưa xác minh/suspended, ownership session, ciphertext/tokens, log redaction và key rotation. OpenAPI artifact được xuất từ context bật M1, có các endpoint identity/profile.
+- Flyway V2–V4, register → email verification → login → profile/consent → refresh/reuse có PostgreSQL Testcontainers tests. V16 bổ sung mã xác minh email; V17 chuyển đăng ký chưa xác minh sang bảng tạm, xác minh mới tạo user. Web đã xử lý liên kết và form nhập mã; mobile đã nối xác minh bằng mã, chưa cấu hình Universal Links/App Links. V19 bổ sung Google OAuth; backend/web có implementation, mobile chưa nối. Test có registration race, account chưa xác minh/suspended, ownership session, ciphertext/tokens, log redaction và key rotation. OpenAPI artifact được xuất từ context bật M1, có các endpoint identity/profile.
 - BCrypt cost 12 được chọn sau benchmark local ngày 2026-09-30 (Java 25 trên máy phát triển): trung bình khoảng 264 ms cho một cặp encode + verify; cost 10 khoảng 70 ms, cost 11 khoảng 131 ms. Cần đo lại trên hạ tầng triển khai trước release.
 - Local email verification gửi đến Mailpit (`docker compose up -d mailpit`, UI cổng 8025). Production cần SMTP và khóa do secret manager cung cấp; không dùng fallback local.
-- Frontend chưa tích hợp các API M1; điều kiện frontend ở exit criteria cần được xác nhận khi tích hợp.
+- Web và mobile đã gọi API M1 cho auth, hồ sơ, consent và phiên. E2E toàn bộ trên staging và hành vi native vẫn cần kiểm chứng; xem [mobile status](../../front-end/my-app-mobile/PROJECT_STATUS.md).
 - M1 dùng `audit_logs` sớm trong V2 để audit session revoke. Khi viết V6, chỉ bổ sung outbox/idempotency và phần audit còn thiếu, không tạo lại bảng này.
 
 ## 8. M2 — Journal, check-in và safety đầu vào
@@ -361,7 +363,7 @@ Asset có thể chuyển P2 nếu demo MVP không cần upload ảnh thật.
 - Backend đã có journal CRUD/list/favorite/tag, daily check-in, encryption, idempotency, outbox và safety event trong cùng transaction. Flyway V5–V7 đã áp dụng lên Supabase PostgreSQL (schema version 7); ứng dụng khởi động và Hibernate validate thành công với schema này. `mvn verify` qua PostgreSQL Testcontainers.
 - Classifier mặc định trả `unavailable`: journal vẫn lưu; ordinary analysis bị chặn và tạo `SafetyRescreenRequested`. Kể cả khi cắm classifier, policy gate chỉ cho ordinary analysis nếu có policy `APPROVED` đang hiệu lực và khớp rule/provider/version/confidence. Rule tiếng Việt/Anh hiện là **draft**, không được coi là policy đã duyệt. Corpus synthetic ghi nhận false positive dự kiến ở câu phủ định/trích dẫn; chưa có đánh giá false negative đáng tin cậy. API safety resources công khai chỉ trả nguồn đã duyệt, xác minh và có nguồn HTTPS; safety modal gọi API nhưng chưa có hotline hoặc nguồn hỗ trợ thật nào được duyệt trong DB.
 - Web đã dùng auth M1 và API journal/check-in thật (không còn auth mock hay journal trong `localStorage`); safety modal đã bỏ số điện thoại chưa xác minh. Mobile còn thiếu một số luồng, xem `WEB_MOBILE_GAP_IMPLEMENTATION_PLAN.md`. Kiểm tra high-risk end-to-end với classifier/policy được duyệt vẫn còn mở.
-- Asset upload Cloudinary signed workflow vẫn mở và có thể chuyển P2 theo quy định ở trên. Dashboard ưu tiên check-in là quy tắc cho M4, chưa có dashboard query thực tế để xác nhận.
+- Backend/web có upload/delivery ảnh qua Cloudinary và adapter file local; mobile chưa có luồng ảnh. Kiểm chứng Cloudinary thực tế và destroy vẫn còn mở. M4 đã có dashboard query ưu tiên check-in, journal là fallback; cần đo lại trên staging.
 
 ## 9. M3 — Outbox, jobs và AI analysis
 
@@ -413,9 +415,9 @@ GET  /api/v1/journal-entries/{entryId}/analysis
 
 ### AI-004 — Frontend status integration (P1, M)
 
-- [ ] Polling có exponential backoff.
-- [ ] Response phân biệt pending/failed/blocked.
-- [ ] Không hiển thị spinner vô hạn.
+- [x] Web/mobile có polling với backoff và giới hạn chờ trong code.
+- [x] API và client phân biệt pending/failed/blocked; kết quả nội dung chỉ hiển thị khi đã phân tích.
+- [x] Web/mobile có trạng thái hết thời gian chờ; vẫn cần E2E với backend/provider được duyệt.
 - [ ] P2: SSE notification khi analysis hoàn tất.
 
 ### Exit criteria M3
@@ -424,7 +426,8 @@ Backend đã được kiểm thử với PostgreSQL Testcontainers cho fake prov
 consent lúc worker chạy, retry, lease recovery và kết quả cũ; `JournalEntryChanged`/`JournalEntryDeleted`
 đánh dấu kết quả cũ `STALE` qua outbox. Fake chỉ dùng local/test. M3 chưa đạt exit criteria
 production: classifier/policy/safety content của M2 chưa được duyệt, provider adapter chưa được
-phê duyệt theo điều khoản dữ liệu, output safety validator mới là baseline, frontend vẫn dùng mock.
+phê duyệt theo điều khoản dữ liệu, output safety validator mới là baseline. Web/mobile đã nối
+API status/result/retry; E2E với classifier/provider được duyệt còn mở.
 ADR-0009 chốt kiến trúc lai: classifier nội bộ được train ngoài backend, journal analyzer có thể
 dùng API key trong worker. `CONSTRAIN` hiện bị chặn khỏi ordinary reflection tới khi có luồng riêng.
 `SafetyRescreenRequested` được retry có backoff khi classifier/policy chưa sẵn sàng,
@@ -523,7 +526,10 @@ tập mẫu lớn, analyzer cảm xúc được duyệt cho production (local đ
 POST   /api/v1/self-care/goals
 GET    /api/v1/self-care/goals
 PATCH  /api/v1/self-care/goals/{goalId}
+DELETE /api/v1/self-care/goals/{goalId}
 POST   /api/v1/self-care/goals/{goalId}/habits
+PATCH  /api/v1/self-care/habits/{habitId}
+DELETE /api/v1/self-care/habits/{habitId}
 PUT    /api/v1/self-care/habits/{habitId}/completions/{localDate}
 DELETE /api/v1/self-care/habits/{habitId}/completions/{localDate}
 ```
@@ -539,11 +545,11 @@ DELETE /api/v1/self-care/habits/{habitId}/completions/{localDate}
 
 Backend M5 có API để tạo goal/habit, đánh dấu và bỏ completion, xem progress trong `GET /goals`.
 V10 đã áp dụng lên Supabase và Hibernate `ddl-auto=validate` khởi động thành công (2026-10-01).
-Frontend hiện chưa tích hợp các API này; vì vậy exit criterion end-to-end vẫn mở.
+Web đã tích hợp goal/habit/completion và form sửa/xóa habit, sửa/xóa goal. Mobile có danh sách, tạo goal/habit và completion cơ bản; chưa nối đầy đủ thao tác sửa/xóa. Kiểm chứng end-to-end trên staging/native vẫn mở.
 Completion dùng `UNIQUE(habit_id, local_date)` và `PUT` upsert; gọi lặp không tăng số lượng.
 Goal/habit của user khác trả 404 qua truy vấn theo `user_id` và ID.
 M5 dùng timezone snapshot khi tạo habit; đổi timezone profile sau đó không đổi lịch của habit đã tạo.
-Chưa có API cập nhật habit, chỉ goal update dùng `If-Match` và version.
+Goal và habit update đều dùng `If-Match` và version. V21 thêm `habits.tool_code` cùng preference cho gợi ý thói quen của Companion; người dùng phải chủ động xác nhận trước thao tác ghi.
 
 ## 12. M6 — Knowledge base, RAG và admin
 
@@ -557,7 +563,7 @@ Chưa có API cập nhật habit, chỉ goal update dùng `If-Match` và version
 
 - [x] Draft → review → approve/reject/archive.
 - [x] Version và chunk bất biến sau approve bằng DB trigger; archive giữ citation lịch sử.
-- [x] Checksum tránh chunk lại nội dung không đổi. Embedding chưa bật khi chưa chốt provider/model.
+- [x] Checksum tránh chunk lại nội dung không đổi. Embedding có adapter/cấu hình/worker, mặc định tắt và còn phụ thuộc phê duyệt provider cùng kiểm chứng vận hành.
 - [x] Chỉ approver có `knowledge:review` được publish; không tự duyệt bản do mình tạo.
 - [x] Audit approve/archive bằng reason code, không ghi content.
 

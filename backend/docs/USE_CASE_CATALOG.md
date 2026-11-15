@@ -7,10 +7,11 @@ mylog hỗ trợ ghi nhật ký, tự nhìn lại cảm xúc và chăm sóc bả
 ## Cách đọc trạng thái
 
 - **Có backend:** Đã có luồng/API backend, nhưng giao diện, cấu hình hoặc nội dung được duyệt có thể chưa đủ để sử dụng trọn vẹn.
+- **Đã nối API:** Client có implementation gọi backend; vẫn cần xem bằng chứng kiểm thử, cấu hình và phê duyệt trước khi dùng production.
 - **Demo giao diện:** Giao diện web có tương tác mẫu, chưa kết nối đầy đủ với backend; dữ liệu trình duyệt không phải dữ liệu production.
 - **Dự kiến:** Ý tưởng hoặc công việc tiếp theo, chưa phải tính năng hoàn chỉnh.
 
-Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam kết phát hành. Ứng dụng mobile hiện chủ yếu là scaffold.
+Trạng thái được đối chiếu code ngày **2026-11-15**, không phải cam kết phát hành. Mobile đã nối nhiều API nhưng còn thiếu các slice và kiểm chứng native. Xem [tiến độ và bằng chứng kiểm tra](../../PROJECT_STATUS.md).
 
 | Người tham gia | Điều họ cần làm |
 |---|---|
@@ -25,9 +26,9 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Mục tiêu:** Có tài khoản cá nhân để bắt đầu sử dụng mylog.
 
-**Luồng:** Khách nhập email và mật khẩu → hệ thống tạo tài khoản → khách xác minh email theo hướng dẫn. Nếu email đã tồn tại hoặc mã xác minh hết hạn, hệ thống báo lỗi phù hợp và cho phép thử lại.
+**Luồng:** Khách nhập email và mật khẩu → hệ thống lưu đăng ký tạm → khách xác minh email theo hướng dẫn → hệ thống mới tạo tài khoản thật. Nếu email đã có tài khoản hoặc mã xác minh hết hạn, hệ thống báo lỗi phù hợp và cho phép thử lại.
 
-**Hiện trạng:** Có backend; giao diện web là demo và việc gửi email thực tế cần cấu hình.
+**Hiện trạng:** Backend/web đã nối đăng ký và xác minh bằng liên kết hoặc mã; mobile đã nối xác minh bằng mã. Gửi email cần cấu hình SMTP; Universal Links/App Links trên mobile còn mở.
 
 ### UC-02 — Đăng nhập và đăng xuất
 
@@ -35,15 +36,15 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Luồng:** Người dùng nhập thông tin đăng nhập → hệ thống kiểm tra → mở phiên. Khi đăng xuất, phiên tương ứng bị thu hồi. Tài khoản bị đình chỉ hoặc thông tin sai thì không đăng nhập được.
 
-**Hiện trạng:** Có backend; giao diện web hiện dùng luồng demo.
+**Hiện trạng:** Backend, web và mobile đã có đăng nhập/refresh/đăng xuất thật. Backend/web có Google auth; mobile chưa nối Google.
 
 ### UC-03 — Lấy lại mật khẩu
 
 **Mục tiêu:** Khôi phục quyền truy cập khi quên mật khẩu.
 
-**Luồng dự kiến:** Khách yêu cầu đặt lại mật khẩu → nhận liên kết hoặc mã qua email → đặt mật khẩu mới → phiên cũ được xử lý theo chính sách bảo mật.
+**Luồng:** Khách yêu cầu đặt lại mật khẩu → nhận liên kết hoặc mã qua email → đặt mật khẩu mới → mọi phiên cũ bị thu hồi.
 
-**Hiện trạng:** Dự kiến; màn hình quên mật khẩu trên web chưa phải quy trình khôi phục thật.
+**Hiện trạng:** Backend/web đã có quy trình thật bằng liên kết và mã; mobile đã nối yêu cầu và xác nhận bằng mã. Kiểm chứng native còn mở.
 
 ## B. Người dùng: tài khoản và quyền riêng tư
 
@@ -53,7 +54,7 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Luồng:** Người dùng điền thông tin ban đầu → lưu hồ sơ → có thể xem và sửa về sau. Dữ liệu không hợp lệ được yêu cầu chỉnh lại.
 
-**Hiện trạng:** Có backend; giao diện web mới ở mức demo.
+**Hiện trạng:** Web/mobile đã nối onboarding và hồ sơ với backend, dùng version/`If-Match` khi cập nhật. Đồng bộ hai phiên và native cần kiểm chứng thêm.
 
 ### UC-05 — Chọn hoặc rút lại sự đồng ý xử lý dữ liệu
 
@@ -77,19 +78,19 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Mục tiêu:** Có một câu hỏi gợi mở khi đang viết và bị bí ý.
 
-**Luồng mong muốn:** Người dùng dừng gõ khoảng 3–5 giây → ứng dụng hỏi backend → hiện một gợi ý ngắn nếu phù hợp. Người dùng có thể bỏ qua; gợi ý không tự ghi vào bài.
+**Luồng:** Người dùng chủ động mở Trợ lý hoặc gửi tin → backend kiểm tra consent/safety → client hiển thị lời đáp, câu hỏi và hành động khi được phép. Người dùng có thể bỏ qua; câu hỏi chỉ được chèn vào bài khi người dùng chọn.
 
-**Hiện trạng:** Backend có endpoint gợi ý mẫu, mặc định tắt và chưa dùng AI tạo sinh; editor web chưa nối luồng này. Việc chờ 3–5 giây là hành vi frontend dự kiến.
+**Hiện trạng:** Companion backend/web đã có implementation API thật, responder dựng sẵn và adapter LLM với validator/screening/fallback. Tính năng/generation mặc định tắt; provider/safety approval và bước 4b–4e còn mở. Mobile chưa nối; xem [kế hoạch Companion](COMPANION_CHATBOT_PLAN.md).
 
 ### UC-08 — Viết và lưu nhật ký
 
 **Mục tiêu:** Giữ lại điều mình đã trải qua, kể cả khi dịch vụ AI gặp lỗi.
 
-**Luồng:** Người dùng viết và nhấn Lưu → hệ thống lưu bài → trả kết quả lưu. Sau đó hệ thống tự kiểm tra an toàn và, khi có đủ điều kiện, phân tích bài để tạo phản chiếu hoặc dữ liệu cảm xúc. Người dùng không phải chờ toàn bộ phân tích mới lưu xong.
+**Luồng:** Người dùng viết và nhấn Lưu → backend kiểm tra safety đồng bộ và lưu bài → trả kết quả lưu. Khi có đủ điều kiện, outbox/worker phân tích bất đồng bộ để tạo phản chiếu hoặc dữ liệu cảm xúc. Người dùng không phải chờ toàn bộ phân tích mới lưu xong.
 
 **Trường hợp cần chú ý:** Nếu bài có dấu hiệu nguy cơ cao, hệ thống đi theo luồng hỗ trợ an toàn và không tạo phản chiếu thông thường. Nếu bộ kiểm tra không hoạt động, bài vẫn được lưu nhưng phản hồi AI thông thường tạm dừng. Đây là hai tình huống khác nhau; hệ thống không tự kết luận tình trạng y khoa của người viết.
 
-**Hiện trạng:** Có backend; web hiện chủ yếu lưu bản demo trong trình duyệt. Phân tích còn phụ thuộc consent, chính sách và provider được duyệt.
+**Hiện trạng:** Web/mobile đã lưu nhật ký qua backend; trình duyệt chỉ giữ bản nháp/dữ liệu giao diện. Phân tích còn phụ thuộc consent, chính sách và provider được duyệt.
 
 ### UC-09 — Đọc, tìm và xem lại nhật ký
 
@@ -97,7 +98,7 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Luồng:** Người dùng mở danh sách hoặc lịch → chọn bài → đọc nội dung và các thông tin liên quan của chính mình. Bài của tài khoản khác không được hiển thị.
 
-**Hiện trạng:** Có backend; web là demo.
+**Hiện trạng:** Web/mobile đã nối danh sách, đọc chi tiết và tìm kiếm; web có lịch với daily-counts API. Đồng bộ chéo thiết bị và phân trang nhiều trang cần kiểm chứng thêm.
 
 ### UC-10 — Sửa, đánh dấu và xóa nhật ký
 
@@ -105,7 +106,7 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Luồng:** Người dùng sửa nội dung, gắn nhãn/yêu thích hoặc xóa bài → hệ thống lưu thay đổi → phân tích cũ không còn phù hợp sẽ không được hiển thị như kết quả của bản mới. Khi hai nơi cùng sửa một bài, hệ thống báo xung đột để tránh ghi đè âm thầm.
 
-**Hiện trạng:** Có backend cho các thao tác nhật ký chính; mức tích hợp web còn là demo.
+**Hiện trạng:** Web/mobile đã nối sửa/xóa, yêu thích và gắn/bỏ nhãn. Backend có endpoint đọc nhãn của từng bài; mobile chưa dùng để hiển thị chính xác trạng thái nhãn đang gắn.
 
 ### UC-11 — Thêm ảnh vào nhật ký
 
@@ -113,7 +114,7 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Luồng mong muốn:** Người dùng chọn ảnh → tải lên → thấy ảnh gắn với bài → có thể gỡ ảnh. Chỉ chủ tài khoản được truy cập ảnh theo quyền phù hợp.
 
-**Hiện trạng:** Có nền tảng Cloudinary và metadata; luồng giao diện và kiểm chứng đầu cuối cần hoàn thiện.
+**Hiện trạng:** Backend/web có upload/delivery ảnh và metadata với Cloudinary hoặc adapter file local. Mobile chưa có ảnh; kiểm chứng Cloudinary và cleanup thực tế còn mở.
 
 ### UC-12 — Check-in cảm xúc hằng ngày
 
@@ -121,7 +122,7 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Luồng:** Người dùng mở check-in → chọn mức và thông tin muốn ghi → lưu → có thể xem lại theo ngày. Khi hiển thị xu hướng, check-in là dữ liệu chính của ngày; quan sát từ nhật ký chỉ là nguồn dự phòng có ghi rõ.
 
-**Hiện trạng:** Có backend; giao diện web cần kiểm tra tích hợp thực tế.
+**Hiện trạng:** Backend/web đã có check-in hằng ngày, gồm hoạt động. Mobile chưa có slice check-in riêng; chỉ số trong journal không tự tạo check-in.
 
 ## D. Người dùng: phản chiếu và hỗ trợ sức khỏe tinh thần
 
@@ -133,7 +134,7 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Trường hợp cần chú ý:** Không có consent, thiếu phê duyệt provider/chính sách, lỗi phân tích hoặc bài thuộc luồng safety thì không hiển thị phản chiếu thông thường. Bài nhật ký vẫn tồn tại.
 
-**Hiện trạng:** Có backend và nền xử lý bất đồng bộ; việc chạy thật phụ thuộc cổng cấu hình và phê duyệt.
+**Hiện trạng:** Có backend/worker và web/mobile đã nối status/result/retry với polling/backoff/giới hạn chờ. Việc chạy AI thật phụ thuộc cổng cấu hình và phê duyệt; chưa xác minh E2E production.
 
 ### UC-14 — Nhận hướng dẫn an toàn khi có dấu hiệu nguy cơ
 
@@ -157,7 +158,7 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Luồng:** Người dùng tạo mục tiêu/thói quen → đánh dấu đã làm → xem tiến trình → có thể sửa hoặc dừng. Nội dung được diễn đạt như gợi ý tự chăm sóc, không phải phác đồ điều trị.
 
-**Hiện trạng:** Có backend; cần kiểm tra từng màn hình web trước khi coi là tích hợp hoàn chỉnh.
+**Hiện trạng:** Backend/web đã có goal/habit/completion và sửa/xóa goal/habit. Mobile có tạo mục tiêu/thói quen, completion và xem tiến trình cơ bản; chưa có đầy đủ sửa/xóa. Wellness policy và kiểm chứng staging/native vẫn mở.
 
 ### UC-17 — Xem nội dung và nguồn hỗ trợ đã duyệt
 
@@ -207,7 +208,7 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Luồng:** Người dùng yêu cầu xuất → hệ thống chuẩn bị file → người dùng tải trong thời gian hiệu lực. File hết hạn được dọn dẹp; chỉ chủ tài khoản nhận được file.
 
-**Hiện trạng:** Có backend xuất CSV/PDF bằng job, giới hạn dung lượng và thời hạn theo chính sách hiện tại.
+**Hiện trạng:** Có backend xuất CSV/PDF bằng job, web/mobile đã nối yêu cầu/trạng thái/tải theo quyền. Giới hạn dung lượng/thời hạn có trong backend; tải/chia sẻ file trên native còn cần kiểm chứng.
 
 ### UC-23 — Xóa tài khoản
 
@@ -215,7 +216,7 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Luồng:** Người dùng xác nhận yêu cầu → tài khoản chuyển sang quy trình xóa → hệ thống xóa/thu hồi dữ liệu liên quan theo chính sách, kể cả tài nguyên bên ngoài khi áp dụng.
 
-**Hiện trạng:** Có backend cho yêu cầu và job xóa; cần kiểm chứng vận hành trước khi coi toàn bộ vòng đời production đã sẵn sàng.
+**Hiện trạng:** Có backend cho yêu cầu, trạng thái, hủy và job xóa. Web hiện hướng dẫn liên hệ admin khi có cấu hình email hỗ trợ, không có nút yêu cầu xóa; mobile chưa nối quy trình này. Cleanup dịch vụ ngoài và vòng đời production cần kiểm chứng. Reset dữ liệu giữ tài khoản trên web là luồng riêng.
 
 ## F. Quản trị viên và nhóm nội dung
 

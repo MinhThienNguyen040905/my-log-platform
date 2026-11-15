@@ -1,6 +1,6 @@
-# Mobile API contract inventory — phase 0
+# Mobile API contract inventory
 
-Verified against the current backend controllers and request/response records on 2026-10-13. Native mobile calls `${EXPO_PUBLIC_API_BASE_URL}/api/v1` directly; the Next.js `/api/*` routes belong to the web app. Auth, profile, onboarding, journal, dashboard, insight/report, self-care and session calls are implemented in source. The synthetic local API smoke test covers core endpoints; native device behavior remains unverified.
+Inventory initially verified on 2026-10-13, updated against source on 2026-11-15 with password reset, analysis and safety calls added on 2026-11-11. Native mobile calls `${EXPO_PUBLIC_API_BASE_URL}/api/v1` directly; the Next.js `/api/*` routes belong to the web app. Auth, profile, onboarding, journal, dashboard, insight/report, basic self-care, session and export calls are implemented. Earlier synthetic API smoke results do not establish current native behavior; see [PROJECT_STATUS.md](PROJECT_STATUS.md) for dated evidence and gaps.
 
 ## Auth — `/api/v1/auth`
 
@@ -40,6 +40,7 @@ Verified against the current backend controllers and request/response records on
 | `DELETE /journal-entries/{id}` | `If-Match` | `204` | Version required. |
 | `PUT/DELETE /journal-entries/{id}/favorite` | — | `200` detail and `ETag` | Toggle favorite. |
 | `GET/POST /journal-tags` | POST `{name, color?}` | `200` list / `201` tag | Tag metadata. |
+| `GET /journal-entries/{id}/tags` | — | `200` tag array | Backend exists; mobile does not yet use it to show attached/selected tags. |
 | `PUT/DELETE /journal-entries/{id}/tags/{tagId}` | — | `204` | Attach/detach. |
 | `GET /journal-entries/{id}/analysis` | — | `200` `{entryId, contentVersion, status, analysisId, sentiment, sentimentScore, emotions, topics, reflection}` | `status` is `journal_entries.analysis_status`: `NOT_REQUESTED`, `PENDING`, `ANALYZING`, `ANALYZED`, `ANALYSIS_FAILED`, `ANALYSIS_OUTDATED`, `BLOCKED_BY_SAFETY`. Content fields are set only when `ANALYZED`. Mobile polls with backoff (2→4→8→16→30 s, about 2 minutes) and never shows score, IDs or raw status. Added 2026-11-11. |
 | `POST /journal-entries/{id}/analysis:retry` | — | `200` `{status}` | `409` without `AI_PROCESSING` consent or when safety does not permit analysis; `429` when retried too soon. |
@@ -61,12 +62,12 @@ Backend journal create/update DTOs accept `title`, `contentJson`, `location`, `o
 | `POST /exports/{id}:authorize-download` | `{password}` | `200` short-lived signed relative URL | Password is used only for reauthentication. |
 | `GET /exports/{id}/file` | Signed `expires`, `signature` plus bearer token | `200` file | File is shared from temporary cache on native and removed after sharing. |
 
-The account deletion API exists on the backend but is not exposed in mobile yet. It needs a reviewed request/status/cancel flow because requesting deletion disables the account before the scheduled purge.
+The account deletion API exists on the backend but is not exposed in mobile yet. It needs a reviewed request/status/cancel flow because requesting deletion disables the account before the scheduled purge. Backend goal/habit update and delete APIs also exist; mobile has not implemented the full edit/delete flow. Separate check-ins, authenticated password change, Companion/recommendation questions, assets, feedback and Google login remain client integration gaps; see the [web/mobile gap plan](../../backend/docs/WEB_MOBILE_GAP_IMPLEMENTATION_PLAN.md).
 
 ## Development connection
 
 - Set `EXPO_PUBLIC_API_BASE_URL` to a backend URL reachable **from the device**, without `/api/v1`. `localhost` on a physical phone is the phone itself. Android emulator, iOS simulator, and a phone may need different hostnames. Never put tokens or service keys in this public variable.
-- Run the backend local profile and verify `/actuator/health` from the same device/network before API integration. The development host was not reachable during this phase unless separately noted in the implementation report.
+- Run the backend local profile and verify `/actuator/health` from the same device/network. Earlier API/Expo web smoke tests used a local backend; the 2026-11-15 review did not repeat them or establish native device connectivity.
 - Real user data requires HTTPS. HTTP is only for isolated local development with synthetic accounts and journal content.
 
 Sources: backend `IdentityController`, `UserController`, `JournalController`, `JournalTagController` and their request/response records; `backend/README.md` for validation and paging constraints.

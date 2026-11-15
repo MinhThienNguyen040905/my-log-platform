@@ -26,7 +26,9 @@
 
 ---
 
-## 1. Hiện trạng trong code
+## 1. Hiện trạng trước khi triển khai (lịch sử)
+
+Bảng dưới ghi vấn đề lúc lập kế hoạch. Đối chiếu **2026-11-15**: `CompanionPopover` đã được thay bằng panel/hook riêng, web gọi backend qua BFF, consent/safety do backend quyết định, công cụ dịu được tách riêng và đã có `CreateHabitFromTemplateModal`. Không dùng bảng lịch sử để suy ra các phần này còn thiếu. Build/typecheck web đạt và lint có 0 lỗi, 4 cảnh báo trong đợt rà soát; UI E2E chưa chạy được vì thiếu browser. Xem [báo cáo kiểm tra](../../PROJECT_STATUS.md).
 
 | Thành phần | Hiện tại | Vấn đề |
 |---|---|---|
@@ -207,9 +209,9 @@ Icon `Lightbulb` cạnh ô Tag mở popover 3 gợi ý tựa đề theo cảm x�
 - **Xong khi**: `npx tsc --noEmit`/`npm run lint` sạch (✅); chưa xác nhận bằng trình duyệt thật + tài khoản thật (đang chờ hết giới hạn đăng nhập từ lúc gỡ lỗi Bước 1/2 — xem ghi chú đầu file).
 - **Xong khi**: chạy cục bộ với `MYLOG_WRITING_SUGGESTIONS_ENABLED=true`, cả 5 status hiển thị đúng; không còn kịch bản hay safety tự viết ở client.
 
-### Bước 4: Thói quen (cần backend giai đoạn 5)
+### Bước 4: Thói quen — đã có implementation
 - Thẻ thói quen loại `LOG_EXISTING`: gọi `completeHabit(habitId, habitSuggestion.localDate, habitSuggestion.targetValue)` từ `@/features/selfcare` (dùng `localDate` do backend tính sẵn theo `habit.timezone`, không lấy theo đồng hồ trình duyệt), rồi hiện toast "Đã ghi nhận".
-- Loại `CREATE_FROM_TEMPLATE`: mở **màn hình tạo thói quen đã điền sẵn**. Màn hình này chưa tồn tại nên cần làm trong `features/selfcare` (form + `createHabit`, chọn mục tiêu hoặc tạo mục tiêu mới, chọn "gắn với công cụ" `toolCode`).
+- Loại `CREATE_FROM_TEMPLATE`: mở `CreateHabitFromTemplateModal` trong `features/selfcare`, điền sẵn dữ liệu từ backend và cho chọn mục tiêu hoặc tạo mục tiêu mới trước khi gọi `createHabit`; có `toolCode` khi gắn với công cụ.
 - "Không, cảm ơn": gọi endpoint riêng `POST /api/v1/companion/habit-suggestions/dismiss` (kèm allowlist trong `secured-proxy.ts`) để backend ghi nhận việc ẩn 7 ngày, không đi qua `POST /api/v1/journal-writing-suggestions` để không tốn quota `companion-turn`.
 - **Xong khi**: chỉ ghi dữ liệu khi người dùng bấm; thẻ không hiện khi cảm xúc là "Rất tệ".
 
@@ -261,8 +263,8 @@ Các kịch bản cần có:
 
 | Mục | Phụ thuộc / cần quyết định |
 |---|---|
-| Bước 3 | Backend giai đoạn 1 (contract mở rộng, quota `companion-turn`) |
-| Bước 4 | Backend giai đoạn 5 (`habits.tool_code`, `habitSuggestion`) và **màn hình tạo thói quen** chưa có |
+| Bước 3 | Backend contract/quota và BFF đã có; còn cần kiểm chứng E2E trên môi trường được duyệt |
+| Bước 4 | V21, `habitSuggestion`, API dismiss và modal tạo thói quen đã có; kiểm chứng hành vi ghi dữ liệu/giới hạn gợi ý trên môi trường triển khai còn mở |
 | Âm thanh thật | Hiện chỉ có tiếng mưa tạo bằng Web Audio. Nhạc thật cần file có bản quyền, tự host. |
 | Panel ở 768–1359px | Chốt với thiết kế: panel phủ bên phải hay bottom sheet giống điện thoại |
 | Mobile app (Expo) | Ngoài phạm vi; dùng lại contract khi làm |

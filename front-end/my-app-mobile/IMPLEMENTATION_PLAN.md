@@ -1,6 +1,6 @@
 # Kế hoạch thực thi MyLog mobile
 
-Trạng thái kiểm chứng ngày 2026-10-13: giai đoạn 0–3 có mã và luồng API/UI web chạy với backend local. Giai đoạn 4 có nhật ký văn bản, bản nháp, CRUD, yêu thích và thao tác nhãn; giai đoạn 5 có các lát cắt dashboard, lịch sử theo ngày, insight/report, self-care, phiên đăng nhập và xuất dữ liệu. Xem [PROJECT_STATUS.md](PROJECT_STATUS.md) để biết phần đã kiểm tra và phần còn mở. Chưa có kiểm thử Android/iOS native vì không có thiết bị hoặc emulator được kết nối.
+Đối chiếu code ngày **2026-11-15**: giai đoạn 0–3 có auth/onboarding/profile; giai đoạn 4 có nhật ký văn bản, bản nháp, CRUD, tìm kiếm, yêu thích, thao tác nhãn và màn analysis/safety; giai đoạn 5 có dashboard, lịch sử theo ngày, insight/report, self-care cơ bản, phiên và xuất dữ liệu. Quên/đặt lại mật khẩu bằng mã đã có. Backend đã có API đọc nhãn từng bài, mobile chưa dùng để đánh dấu nhãn đang gắn. Check-in riêng, đổi mật khẩu, Companion/câu hỏi, rich text/ảnh, feedback, deletion và Google login còn mở. Xem [PROJECT_STATUS.md](PROJECT_STATUS.md) để tách bằng chứng lịch sử với phần chưa kiểm chứng lại; chưa có bằng chứng Android/iOS native. Các bước dưới đây là kế hoạch/tiêu chí nghiệm thu, không phải tất cả đều đang TODO hoặc đã đạt.
 
 ## Cách triển khai
 

@@ -2,12 +2,14 @@
 
 Tài liệu này giải thích **code đang có**, đồng thời chỉ rõ phần nào mới là thiết kế hoặc còn thiếu để chạy với dữ liệu người dùng thật. Đọc cùng [kiến trúc backend](BACKEND_ARCHITECTURE.md), [kế hoạch phát triển](BACKEND_DEVELOPMENT_PLAN.md), [ADR safety](adr/0003-layered-safety-screening.md) và [ADR AI provider](adr/0004-ai-provider-and-data-handling.md). Flyway migration là nguồn schema thực thi; sơ đồ dưới đây chỉ nhằm giải thích luồng.
 
+Đối chiếu code ngày **2026-11-15**; bằng chứng kiểm tra và giới hạn môi trường ở [PROJECT_STATUS.md](../../PROJECT_STATUS.md). Phê duyệt provider/classifier/policy production vẫn còn mở.
+
 ## Sơ đồ AI đơn giản
 
 ```mermaid
 flowchart TD
     A[Người dùng viết nhật ký] --> B{Đang viết hay nhấn Lưu?}
-    B -->|Dừng gõ 3–5 giây| C[Backend kiểm tra consent và safety của bản nháp]
+    B -->|Chủ động mở Trợ lý hoặc gửi tin| C[Backend kiểm tra consent và safety của cửa sổ hội thoại]
     C -->|Đủ điều kiện| D[Hiển thị câu hỏi gợi ý tự phản chiếu để viết tiếp]
     C -->|Không đủ điều kiện| E[Không hiện gợi ý thông thường]
     D --> A
@@ -21,7 +23,7 @@ flowchart TD
     F -->|Chưa kiểm tra được| M[Giữ bài viết, chờ kiểm tra lại]
 ```
 
-Có **hai loại phản hồi ở hai thời điểm**: lúc đang viết là câu hỏi gợi ý để viết tiếp; sau khi lưu là kết quả phân tích của bài đã lưu, gồm reflection và các nhãn cảm xúc/chủ đề. Nhánh đang viết là trải nghiệm dự kiến: backend hiện chỉ có câu hỏi mẫu, mặc định tắt, chưa gọi AI tạo sinh và frontend chưa kết nối. Bài viết được lưu trước khi có kết quả phân tích AI. Sơ đồ chi tiết về outbox và worker nằm ở mục 3.
+Có **hai loại phản hồi ở hai thời điểm**: lúc đang viết là Companion với lời đáp/câu hỏi và công cụ theo contract; sau khi lưu là kết quả phân tích của bài đã lưu, gồm reflection và các nhãn cảm xúc/chủ đề. Web đã nối Companion qua BFF; backend có responder dựng sẵn và adapter LLM với validator, screening đầu ra và fallback. Cờ tính năng/generation mặc định tắt và chưa đủ điều kiện production. Mobile chưa nối Companion. Bài viết được lưu trước khi có kết quả phân tích AI. Sơ đồ chi tiết về outbox và worker nằm ở mục 3.
 
 ## 1. Bốn khái niệm dễ bị gọi chung là “AI”
 
@@ -29,18 +31,18 @@ Có **hai loại phản hồi ở hai thời điểm**: lúc đang viết là c�
 |---|---|---|
 | **Safety screening** | Nội dung này có được đi vào phân tích/phản hồi thông thường không? | Có rule, classifier port, HTTP adapter cho model nội bộ và policy gate. Classifier mặc định unavailable; model/rule/nội dung hỗ trợ chưa được duyệt. |
 | **Journal analysis** | Bài viết có sentiment, emotion, topic gì; reflection nào có thể hiển thị? | Có outbox, job, lưu kết quả, API, fake analyzer và adapter Chat Completions có API key. Provider thật chưa được duyệt và adapter mặc định tắt. |
-| **Insight, dashboard, report** | Dữ liệu nhiều ngày cho thấy mẫu quan sát nào? | Backend tính từ check-in, chỉ số và analysis có cấu trúc; report narrative hiện là câu dựng theo dữ liệu, không gọi LLM trên request path. |
-| **Knowledge/recommendation, RAG** | Có nguồn kiến thức đã duyệt phù hợp topic/locale không? | Có workflow duyệt, chunk, retrieval và citation. GET trả excerpts; POST `/recommendations/questions` gửi tối đa 3 excerpt cùng topicCode tới Chat Completions để sinh tối đa 3 câu hỏi. Code generation có nhưng provider mặc định tắt và chưa được kiểm chứng gọi thật; kiểm tra hiện tại mới xác nhận cấu trúc, chưa đánh giá đầy đủ grounding/safety. |
+| **Insight, dashboard, report** | Dữ liệu nhiều ngày cho thấy mẫu quan sát nào? | Backend tính từ check-in, chỉ số và analysis có cấu trúc; narrative có template và adapter diễn đạt lại tùy chọn qua `NarrativeRewriter`, validator/screening và fallback. Dashboard không gọi LLM trên request path. |
+| **Knowledge/recommendation, RAG** | Có nguồn kiến thức đã duyệt phù hợp topic/locale không? | Có workflow duyệt, chunk, retrieval và citation. GET trả excerpts; POST `/recommendations/questions` gửi tối đa 3 excerpt cùng topicCode tới Gemini để sinh tối đa 3 câu hỏi. Provider có cổng cấu hình/phê duyệt; curated retrieval eval và đánh giá đầy đủ grounding/safety còn mở. |
 
 AI không chẩn đoán hoặc điều trị. Risk classifier phục vụ quyết định an toàn; `JournalAnalyzer` phục vụ phân tích nhật ký. Hai thành phần này khác nhau và không thay thế cho nhau.
 
 ### Gợi ý khi đang viết và phân tích sau khi lưu
 
-Safety và nội dung gợi ý theo bản nháp đều thuộc backend. Editor hiện **không tự sinh gợi ý sau khi ngừng gõ và không tự kết luận safety**. FE đăng nhập/journal vẫn dùng `JournalContext`/`localStorage` mock, chưa cấp JWT thật để gọi API bản nháp; bản nháp/bài viết local chưa được mã hóa theo backend và không phù hợp production. Editor đã bỏ đường tạo reflection giả trước khi lưu. Khi tích hợp auth thật, FE chỉ debounce 3–5 giây, gửi plain text qua API có xác thực và hiển thị `status`/`suggestion` backend trả về; nếu người dùng gõ tiếp thì hủy hoặc bỏ kết quả cũ. Gợi ý không được dùng thay cho safety trên request lưu bài.
+Safety và nội dung gợi ý theo bản nháp đều thuộc backend. Editor **không tự sinh gợi ý sau khi ngừng gõ và không tự kết luận safety**. Web đã dùng auth và journal API thật; bài đã lưu ở backend, `localStorage` chỉ phục vụ bản nháp/dữ liệu giao diện. Khi người dùng chủ động mở Trợ lý hoặc gửi tin, `postCompanionTurn` gọi API qua BFF và `useCompanionConversation` hiển thị trạng thái backend. Mock Companion chỉ được chọn rõ ở development; hội thoại nằm trong bộ nhớ, không tự ghi vào bài. Gợi ý không thay thế safety trên request lưu bài.
 
 Backend có `POST /api/v1/journal-writing-suggestions`, dùng cho trợ lý trong journal editor (xem [COMPANION_CHATBOT_PLAN.md](COMPANION_CHATBOT_PLAN.md)). Request chấp nhận cả dạng cũ `{ "text": "..." }` (tương thích ngược) và dạng mới `{ intent, message, draft, context, completedTool, history }`, trong đó `draft.text` tối đa 4.000 ký tự và `history` tối đa 8 lượt. Response gồm `status`, `reply`, `questions`, `suggestedTitle`, `immediateActions`, `habitSuggestion`, `chips`, `nextState`, `source`, `promptVersion`. Endpoint yêu cầu JWT, giới hạn quota `companion-turn` 40 lần/15 phút/user, kiểm tra consent `AI_PROCESSING` trước khi screen toàn bộ cửa sổ (bản nháp + các lượt user trong `history` + tin nhắn mới), không lưu hội thoại. Chỉ `ALLOW` mới gọi `CompanionResponder` để trả nội dung **do backend sở hữu**; `SAFETY_FLOW` không trả nội dung; `CONSTRAIN` trả `BLOCKED` kèm một câu trung tính dựng sẵn, không có câu hỏi; `FAIL_SAFE` trả `UNAVAILABLE`. Cờ `MYLOG_WRITING_SUGGESTIONS_ENABLED` mặc định `false` vì nội dung câu hỏi, classifier và policy chưa được duyệt. Khi bật, hệ thống mặc định dùng `TemplateCompanionResponder` (kịch bản cố định theo cảm xúc, **không gọi LLM**); khi bật thêm `MYLOG_COMPANION_GENERATION_ENABLED=true` (hiện ở Giai đoạn 4a chỉ dùng nội bộ với dữ liệu giả), `LlmCompanionResponder` gọi OpenAI Chat Completions 1 lần/lượt, kiểm tra đầu ra qua `CompanionOutputValidator` và safety screening chiều ra, rồi tự động quay về `TemplateCompanionResponder` nếu lỗi, quá giờ hoặc không đạt chuẩn. Ở lượt `TOOL_COMPLETED`/`CLOSING`, `CompanionHabitSuggestionService` đính kèm tối đa 1 `habitSuggestion`/ngày (không gửi danh sách thói quen cho LLM) và nút từ chối gọi endpoint riêng `POST /api/v1/companion/habit-suggestions/dismiss`.
 
-Sau khi FE được nối với journal API, thao tác lưu vẫn đi qua safety đồng bộ ở `JournalService` rồi mới tạo outbox/job phân tích bất đồng bộ. Kết quả `sentiment`/`emotions`/`topics`/reflection chỉ thuộc **phiên bản bài đã lưu**, không thuộc bản nháp. Mỗi lần sửa và lưu lại tăng `contentVersion`; kết quả cũ không được kích hoạt cho phiên bản mới.
+Thao tác lưu từ client đi qua safety đồng bộ ở `JournalService` rồi mới tạo outbox/job phân tích bất đồng bộ khi quyết định cho phép. Web và mobile đã có client đọc trạng thái/kết quả analysis, retry và polling có backoff/giới hạn chờ. Kết quả `sentiment`/`emotions`/`topics`/reflection chỉ thuộc **phiên bản bài đã lưu**, không thuộc bản nháp. Mỗi lần sửa và lưu lại tăng `contentVersion`; kết quả cũ không được kích hoạt cho phiên bản mới. Việc có UI analysis không chứng minh provider/safety đã được duyệt hoặc chạy end-to-end ở môi trường triển khai.
 
 ## 2. Bản đồ module và chiều phụ thuộc
 
@@ -206,7 +208,7 @@ với timeout tối đa 10 giây và mặc định 2 giây. Nếu service lỗi,
 Adapter `OpenAiJournalAnalyzer` chỉ tồn tại ở worker khi `MYLOG_AI_PROVIDER=openai` và hai
 cờ phê duyệt dữ liệu provider/output safety được bật rõ. Nó không được gọi trong transaction
 PostgreSQL. Mô hình safety nội bộ, model tạo reflection qua API key và embedding cho RAG là
-ba trách nhiệm khác nhau; hiện embedding vẫn để mở. Xem [ADR-0009](adr/0009-hybrid-ai-inference.md).
+ba trách nhiệm khác nhau. Embedding đã có Gemini adapter và worker; phê duyệt provider, đánh giá retrieval và xác nhận vận hành staging vẫn mở. Xem [ADR-0009](adr/0009-hybrid-ai-inference.md).
 Kế hoạch chi tiết cho model team sẽ train nằm ở [SAFETY_CLASSIFIER_MODEL_PLAN.md](SAFETY_CLASSIFIER_MODEL_PLAN.md).
 
 | Cấu hình | Mặc định | Ý nghĩa |
@@ -219,12 +221,12 @@ Kế hoạch chi tiết cho model team sẽ train nằm ở [SAFETY_CLASSIFIER_M
 | `MYLOG_SAFETY_CLASSIFIER_URL` | rỗng | HTTPS endpoint nội bộ `/classify`; rỗng dùng classifier unavailable. |
 | `MYLOG_APP_PROFILE` | `all` | `api` không chạy scheduled workers; `worker` dành cho xử lý nền. |
 
-`JournalAnalyzer` mặc định là [`UnavailableJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/UnavailableJournalAnalyzer.java). [`FakeJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/FakeJournalAnalyzer.java) chỉ trả kết quả mẫu cố định. Adapter [`OpenAiJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/OpenAiJournalAnalyzer.java) gửi title/plain text tối thiểu qua HTTPS khi được bật rõ (HTTP chỉ cho loopback local/test), yêu cầu JSON schema, không gửi ID/email và không log raw request/response. API key chỉ có ở worker; `store=false` không thay thế việc thẩm định retention/no-training/region của provider. Backend còn có [`HttpRiskClassifier`](../src/main/java/com/mylog/safety/infrastructure/HttpRiskClassifier.java) cho model nội bộ; pipeline train/inference mẫu ở [`safety-model`](../../safety-model/README.md). Bật adapter **không đồng nghĩa với được phê duyệt production**. Chưa có model classifier được duyệt, policy/safety content hoàn chỉnh, output safety eval hoặc provider data-handling sign-off. Frontend còn các phần mock và chưa hoàn tất trải nghiệm status/retry của M3.
+`JournalAnalyzer` mặc định là [`UnavailableJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/UnavailableJournalAnalyzer.java). [`FakeJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/FakeJournalAnalyzer.java) chỉ trả kết quả mẫu cố định. Adapter [`OpenAiJournalAnalyzer`](../src/main/java/com/mylog/analysis/infrastructure/OpenAiJournalAnalyzer.java) gửi title/plain text tối thiểu qua HTTPS khi được bật rõ (HTTP chỉ cho loopback local/test), yêu cầu JSON schema, không gửi ID/email và không log raw request/response. API key của journal analyzer ở worker; `store=false` không thay thế việc thẩm định retention/no-training/region của provider. Backend còn có [`HttpRiskClassifier`](../src/main/java/com/mylog/safety/infrastructure/HttpRiskClassifier.java) cho model nội bộ; pipeline train/inference mẫu ở [`safety-model`](../../safety-model/README.md). Bật adapter **không đồng nghĩa với được phê duyệt production**. Chưa có bằng chứng model classifier được duyệt, policy/safety content hoàn chỉnh, output safety eval hoặc provider data-handling sign-off. Web/mobile đã có trải nghiệm status/retry của M3; kiểm chứng E2E với môi trường được duyệt còn mở.
 
 Các việc chính còn mở trước production:
 
 1. Duyệt rule, classifier, policy và nguồn hỗ trợ safety; đánh giá false negative/false positive bằng corpus synthetic tiếng Việt/Anh.
-2. Chọn provider theo ADR-0004, kiểm tra no-training/retention/region/deletion, thêm adapter với timeout và circuit breaker; không log raw request/response.
+2. Phê duyệt provider theo ADR-0004, kiểm tra no-training/retention/region/deletion và kiểm chứng timeout/resilience của adapter hiện có; không log raw request/response.
 3. Hoàn thiện output safety validation và đánh giá chất lượng reflection; chỉ bật ordinary analysis khi các cổng vào/ra đạt yêu cầu.
 4. Tích hợp frontend polling/trạng thái failed/blocked, kiểm thử end-to-end; với RAG, chốt embedding model, index, retrieval eval và kiểm tra generation/citation.
 

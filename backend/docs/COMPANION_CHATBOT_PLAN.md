@@ -272,7 +272,7 @@ Danh mục chỉ mở rộng khi tool mới đã có widget và được duyệt
 | 4 | Model đã fine-tune đạt ngưỡng bộ đánh giá (bước 4d), đã chuyển sang gói không dùng dữ liệu để huấn luyện và chính sách dữ liệu được duyệt (bước 4e); chỉ khi đó bật cờ ở môi trường thật |
 | 5 | Ghi nhận thói quen chỉ xảy ra khi người dùng bấm; không có completion với nguồn khác `USER`; giới hạn tần suất có test |
 
-Mỗi giai đoạn cập nhật kèm [`AI_ANALYSIS_GUIDE.md`](AI_ANALYSIS_GUIDE.md) và mục gợi ý khi viết trong [`BACKEND_ARCHITECTURE.md`](BACKEND_ARCHITECTURE.md). Hai tài liệu này hiện vẫn ghi frontend journal dùng mock/`localStorage`, trong khi editor đã lưu bài lên server.
+Mỗi giai đoạn cập nhật kèm [`AI_ANALYSIS_GUIDE.md`](AI_ANALYSIS_GUIDE.md) và mục gợi ý khi viết trong [`BACKEND_ARCHITECTURE.md`](BACKEND_ARCHITECTURE.md). Đợt đối chiếu 2026-11-15 đã đồng bộ mô tả web journal/Companion gọi API thật; xem [bằng chứng kiểm tra và giới hạn](../../PROJECT_STATUS.md). Các mục 4b–4e và phê duyệt production vẫn còn mở.
 
 ## 8. Cấu hình
 

@@ -1,6 +1,6 @@
 # Kế hoạch kiểm thử: bù các tính năng còn thiếu trên web và mobile
 
-> **Trạng thái:** kế hoạch, chưa chạy. Lập ngày 2026-11-11.
+> **Trạng thái:** đợt 1 đã có kết quả local ngày 2026-11-11 ở mục 9; các ca còn lại vẫn là kế hoạch hoặc chưa đủ bằng chứng. Lập ngày 2026-11-11, đối chiếu tài liệu ngày 2026-11-15. Đợt rà soát mới chưa chạy lại E2E; xem [báo cáo kiểm tra](../../PROJECT_STATUS.md).
 > **Đi kèm:** [`WEB_MOBILE_GAP_IMPLEMENTATION_PLAN.md`](WEB_MOBILE_GAP_IMPLEMENTATION_PLAN.md). Mã hạng mục (W1–W4, M1–M12) dùng chung giữa hai tài liệu.
 
 ---

@@ -4,7 +4,9 @@
 > **Kế hoạch kiểm thử đi kèm:** [`WEB_MOBILE_GAP_TEST_PLAN.md`](WEB_MOBILE_GAP_TEST_PLAN.md).
 > **Phạm vi:** hai nhóm việc. Nhóm 1 là các tính năng backend đã có API nhưng web chưa làm. Nhóm 2 là các tính năng mobile còn thiếu so với web và backend. Phần duyệt safety/AI/provider trước khi phát hành **không** nằm trong tài liệu này.
 
-Danh sách được lập bằng cách đối chiếu controller backend với route `/api` và allowlist [`secured-proxy.ts`](../../front-end/my-app-web/features/auth/api/secured-proxy.ts) của web, cùng các endpoint mà `front-end/my-app-mobile/src` đang gọi. Code là nguồn sự thật. Một số ghi chú trong [`BACKEND_DEVELOPMENT_PLAN.md`](BACKEND_DEVELOPMENT_PLAN.md), ví dụ "frontend chưa tích hợp auth", và trong [`PROJECT_STATUS.md`](../../front-end/my-app-mobile/PROJECT_STATUS.md) của mobile đã cũ; mục 6 nêu phần cần cập nhật.
+Danh sách được lập bằng cách đối chiếu controller backend với route `/api` và allowlist [`secured-proxy.ts`](../../front-end/my-app-web/features/auth/api/secured-proxy.ts) của web, cùng các endpoint mà `front-end/my-app-mobile/src` đang gọi. Code là nguồn sự thật. Ngày **2026-11-15**, kế hoạch backend và trạng thái mobile đã được đồng bộ với implementation; xem [báo cáo kiểm tra](../../PROJECT_STATUS.md). Các mô tả ghi rõ "lúc lập kế hoạch" và danh sách việc cần làm bên dưới được giữ làm lịch sử/tiêu chí, không thay thế trạng thái ở đầu tài liệu.
+
+Bổ sung ngoài danh sách ban đầu: backend/web đã có sửa/xóa habit và xóa goal (2026-11-14); mobile mới có self-care cơ bản, còn cần nối đầy đủ sửa/xóa. Đợt rà soát 2026-11-15 chưa chạy lại E2E/native và không thay đổi trạng thái kiểm chứng đợt 1.
 
 ---
 

@@ -2,6 +2,8 @@
 
 Giao diện Next.js App Router của MyLog. Ứng dụng web gọi backend qua các route `/api` của Next.js; nhật ký và dữ liệu tài khoản được lưu ở backend. Xem `AGENTS.md` để biết quy tắc kiến trúc chi tiết.
 
+Đối chiếu ngày **2026-11-15**: auth/profile/journal, check-in, dashboard/insight/report, self-care CRUD, feedback/admin, export/reset dữ liệu và Companion đã có implementation nối API. Build production và TypeScript đạt; lint có 0 lỗi, 4 cảnh báo. Playwright smoke chưa kiểm chứng UI trong lần chạy này vì thiếu Chromium headless shell đúng phiên bản. Xem [báo cáo tiến độ](../../PROJECT_STATUS.md) để biết phạm vi kiểm tra; provider/safety approval và staging release vẫn còn mở.
+
 ## Cấu trúc
 
 | Thư mục | Trách nhiệm |
