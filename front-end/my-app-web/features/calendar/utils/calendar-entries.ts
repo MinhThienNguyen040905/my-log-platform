@@ -36,13 +36,13 @@ export function monthGridRange(month: Date): { from: string; to: string } {
   return { from: isoDay(start), to: isoDay(end) };
 }
 
-/** Badge colour for the day's latest mood icon (`mood_code`), used when moods are shown. */
+/** Badge colour for the day's latest mood (`mood_code`), matching the mood battery segments. */
 export const MOOD_BADGE_CLASS: Record<string, string> = {
-  happy: 'bg-mood-calm-joy text-black',
-  neutral: 'bg-mood-hope-energy text-black',
-  angry: 'bg-mood-anxiety-stress text-black',
-  sad: 'bg-mood-sadness-reflect text-white',
-  'very-bad': 'bg-mood-purple text-white',
+  happy: 'bg-battery-5 text-white',
+  neutral: 'bg-battery-4 text-black',
+  angry: 'bg-battery-3 text-black',
+  sad: 'bg-battery-2 text-black',
+  'very-bad': 'bg-battery-1 text-white',
 };
 
 export function averageMoodScore(entries: JournalEntry[]): string | null {

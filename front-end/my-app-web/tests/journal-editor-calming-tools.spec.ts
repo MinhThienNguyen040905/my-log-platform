@@ -3,8 +3,8 @@ import { loginAsTestAccount, testAccount } from './helpers/login';
 import { openToolsDrawerIfNeeded } from './helpers/tools-drawer';
 
 /**
- * Bước 1 của COMPANION_UI_PLAN.md: nút "Công cụ dịu" mở thẳng 3 công cụ, không gọi API, không
- * cần consent. "Nghe âm thanh dịu" giờ mở máy phát nhạc nền (chi tiết ở ambient-player.spec.ts).
+ * Bước 1 của COMPANION_UI_PLAN.md: nút "Công cụ dịu" mở panel (Thở 2 phút, Nhạc dịu), không gọi
+ * API, không cần consent. Chi tiết máy phát nhạc ở ambient-player.spec.ts.
  * Cần backend + tài khoản kiểm thử thật (xem tests/README.md); tự skip nếu thiếu.
  */
 test.describe('Công cụ dịu trên trang viết', () => {
@@ -16,44 +16,43 @@ test.describe('Công cụ dịu trên trang viết', () => {
     await openToolsDrawerIfNeeded(page);
   });
 
-  test('mở menu và chạy Thở chậm 2 phút, dừng giữa chừng không lỗi', async ({ page }) => {
+  test('mở panel và thở chậm 2 phút có đếm nhịp, dừng giữa chừng không lỗi', async ({ page }) => {
     await page.getByRole('button', { name: 'Công cụ dịu' }).click();
-    const menu = page.getByRole('menu', { name: 'Công cụ dịu' });
-    await expect(menu).toBeVisible();
+    const panel = page.getByRole('complementary', { name: 'Công cụ dịu' });
+    await expect(panel).toBeVisible();
+    // "Viết xả ra trang" không còn nằm trong Công cụ dịu.
+    await expect(panel.getByText('Viết xả ra trang')).toHaveCount(0);
 
-    await menu.getByRole('menuitem', { name: 'Thở chậm 2 phút' }).click();
-    await expect(menu).toBeHidden();
-    const status = page.getByRole('status');
-    await expect(status).toContainText('Thở chậm cùng mình');
-    await expect(status).toContainText(/[12]:\d{2}/); // đếm ngược 2 phút đang chạy
+    await panel.getByRole('button', { name: 'Bắt đầu thở' }).click();
+    const exercise = panel.getByRole('region', { name: 'Thở chậm 2 phút' });
+    await expect(exercise).toContainText('Hít vào');
+    await expect(exercise).toContainText(/[12]:\d{2}/); // đếm ngược 2 phút đang chạy
 
-    await status.getByRole('button', { name: 'Dừng công cụ dịu' }).click();
-    await expect(page.getByRole('status')).toHaveCount(0);
+    await exercise.getByRole('button', { name: 'Dừng thở' }).click();
+    await expect(exercise.getByRole('button', { name: 'Bắt đầu thở' })).toBeVisible();
   });
 
-  test('mở menu và phát âm thanh dịu (máy phát nhạc nền, bài Tiếng mưa), tắt được', async ({ page }) => {
+  test('phát nhạc dịu (bài Tiếng mưa), đóng panel còn thanh nhạc nhỏ, tắt được', async ({ page }) => {
     await page.getByRole('button', { name: 'Công cụ dịu' }).click();
-    await page.getByRole('menuitem', { name: 'Nghe âm thanh dịu' }).click();
-    const player = page.getByRole('region', { name: 'Nhạc nền' });
+    await page.getByRole('tab', { name: 'Nhạc dịu' }).click();
+    const player = page.getByRole('region', { name: 'Nhạc nền', exact: true });
+    await player.getByRole('button', { name: 'Phát' }).click();
     await expect(player).toContainText('Tiếng mưa rơi êm dịu');
     await expect(player).toContainText('Đang phát');
 
-    await player.getByRole('button', { name: 'Tắt và đóng nhạc nền' }).click();
-    await expect(player).toHaveCount(0);
-  });
-
-  test('viết xả chèn dòng mở đầu vào bài, không mở thanh trạng thái', async ({ page }) => {
-    await page.getByRole('button', { name: 'Công cụ dịu' }).click();
-    await page.getByRole('menuitem', { name: 'Viết xả ra trang' }).click();
-
-    await expect(page.locator('.ProseMirror')).toContainText('Điều làm mình bực nhất hôm nay là');
-    await expect(page.getByRole('status')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Đóng công cụ dịu' }).click();
+    const mini = page.getByRole('region', { name: 'Thanh nhạc nền' });
+    await expect(mini).toContainText('Đang phát');
+    await mini.getByRole('button', { name: 'Tắt và đóng nhạc nền' }).click();
+    await expect(mini).toHaveCount(0);
   });
 
   test('rời trang khi âm thanh đang phát thì không còn tiến trình nào kẹt lại', async ({ page }) => {
     await page.getByRole('button', { name: 'Công cụ dịu' }).click();
-    await page.getByRole('menuitem', { name: 'Nghe âm thanh dịu' }).click();
-    await expect(page.getByRole('region', { name: 'Nhạc nền' })).toContainText('Đang phát');
+    await page.getByRole('tab', { name: 'Nhạc dịu' }).click();
+    const player = page.getByRole('region', { name: 'Nhạc nền', exact: true });
+    await player.getByRole('button', { name: 'Phát' }).click();
+    await expect(player).toContainText('Đang phát');
 
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/dashboard/);

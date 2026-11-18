@@ -4,6 +4,8 @@ import com.mylog.journal.application.CompanionOutputValidator;
 import com.mylog.journal.application.CompanionResponder;
 import com.mylog.journal.application.command.CompanionTurnCommand;
 import com.mylog.journal.application.result.CompanionReply;
+import com.mylog.journal.domain.CompanionActionCode;
+import com.mylog.journal.domain.HabitTemplateCatalog;
 import com.mylog.safety.application.SafetyDecision;
 import com.mylog.safety.application.SafetyScreeningUseCase;
 import tools.jackson.databind.JsonNode;
@@ -15,6 +17,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +30,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Centralizes the entire generative fallback chain in one place (see COMPANION_CHATBOT_PLAN.md stage 4):
  * <ol>
  *   <li>Compute deterministic baseline ({@code immediateActions}, {@code chips}, {@code nextState}) via {@link TemplateCompanionResponder}.</li>
- *   <li>Call OpenAI with {@code store: false} and strict JSON schema ({@code reply}, {@code questions}, {@code suggestedTitle}).</li>
+ *   <li>Call OpenAI with {@code store: false} and strict JSON schema ({@code reply}, {@code questions}, {@code suggestedTitle},
+ *       {@code actions}, {@code habitTemplate}). The model picks calming actions and a habit template only from fixed
+ *       lists; this class drops anything else again before it reaches the user.</li>
  *   <li>Validate generated copy via {@link CompanionOutputValidator}.</li>
  *   <li>Screen outbound copy via {@link SafetyScreeningUseCase} (tracking outbound blocks so stage 4a evaluation can measure false-positive rate).</li>
  *   <li>On any timeout, HTTP error, validation error, or outbound safety block, fall back to the {@code TemplateCompanionResponder} baseline.</li>
@@ -34,7 +40,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Never logs draft text, user messages, history, or raw provider responses.
  */
 public final class LlmCompanionResponder implements CompanionResponder {
-    public static final String PROMPT_VERSION = "companion-openai-v1";
+    public static final String PROMPT_VERSION = "companion-openai-v2";
+
+    private static final List<String> AI_ACTION_CODES = Arrays.stream(CompanionActionCode.values())
+            .filter(CompanionActionCode::aiSelectable).map(Enum::name).toList();
+    private static final List<String> HABIT_TEMPLATE_CODES = HabitTemplateCatalog.all().stream()
+            .map(HabitTemplateCatalog.Template::templateCode).toList();
 
     private static final String INSTRUCTIONS = """
             Bạn là người bạn đồng hành ấm áp trong lúc viết nhật ký của ứng dụng mylog (không phải bác sĩ hay nhà trị liệu).
@@ -44,6 +55,19 @@ public final class LlmCompanionResponder implements CompanionResponder {
             3. Viết 0–3 câu hỏi gợi mở (`questions`) bám sát nội dung người dùng đang viết, dạng câu hỏi mở để người dùng tự chọn hướng viết tiếp, không tra vấn.
             4. Tuyệt đối KHÔNG chẩn đoán bệnh, không khuyên dùng thuốc, không tự bịa số điện thoại/hotline hay URL.
             5. Nếu trích dẫn cụm từ trong dấu ngoặc kép, cụm từ đó phải có thật nguyên văn trong bản nháp.
+            6. `actions`: tự quyết có đưa nút công cụ dịu hay không, chọn 0–2 mã trong danh sách sau, không tự đặt mã khác:
+               - BREATHING_2MIN: bài thở chậm 2 phút (hít 4 nhịp, giữ 4 nhịp, thở ra 4 nhịp).
+               - AMBIENT: nghe âm thanh dịu (mưa, sóng biển, lửa trại, piano lofi, quán cà phê).
+               Đưa nút khi người dùng có vẻ căng thẳng, bức bối, buồn, mệt, khó ngủ hoặc cần hạ nhiệt. Nếu người dùng
+               xin thở hoặc nghe nhạc thì phải có mã tương ứng. Khi người dùng đang ổn và chỉ muốn viết, để mảng rỗng.
+            7. `habitTemplate`: chỉ điền khi người dùng muốn duy trì một thói quen, hoặc kể một khó khăn lặp lại mà
+               một mẫu dưới đây giúp được; còn lại để null. Chỉ dùng một trong các mã:
+               - EVENING_BREATHING: thở sâu 2 phút mỗi tối.
+               - CALM_AUDIO_PAUSE: nghe âm thanh dịu 5 phút khi căng thẳng.
+               - GENTLE_WALK: đi bộ thư giãn 15 phút.
+               - SLEEP_BEFORE_23H: lên giường nghỉ trước 23h.
+               Không gợi ý thói quen khi moodCode là "very_bad".
+            8. Nút và thói quen hiện bên dưới câu trả lời; `reply` không cần liệt kê lại chúng và không hứa làm việc khác.
             """;
 
     private static final Map<String, Object> SCHEMA = Map.of(
@@ -52,8 +76,12 @@ public final class LlmCompanionResponder implements CompanionResponder {
             "properties", Map.of(
                     "reply", Map.of("type", "string"),
                     "questions", Map.of("type", "array", "items", Map.of("type", "string")),
-                    "suggestedTitle", Map.of("type", List.of("string", "null"))),
-            "required", List.of("reply", "questions", "suggestedTitle"));
+                    "suggestedTitle", Map.of("type", List.of("string", "null")),
+                    "actions", Map.of("type", "array", "items", Map.of("type", "string", "enum", AI_ACTION_CODES)),
+                    "habitTemplate", Map.of("anyOf", List.of(
+                            Map.of("type", "string", "enum", HABIT_TEMPLATE_CODES),
+                            Map.of("type", "null")))),
+            "required", List.of("reply", "questions", "suggestedTitle", "actions", "habitTemplate"));
 
     @FunctionalInterface
     public interface HttpTransport {
@@ -178,6 +206,8 @@ public final class LlmCompanionResponder implements CompanionResponder {
             String reply = textOrNull(parsed, "reply");
             List<String> questions = stringList(parsed.get("questions"));
             String suggestedTitle = textOrNull(parsed, "suggestedTitle");
+            List<CompanionActionCode> actions = allowedActions(parsed.get("actions"));
+            String habitTemplate = allowedHabitTemplate(textOrNull(parsed, "habitTemplate"), command.moodCode());
 
             try {
                 CompanionOutputValidator.validate(reply, questions, suggestedTitle, command.draftText());
@@ -204,12 +234,13 @@ public final class LlmCompanionResponder implements CompanionResponder {
                     reply,
                     questions,
                     finalTitle,
-                    baseline.immediateActions(),
+                    actions,
                     baseline.habitSuggestion(),
                     baseline.chips(),
                     baseline.nextState(),
                     "GENERATED",
-                    PROMPT_VERSION);
+                    PROMPT_VERSION,
+                    habitTemplate);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             fallbackCount.incrementAndGet();
@@ -234,6 +265,31 @@ public final class LlmCompanionResponder implements CompanionResponder {
         payload.put("userMessage", command.message() == null ? "" : command.message());
         payload.put("history", command.history());
         return payload;
+    }
+
+    /**
+     * Keeps only AI-selectable action codes, in the model's order, without duplicates, at most
+     * {@link CompanionActionCode#MAX_AI_ACTIONS}. Unknown or non-text items are dropped, not fatal.
+     */
+    static List<CompanionActionCode> allowedActions(JsonNode node) {
+        if (node == null || !node.isArray()) return List.of();
+        EnumSet<CompanionActionCode> seen = EnumSet.noneOf(CompanionActionCode.class);
+        List<CompanionActionCode> actions = new ArrayList<>();
+        for (JsonNode item : node) {
+            if (actions.size() == CompanionActionCode.MAX_AI_ACTIONS) break;
+            if (item == null || !item.isTextual()) continue;
+            CompanionActionCode code = Arrays.stream(CompanionActionCode.values())
+                    .filter(candidate -> candidate.aiSelectable() && candidate.name().equals(item.asText()))
+                    .findFirst().orElse(null);
+            if (code != null && seen.add(code)) actions.add(code);
+        }
+        return List.copyOf(actions);
+    }
+
+    /** A habit template the catalogue knows, and never for the {@code very_bad} mood; otherwise null. */
+    static String allowedHabitTemplate(String templateCode, String moodCode) {
+        if ("very_bad".equalsIgnoreCase(moodCode == null ? null : moodCode.trim())) return null;
+        return HabitTemplateCatalog.byCode(templateCode).map(HabitTemplateCatalog.Template::templateCode).orElse(null);
     }
 
     private static String outboundScreeningText(String reply, List<String> questions, String suggestedTitle) {

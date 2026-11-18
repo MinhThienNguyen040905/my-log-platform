@@ -37,7 +37,7 @@ export function CompanionHabitCard({ suggestion, onAccept, onDismiss }: Companio
         <button
           type="button"
           onClick={onDismiss}
-          aria-label="Không cảm ơn, tạm ẩn gợi ý thói quen 7 ngày"
+          aria-label="Không cảm ơn, ẩn gợi ý thói quen trong cuộc trò chuyện này"
           className="rounded-xl border border-black bg-white px-2.5 py-1.5 font-space text-[11px] font-bold text-gray-700 transition-colors hover:bg-gray-100"
         >
           Không, cảm ơn

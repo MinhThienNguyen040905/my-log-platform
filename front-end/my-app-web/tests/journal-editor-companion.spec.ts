@@ -61,7 +61,7 @@ test('trợ lý: consent → trả lời → chèn câu hỏi → Esc thu nhỏ 
   const habitCard = panel.getByRole('region', { name: 'Gợi ý thói quen tự chăm sóc' })
     .or(panel.getByLabel('Gợi ý thói quen tự chăm sóc'));
   await expect(habitCard.first()).toBeVisible();
-  await panel.getByRole('button', { name: 'Không cảm ơn, tạm ẩn gợi ý thói quen 7 ngày' }).click();
+  await panel.getByRole('button', { name: 'Không cảm ơn, ẩn gợi ý thói quen trong cuộc trò chuyện này' }).click();
   await expect(habitCard.first()).toBeHidden();
 
   // Đưa câu hỏi vào bài: chỉ các câu hỏi gợi ý chưa chèn, không có câu chào/cảm ơn của trợ lý hay chữ trên chip.
@@ -73,6 +73,13 @@ test('trợ lý: consent → trả lời → chèn câu hỏi → Esc thu nhỏ 
   expect(draftText).not.toContain('Mình nghe rồi');
   expect(draftText).not.toContain('Cảm ơn bạn đã chia sẻ');
   expect(draftText).not.toContain('Mình muốn viết tiếp về buổi họp');
+
+  // Nút X trên thẻ gợi ý xóa cả thẻ khỏi bài.
+  const promptCards = page.locator('.ProseMirror .prompt-question');
+  const promptsInDraft = await promptCards.count();
+  await promptCards.first().hover();
+  await promptCards.first().getByRole('button', { name: 'Xóa gợi ý viết' }).click();
+  await expect(promptCards).toHaveCount(promptsInDraft - 1);
 
   // Mở lại: cuộc trò chuyện mới. Rồi khép và kết thúc không lưu cũng phải về trạng thái mới.
   await openToolsDrawerIfNeeded(page);

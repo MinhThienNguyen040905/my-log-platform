@@ -94,7 +94,8 @@ public final class CompanionMoodTemplates {
         List<String> questions = moodVariant.questions().isEmpty()
                 ? GENERIC_FOLLOW_UP.questions()
                 : List.of(moodVariant.questions().get(moodVariant.questions().size() - 1));
-        return new Variant(GENERIC_FOLLOW_UP.reply(), questions, List.of());
+        // Same calming buttons as the mood's opening turn, so a free-text turn without AI still offers them.
+        return new Variant(GENERIC_FOLLOW_UP.reply(), questions, moodVariant.actions());
     }
 
     public static Variant toolCompleted(String moodCode) {

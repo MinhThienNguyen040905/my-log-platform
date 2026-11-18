@@ -10,7 +10,7 @@ import Underline from '@tiptap/extension-underline';
 import { JournalBubbleMenu } from './JournalBubbleMenu';
 import { IMAGE_DELETE_META, JournalImage } from '../extensions/journal-image';
 import { createSlashCommandExtension } from '../extensions/slash-command';
-import { PromptQuestion } from '../extensions/prompt-question';
+import { PromptQuestionWithRemove } from '../extensions/prompt-question-view';
 
 export interface JournalTipTapEditorRef {
   insertContent: (content: string) => void;
@@ -76,7 +76,7 @@ export const JournalTipTapEditor = forwardRef<JournalTipTapEditorRef, JournalTip
               'max-h-96 w-auto mx-auto rounded-2xl border-2 border-black shadow-neo-sm p-1.5 bg-white my-4 object-contain transition-transform hover:scale-[1.01]',
           },
         }),
-        PromptQuestion,
+        PromptQuestionWithRemove,
         slashCommandExtension,
       ],
       content: initialContent || '',

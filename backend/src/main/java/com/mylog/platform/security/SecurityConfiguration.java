@@ -74,7 +74,6 @@ class SecurityConfiguration {
                         authorize.requestMatchers("/api/v1/auth/logout", "/api/v1/me", "/api/v1/me/**",
                                         "/api/v1/journal-entries", "/api/v1/journal-entries/**",
                                         "/api/v1/journal-writing-suggestions",
-                                        "/api/v1/companion/habit-suggestions/dismiss",
                                         "/api/v1/journal-tags", "/api/v1/journal-tags/**",
                                         "/api/v1/journal-assets", "/api/v1/journal-assets/**",
                                         "/api/v1/check-ins", "/api/v1/check-ins/**")
