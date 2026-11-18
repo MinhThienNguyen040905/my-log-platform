@@ -31,15 +31,18 @@ async function openEditor(page: Page) {
   await expect(page.getByRole('button', { name: 'Công cụ dịu', exact: true })).toBeVisible();
 }
 
-/** The player has no button of its own: it opens from "Công cụ dịu" → "Nghe âm thanh dịu". */
+/** The player has no button of its own: "Công cụ dịu" panel → tab "Nhạc dịu" → Phát. */
 async function openPlayer(page: Page) {
   await page.getByRole('button', { name: 'Công cụ dịu', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Nghe âm thanh dịu' }).click();
+  await page.getByRole('tab', { name: 'Nhạc dịu' }).click();
+  await player(page).getByRole('button', { name: 'Phát' }).click();
 }
 
 const contextStates = (page: Page) =>
   page.evaluate(() => (window as unknown as { __contexts: AudioContext[] }).__contexts.map((c) => c.state));
-const player = (page: Page) => page.getByRole('region', { name: 'Nhạc nền' });
+const player = (page: Page) => page.getByRole('region', { name: 'Nhạc nền', exact: true });
+/** Fixed bar at the bottom of the screen while the panel is closed or on another tab. */
+const miniPlayer = (page: Page) => page.getByRole('region', { name: 'Thanh nhạc nền' });
 const trackTitle = (page: Page) => player(page).locator('[aria-live="polite"]');
 
 test.describe('ambient music player', () => {
@@ -54,7 +57,7 @@ test.describe('ambient music player', () => {
     await expect(player(page)).toBeVisible();
     await expect(trackTitle(page)).toHaveText(TRACK_ORDER[0]);
     await expect.poll(() => contextStates(page)).toEqual(['running']);
-    // No separate music button on the rail; "Công cụ dịu" stays lit while the player is open.
+    // No separate music button on the rail; "Công cụ dịu" is lit while its panel is open.
     const rail = page.getByRole('complementary', { name: 'Công cụ trang viết' });
     await expect(rail.getByRole('button', { name: /nhạc nền/i })).toHaveCount(0);
     await expect(rail.getByRole('button')).toHaveCount(5);
@@ -81,10 +84,8 @@ test.describe('ambient music player', () => {
     await player(page).getByRole('button', { name: 'Bài trước' }).click();
     await expect(trackTitle(page)).toHaveText(TRACK_ORDER[4]);
 
-    await player(page).getByRole('button', { name: 'Danh sách nhạc nền' }).click();
     await player(page).getByRole('button', { name: /Lửa trại đêm/ }).click();
     await expect(trackTitle(page)).toHaveText('Lửa trại đêm');
-    await player(page).getByRole('button', { name: 'Danh sách nhạc nền' }).click();
     await expect(player(page).getByRole('button', { name: /Lửa trại đêm/ })).toHaveAttribute('aria-current', 'true');
     // Switching tracks cross-fades inside one context instead of opening new ones.
     expect(await contextStates(page)).toEqual(['running']);
@@ -110,7 +111,7 @@ test.describe('ambient music player', () => {
     await openEditor(page);
     await openPlayer(page);
     await player(page).getByRole('combobox', { name: 'Hẹn giờ tắt nhạc nền' }).selectOption('15');
-    await expect(player(page)).toContainText('tắt sau 15 phút');
+    await expect(player(page)).toContainText(/tắt sau 1[45]:\d{2}/);
     await page.clock.runFor('15:00');
     await page.clock.runFor('00:06');
     await expect(player(page).getByRole('status')).toContainText('Đã tắt nhạc nền theo hẹn giờ.');
@@ -127,27 +128,36 @@ test.describe('ambient music player', () => {
     await page.waitForTimeout(500);
     expect(await contextStates(page)).toEqual([]);
     await chip.click();
-    await expect(trackTitle(page)).toHaveText('Tiếng mưa rơi êm dịu');
+    // The panel stays closed: the chip plays in the mini bar at the bottom of the screen.
+    await expect(miniPlayer(page)).toContainText('Tiếng mưa rơi êm dịu');
     await expect.poll(() => contextStates(page)).toEqual(['running']);
 
-    await player(page).getByRole('button', { name: 'Tắt và đóng nhạc nền' }).click();
+    await miniPlayer(page).getByRole('button', { name: 'Tắt và đóng nhạc nền' }).click();
+    await expect(miniPlayer(page)).toHaveCount(0);
     await page.getByRole('button', { name: 'Buồn', exact: true }).click();
     await page.getByRole('button', { name: 'Ẩn gợi ý nhạc nền' }).click();
     await expect(page.getByRole('button', { name: /Gợi ý nghe/ })).toHaveCount(0);
   });
 
-  test('AP-07/09: "Nghe âm thanh dịu" opens the player on rain; breathing runs alongside', async ({ page }) => {
+  test('AP-07/09: the first play is rain; breathing runs alongside with the mini bar', async ({ page }) => {
     await openEditor(page);
-    await page.getByRole('button', { name: 'Công cụ dịu', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Nghe âm thanh dịu' }).click();
+    await openPlayer(page);
     await expect(trackTitle(page)).toHaveText('Tiếng mưa rơi êm dịu');
     await expect.poll(() => contextStates(page)).toEqual(['running']);
+    await expect(miniPlayer(page)).toHaveCount(0); // the panel already shows the player
 
-    await page.getByRole('button', { name: 'Công cụ dịu', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Thở chậm 2 phút' }).click();
-    await expect(page.getByRole('button', { name: 'Dừng công cụ dịu' })).toBeVisible();
-    await expect(player(page)).toBeVisible();
+    await page.getByRole('tab', { name: 'Thở 2 phút' }).click();
+    await page.getByRole('button', { name: 'Bắt đầu thở' }).click();
+    await expect(page.getByRole('button', { name: 'Dừng thở' })).toBeVisible();
+    await expect(miniPlayer(page)).toContainText('Tiếng mưa rơi êm dịu');
     expect(await contextStates(page)).toEqual(['running']);
+
+    // Closing the panel keeps both: breathing moves to the bar above the page, music to the mini bar.
+    await page.getByRole('button', { name: 'Đóng công cụ dịu' }).click();
+    await expect(page.getByRole('button', { name: 'Dừng công cụ dịu' })).toBeVisible();
+    await expect(miniPlayer(page)).toBeVisible();
+    await miniPlayer(page).getByRole('button', { name: 'Mở máy phát nhạc nền' }).click();
+    await expect(page.getByRole('tab', { name: 'Nhạc dịu' })).toHaveAttribute('aria-selected', 'true');
   });
 
   test('AP-10: leaving the editor closes the audio', async ({ page }) => {
@@ -163,7 +173,7 @@ test.describe('ambient music player', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openEditor(page);
     await openPlayer(page);
-    const disc = player(page).locator('span.rounded-full.bg-neutral-900');
+    const disc = player(page).locator('[class*="animate-[spin"]');
     await expect(disc).toHaveCSS('animation-iteration-count', '1');
   });
 
@@ -175,13 +185,13 @@ test.describe('ambient music player', () => {
     const drawer = page.getByRole('complementary', { name: 'Công cụ trang viết' });
     await expect(drawer.getByRole('button')).toHaveCount(6); // 5 tools + close
     await drawer.getByRole('button', { name: 'Công cụ dịu', exact: true }).click();
-    await page.getByRole('menuitem', { name: 'Nghe âm thanh dịu' }).click();
-    if (await drawer.isVisible()) await drawer.getByRole('button', { name: 'Đóng công cụ' }).click();
+    await expect(drawer).toBeHidden(); // opening the panel closes the drawer
+    await page.getByRole('tab', { name: 'Nhạc dịu' }).click();
+    await player(page).getByRole('button', { name: 'Phát' }).click();
     await expect(player(page)).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     // The track list must stay on screen too.
-    await player(page).getByRole('button', { name: 'Danh sách nhạc nền' }).click();
     const box = await player(page).getByRole('list', { name: 'Danh sách nhạc nền' }).boundingBox();
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width).toBeLessThanOrEqual(375);

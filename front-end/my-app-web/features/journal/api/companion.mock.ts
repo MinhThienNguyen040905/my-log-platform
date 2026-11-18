@@ -16,14 +16,9 @@ import type {
 } from '../types/companion.types';
 
 let consentGranted = false;
-let habitDismissed = false;
 
 export function grantMockConsent(): void {
   consentGranted = true;
-}
-
-export function dismissMockHabitSuggestion(): void {
-  habitDismissed = true;
 }
 
 function delay(ms: number): Promise<void> {
@@ -99,7 +94,7 @@ export async function mockCompanionTurn(request: CompanionTurnRequest): Promise<
       suggestedTitle: null,
       immediateActions: [],
       habitSuggestion:
-        mood === 'very_bad' || habitDismissed
+        mood === 'very_bad'
           ? null
           : {
               type: 'CREATE_FROM_TEMPLATE',
@@ -130,7 +125,7 @@ export async function mockCompanionTurn(request: CompanionTurnRequest): Promise<
       suggestedTitle: null,
       immediateActions: [],
       habitSuggestion:
-        mood === 'very_bad' || habitDismissed
+        mood === 'very_bad'
           ? null
           : {
               type: 'CREATE_FROM_TEMPLATE',

@@ -10,9 +10,9 @@ import { SafetyModal } from './SafetyModal';
 import { AddTopicModal } from './AddTopicModal';
 import { InsertImageModal } from './InsertImageModal';
 import { CompanionPanel } from './companion/CompanionPanel';
-import { CalmingToolsMenu } from './calming-tools/CalmingToolsMenu';
+import { CalmingToolsPanel, type CalmingTab } from './calming-tools/CalmingToolsPanel';
 import { CalmingToolsStatusBar } from './calming-tools/CalmingToolsStatusBar';
-import { AmbientPlayerBar } from './ambient-player/AmbientPlayerBar';
+import { AmbientMiniPlayer } from './ambient-player/AmbientMiniPlayer';
 import { AmbientSuggestionChip } from './ambient-player/AmbientSuggestionChip';
 import { useAmbientPlayer } from '../hooks/useAmbientPlayer';
 import type { JournalEmotion } from '@/types';
@@ -54,6 +54,8 @@ export function JournalEditor() {
 const MOOD_ICONS = JOURNAL_EMOTION_ORDER.map((id) => ({ id, ...JOURNAL_EMOTIONS[id] }));
 /** Từ mốc này cột công cụ nằm trong card trang viết; nhỏ hơn thì là ngăn kéo nổi. */
 const TOOL_RAIL_MEDIA = '(min-width: 768px)';
+/** Nhạc bật từ chat được coi là "đã dùng xong" sau chừng này thời gian phát (hoặc khi người dùng tắt nhạc). */
+const AMBIENT_DONE_MS = 3 * 60_000;
 
 function formatEntryTimestamp(date: Date) {
   const day = date.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' });
@@ -66,7 +68,8 @@ function JournalEditorContent() {
   const metricsButtonRef = React.useRef<HTMLButtonElement>(null);
   const calmingToolsButtonRef = React.useRef<HTMLButtonElement>(null);
   const [metricsPopoverPosition, setMetricsPopoverPosition] = React.useState<React.CSSProperties | null>(null);
-  const [calmingToolsMenuPosition, setCalmingToolsMenuPosition] = React.useState<React.CSSProperties | null>(null);
+  const [isCalmingPanelOpen, setIsCalmingPanelOpen] = React.useState(false);
+  const [calmingTab, setCalmingTab] = React.useState<CalmingTab>('BREATHING');
   const [isImageModalOpen, setIsImageModalOpen] = React.useState(false);
   const [habitTemplatePreset, setHabitTemplatePreset] = React.useState<HabitTemplatePreset | null>(null);
 
@@ -124,6 +127,8 @@ function JournalEditorContent() {
   // default emotion.
   const [pickedMood, setPickedMood] = React.useState<JournalEmotion | null>(null);
   const ambient = useAmbientPlayer(pickedMood);
+  /** Nhạc đang phát là do bấm nút trong chat trợ lý, nên khi xong phải báo lại cho trợ lý. */
+  const ambientFromChatRef = React.useRef(false);
 
   const escapeHtml = (value: string) => {
     const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -157,6 +162,7 @@ function JournalEditorContent() {
       case 'AMBIENT': {
         // "Nghe âm thanh dịu" from the companion opens the music player on the rain track.
         const started = ambient.openAndPlay('rain');
+        if (started) ambientFromChatRef.current = true;
         if (!started) {
           showToast({
             title: 'Chưa thể phát âm thanh',
@@ -238,8 +244,25 @@ function JournalEditorContent() {
     companionNotifyRef.current = companion.notifyToolCompleted;
   }, [companion.notifyToolCompleted]);
 
+  // Music started from the chat reports TOOL_COMPLETED once: when the user turns it off, or after
+  // AMBIENT_DONE_MS of playing (the countdown restarts after a pause or a track change).
+  React.useEffect(() => {
+    if (!ambientFromChatRef.current) return undefined;
+    const finish = () => {
+      if (!ambientFromChatRef.current) return;
+      ambientFromChatRef.current = false;
+      companionNotifyRef.current('AMBIENT');
+    };
+    if (!ambient.open) {
+      finish();
+      return undefined;
+    }
+    if (ambient.status !== 'playing') return undefined;
+    const id = window.setTimeout(finish, AMBIENT_DONE_MS);
+    return () => window.clearTimeout(id);
+  }, [ambient.open, ambient.status, ambient.track.id]);
+
   const toggleMetricsPopover = () => {
-    setCalmingToolsMenuPosition(null);
     if (showDetailedMetrics) {
       setShowDetailedMetrics(false);
       setMetricsPopoverPosition(null);
@@ -261,61 +284,40 @@ function JournalEditorContent() {
     setShowDetailedMetrics(true);
   };
 
-  const toggleCalmingToolsMenu = () => {
+  // Trợ lý và Công cụ dịu dùng chung một chỗ (cột phải / panel nổi / bottom sheet): mở cái này thì đóng cái kia.
+  const showCalmingPanel = isCalmingPanelOpen && !companion.isOpen;
+  const hasSidePanel = companion.isOpen || showCalmingPanel;
+
+  const openCalmingPanel = (tab?: CalmingTab) => {
+    if (tab) setCalmingTab(tab);
     setMetricsPopoverPosition(null);
     setShowDetailedMetrics(false);
-    if (calmingToolsMenuPosition) {
-      setCalmingToolsMenuPosition(null);
+    setIsToolsOpen(false);
+    if (companion.isOpen) companion.minimize();
+    setIsCalmingPanelOpen(true);
+  };
+
+  const toggleCalmingPanel = () => {
+    if (showCalmingPanel) setIsCalmingPanelOpen(false);
+    else openCalmingPanel();
+  };
+
+  const toggleCompanion = () => {
+    if (companion.isOpen) {
+      companion.minimize();
       return;
     }
-    const button = calmingToolsButtonRef.current;
-    if (!button) return;
-    const rect = button.getBoundingClientRect();
-    const width = Math.min(260, window.innerWidth - 32);
-    if (window.matchMedia(TOOL_RAIL_MEDIA).matches) {
-      setCalmingToolsMenuPosition({ position: 'fixed', top: rect.top, left: Math.max(16, rect.left - width - 12) });
-    } else {
-      setCalmingToolsMenuPosition({
-        position: 'fixed',
-        bottom: window.innerHeight - rect.top + 8,
-        left: Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16)),
-      });
-    }
+    setIsCalmingPanelOpen(false);
+    companion.open();
   };
 
-  const handleStartBreathing = () => {
-    calmingTools.startBreathing();
-    setCalmingToolsMenuPosition(null);
-  };
-
-  const handleStartAmbient = () => {
-    // The menu is the only way into the music player: resume the last track (rain the first time).
-    const started = ambient.openAndPlay();
-    setCalmingToolsMenuPosition(null);
-    if (!started) {
-      showToast({
-        title: 'Chưa thể phát âm thanh',
-        message: 'Trình duyệt của bạn chưa cho phép phát âm thanh lúc này. Thử lại nhé.',
-        type: 'error',
-      });
-    }
-  };
-
-  const handleVent = () => {
-    insertVentPrompt();
-    setCalmingToolsMenuPosition(null);
-    showToast({
-      title: 'Đã thêm dòng mở đầu',
-      message: 'Viết hết ra, không cần đúng sai.',
-      type: 'info',
-    });
-  };
+  const closeCalmingPanel = React.useCallback(() => setIsCalmingPanelOpen(false), []);
 
   return (
-    <div className="w-full bg-bg-canvas min-h-[calc(100dvh-64px)] px-3 sm:px-6 pt-5 pb-28 md:pb-16 selection:bg-primary-container selection:text-black overflow-x-clip relative">
+    <div className={`w-full bg-bg-canvas min-h-[calc(100dvh-64px)] px-3 sm:px-6 pt-5 pb-28 ${ambient.open ? 'md:pb-28' : 'md:pb-16'} selection:bg-primary-container selection:text-black overflow-x-clip relative`}>
       <div
         className={`relative mx-auto w-full flex flex-col gap-4 bg-paper-warm border-[2.5px] border-black rounded-3xl p-3 sm:p-5 shadow-neo-lg transition-[max-width] duration-300 ${
-          companion.isOpen ? 'max-w-[1040px] xl:max-w-[1320px]' : 'max-w-[1040px]'
+          hasSidePanel ? 'max-w-[1040px] xl:max-w-[1320px]' : 'max-w-[1040px]'
         }`}
       >
         <WashiTape color={isEditMode ? 'peach' : 'lime'} rotate={2} className="absolute -top-3.5 right-12 w-32 z-10 hidden md:block" />
@@ -365,7 +367,7 @@ function JournalEditorContent() {
           }
         />
 
-        <main className={`grid grid-cols-1 gap-4 ${companion.isOpen ? 'xl:grid-cols-[minmax(0,1fr)_360px]' : ''}`}>
+        <main className={`grid grid-cols-1 gap-4 ${hasSidePanel ? 'xl:grid-cols-[minmax(0,1fr)_360px]' : ''}`}>
           <div className="flex min-w-0 rounded-2xl border-2 border-black bg-white">
             <article className="flex min-w-0 flex-1 flex-col gap-4 p-4 sm:p-7">
               {/* Notebook Header */}
@@ -412,8 +414,7 @@ function JournalEditorContent() {
                 </div>
               </header>
 
-              {/* Background music player and "Thở chậm" can run side by side above the writing area */}
-              {ambient.open && <AmbientPlayerBar player={ambient} />}
+              {/* Music plays in the Công cụ dịu panel and the mini bar at the bottom of the screen. */}
               {!ambient.open && ambient.suggestion && (
                 <AmbientSuggestionChip
                   track={ambient.suggestion}
@@ -421,7 +422,8 @@ function JournalEditorContent() {
                   onDismiss={ambient.dismissSuggestion}
                 />
               )}
-              {calmingTools.activeTool === 'BREATHING' && (
+              {/* Breathing started from the companion chat, or left running after closing the panel. */}
+              {calmingTools.activeTool === 'BREATHING' && !(showCalmingPanel && calmingTab === 'BREATHING') && (
                 <CalmingToolsStatusBar
                   breathingPhase={calmingTools.breathing.phase}
                   breathingLabel={calmingTools.breathing.label}
@@ -457,15 +459,25 @@ function JournalEditorContent() {
               onToggleMetrics={toggleMetricsPopover}
               isCompanionOpen={companion.isOpen}
               hasCompanionUnread={companion.unread}
-              onToggleCompanion={() => (companion.isOpen ? companion.minimize() : companion.open())}
+              onToggleCompanion={toggleCompanion}
               calmingToolsButtonRef={calmingToolsButtonRef}
-              // The music player opens from "Công cụ dịu" → "Nghe âm thanh dịu", so the button stays lit while it is open.
-              isCalmingToolsActive={!!calmingToolsMenuPosition || !!calmingTools.activeTool || ambient.open}
-              onToggleCalmingTools={toggleCalmingToolsMenu}
+              isCalmingToolsActive={showCalmingPanel}
+              onToggleCalmingTools={toggleCalmingPanel}
             />
           </div>
 
           {companion.isOpen && <CompanionPanel conversation={companion} />}
+          {showCalmingPanel && (
+            <CalmingToolsPanel
+              tab={calmingTab}
+              onTabChange={setCalmingTab}
+              onClose={closeCalmingPanel}
+              breathing={calmingTools.breathing}
+              onStartBreathing={() => calmingTools.startBreathing()}
+              onStopBreathing={calmingTools.stop}
+              player={ambient}
+            />
+          )}
         </main>
       </div>
 
@@ -484,15 +496,8 @@ function JournalEditorContent() {
         document.body,
       )}
 
-      {calmingToolsMenuPosition && createPortal(
-        <CalmingToolsMenu
-          style={calmingToolsMenuPosition}
-          onClose={() => setCalmingToolsMenuPosition(null)}
-          onBreathing={handleStartBreathing}
-          onAmbient={handleStartAmbient}
-          onVent={handleVent}
-        />,
-        document.body,
+      {ambient.open && !(showCalmingPanel && calmingTab === 'MUSIC') && (
+        <AmbientMiniPlayer player={ambient} onExpand={() => openCalmingPanel('MUSIC')} />
       )}
 
       <button type="button" onClick={() => setIsToolsOpen(!isToolsOpen)} aria-label={isToolsOpen ? 'Đóng công cụ' : 'Mở công cụ'} aria-expanded={isToolsOpen} className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border-2 border-black bg-primary-container text-black shadow-neo-lg md:hidden"><Wrench className="h-6 w-6" /></button>

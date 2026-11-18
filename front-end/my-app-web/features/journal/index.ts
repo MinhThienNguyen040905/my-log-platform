@@ -10,6 +10,7 @@ export { getJournalAnalysis, retryJournalAnalysis } from './api/analysis';
 export { EntryAnalysisPanel } from './components/EntryAnalysisPanel';
 export type { JournalAnalysis } from './api/analysis';
 export { JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, journalEmotionLabel, normalizeJournalEmotion } from './utils/journal-emotions';
+export { MoodBattery } from './components/MoodBattery';
 
 export { clearJournalDrafts } from './utils/draft-storage';
 export { getDetailedJournalPage, getSearchJournalPage, getRecentEntries, getJournalDailyCounts, JOURNAL_PAGE_SIZE } from './api/client';

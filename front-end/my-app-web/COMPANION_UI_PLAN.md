@@ -17,7 +17,7 @@
 > **Đã làm (Bước 4 — Thẻ gợi ý thói quen + Modal tạo thói quen từ mẫu):**
 > - Tạo [`CompanionHabitCard.tsx`](features/journal/components/companion/CompanionHabitCard.tsx) hiển thị `habitSuggestion` (`RECORD_EXISTING`, `NUDGE_EXISTING`, `CREATE_FROM_TEMPLATE`) ở các lượt sau câu mở đầu, tự ẩn khi cảm xúc là `very_bad`.
 > - Nút "Ghi nhận hôm nay" gọi `completeHabit(habitId, suggestion.localDate, { completed: true, source: 'USER' })` với `localDate` do backend tính sẵn theo `habit.timezone`.
-> - Nút "Không, cảm ơn" gọi endpoint riêng `POST /api/v1/companion/habit-suggestions/dismiss` (đã thêm vào allowlist của `secured-proxy.ts`), không đi qua endpoint trò chuyện nên không tốn quota `companion-turn`.
+> - Nút "Không, cảm ơn" chỉ ẩn thẻ và không hiện gợi ý thói quen nữa trong cuộc trò chuyện hiện tại. *(Trước 2026-11-18 nút này gọi `POST /api/v1/companion/habit-suggestions/dismiss` để ẩn 7 ngày; endpoint đã gỡ.)*
 > - Tạo [`CreateHabitFromTemplateModal.tsx`](features/selfcare/components/CreateHabitFromTemplateModal.tsx) trong `@/features/selfcare` (export qua `features/selfcare/index.ts`), điền sẵn `presetTitle`, `presetTargetValue`, `presetUnit`, `presetToolCode` và cho phép chọn mục tiêu hiện có hoặc tạo mục tiêu mới trước khi gọi `createHabit(...)`.
 >
 > **Đã làm (Bước 5 — Hoàn thiện & Accessibility):**
@@ -113,10 +113,13 @@ features/journal/
     │   ├── CompanionHabitCard.tsx
     │   └── CompanionClosingCard.tsx
     └── calming-tools/
-        ├── CalmingToolsMenu.tsx      # menu từ nút "Công cụ dịu"
-        ├── BreathingWidget.tsx       # 2 phút, đếm ngược, dừng; dạng mini và dạng đầy đủ
-        └── VentPrompt.ts             # nội dung dòng mở đầu viết xả
+        ├── CalmingToolsPanel.tsx     # panel "Công cụ dịu" (tab Thở 2 phút / Nhạc dịu), cùng chỗ với panel Trợ lý
+        ├── BreathingExercise.tsx     # vòng thở 4-4-4 có đếm nhịp 1–4, đếm ngược 2 phút
+        ├── BreathingWidget.tsx       # dạng mini trên thanh trạng thái khi panel đóng
+        └── vent-prompt.ts            # dòng mở đầu viết xả (chỉ còn dùng cho hành động VENT_PROMPT trong chat)
 ```
+
+> **Cập nhật 2026-11-18:** Menu `CalmingToolsMenu` được thay bằng `CalmingToolsPanel`, đặt cùng chỗ với panel Trợ lý (mở cái này thì đóng cái kia). Nhạc phát trên đĩa than (`ambient-player/VinylPlayer.tsx`); khi đóng panel, nhạc còn điều khiển được qua thanh nhỏ ở đáy màn hình (`AmbientMiniPlayer.tsx`). "Viết xả ra trang" không còn trong Công cụ dịu; hành động `VENT_PROMPT` từ chat và lựa chọn gắn thói quen vẫn giữ.
 
 > **Cập nhật 2026-11-11:** `AmbientSoundWidget.tsx` và `utils/ambient-sound.ts` đã được thay bằng máy phát nhạc nền, xem mục "Máy phát nhạc nền" ở đầu tài liệu.
 
@@ -142,7 +145,7 @@ minimized: giữ nguyên state bên dưới, chỉ ẩn khung
 - Mỗi request có `AbortController`. Gửi tin mới hoặc đóng khung chat thì hủy request cũ. Response về muộn (sai `requestId`) bị bỏ qua.
 - `history` gửi đi tối đa 8 lượt gần nhất.
 - `draft` lấy lúc gửi bằng `editorRef.current.getText()` và `title`; không theo dõi từng lần gõ.
-- `habitShownToday`: cờ trong bộ nhớ để tránh hiện thẻ thói quen hai lần trong một phiên. Giới hạn 1 lần/ngày và ẩn 7 ngày do backend quyết định.
+- `habitDismissedRef`: cờ trong bộ nhớ, bật khi người dùng bấm "Không, cảm ơn", để không hiện thêm thẻ thói quen trong cuộc trò chuyện đó. Backend không giới hạn số lần (từ 2026-11-18).
 
 ### 3.2 Hiển thị hai nhịp
 1. Ngay khi mở khung chat: hiện câu mở dựng sẵn từ `companion-fallback.ts` theo cảm xúc, kèm nút hành động tức thời tương ứng. Phần này chạy trên máy, không cần mạng.
@@ -185,7 +188,7 @@ Icon `Lightbulb` cạnh ô Tag mở popover 3 gợi ý tựa đề theo cảm x�
 
 ### Bước 1: Tách công cụ dịu (không phụ thuộc backend) — ✅ Đã triển khai
 - Tạo `calming-tools/*` và `useCalmingTools`. Chuyển Web Audio và widget thở từ `CompanionPopover`, nâng widget thở lên 2 phút có đếm ngược.
-- Thêm nút **Công cụ dịu** và `CalmingToolsMenu`. Tool chạy dưới dạng thanh trạng thái phía trên trang viết, có nút Dừng.
+- Thêm nút **Công cụ dịu** và `CalmingToolsMenu`. Tool chạy dưới dạng thanh trạng thái phía trên trang viết, có nút Dừng. *(Đã thay bằng `CalmingToolsPanel` ngày 2026-11-18, xem cập nhật ở trên.)*
 - Viết xả: chèn đoạn mở đầu "Điều làm mình bực nhất hôm nay là…" và đặt con trỏ ở cuối đoạn.
 - Âm thanh dừng khi rời trang hoặc đóng tool; tôn trọng `prefers-reduced-motion` cho vòng thở.
 - **Xong khi**: mở được cả 3 tool từ nút mới trên desktop và điện thoại; dừng giữa chừng không lỗi; rời trang thì âm thanh tắt.
@@ -210,7 +213,7 @@ Icon `Lightbulb` cạnh ô Tag mở popover 3 gợi ý tựa đề theo cảm x�
 ### Bước 4: Thói quen (cần backend giai đoạn 5)
 - Thẻ thói quen loại `LOG_EXISTING`: gọi `completeHabit(habitId, habitSuggestion.localDate, habitSuggestion.targetValue)` từ `@/features/selfcare` (dùng `localDate` do backend tính sẵn theo `habit.timezone`, không lấy theo đồng hồ trình duyệt), rồi hiện toast "Đã ghi nhận".
 - Loại `CREATE_FROM_TEMPLATE`: mở **màn hình tạo thói quen đã điền sẵn**. Màn hình này chưa tồn tại nên cần làm trong `features/selfcare` (form + `createHabit`, chọn mục tiêu hoặc tạo mục tiêu mới, chọn "gắn với công cụ" `toolCode`).
-- "Không, cảm ơn": gọi endpoint riêng `POST /api/v1/companion/habit-suggestions/dismiss` (kèm allowlist trong `secured-proxy.ts`) để backend ghi nhận việc ẩn 7 ngày, không đi qua `POST /api/v1/journal-writing-suggestions` để không tốn quota `companion-turn`.
+- "Không, cảm ơn": chỉ ẩn thẻ trong cuộc trò chuyện hiện tại, không gọi backend (endpoint dismiss 7 ngày đã gỡ ngày 2026-11-18).
 - **Xong khi**: chỉ ghi dữ liệu khi người dùng bấm; thẻ không hiện khi cảm xúc là "Rất tệ".
 
 ### Bước 5: Hoàn thiện
