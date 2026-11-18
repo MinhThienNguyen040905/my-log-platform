@@ -233,7 +233,7 @@ M5 phải xong **trước hoặc cùng lúc** với M4 và M7, vì cả hai lu�
 - **Endpoint:**
   - `POST /api/v1/journal-writing-suggestions`
   - `GET /api/v1/companion/title-suggestions`
-  - `POST /api/v1/companion/habit-suggestions/dismiss`
+  - *(Đã gỡ 2026-11-18: `POST /api/v1/companion/habit-suggestions/dismiss`; "Không, cảm ơn" chỉ ẩn thẻ trong phiên.)*
   - Consent `AI_PROCESSING` qua `/me/consents`.
 - **Trạng thái và luồng:** theo [`COMPANION_UI_PLAN.md`](../../front-end/my-app-web/COMPANION_UI_PLAN.md) mục 2.2 và 2.4, gồm consent, tạm nghỉ, bị chặn, `SAFETY_FLOW` (mở M5) và khép lại.
 - **Giao diện:** bottom sheet mở từ editor; thu nhỏ vẫn giữ hội thoại; không chặn bàn phím của editor.

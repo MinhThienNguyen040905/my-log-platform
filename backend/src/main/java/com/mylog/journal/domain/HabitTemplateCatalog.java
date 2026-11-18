@@ -2,6 +2,7 @@ package com.mylog.journal.domain;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Reviewed habit templates offered by the writing companion when the user has no matching active
@@ -39,6 +40,12 @@ public final class HabitTemplateCatalog {
 
     public static List<Template> all() {
         return ALL;
+    }
+
+    /** Looks up a reviewed template by code; unknown or null codes (e.g. invented by an LLM) give empty. */
+    public static Optional<Template> byCode(String templateCode) {
+        if (templateCode == null) return Optional.empty();
+        return ALL.stream().filter(template -> template.templateCode().equals(templateCode)).findFirst();
     }
 
     public static Template forContext(String completedTool, String moodCode) {
