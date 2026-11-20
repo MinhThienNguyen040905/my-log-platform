@@ -23,15 +23,17 @@ import java.util.Map;
  * parsing or shape problem yields an empty result so the caller keeps the templates.
  */
 public final class LlmInsightNarrator implements InsightNarrator {
-    public static final String PROMPT_VERSION = "insight-narrative-v2";
+    public static final String PROMPT_VERSION = "insight-narrative-v3";
     static final String PROVIDER = "openai";
 
     private static final String INSTRUCTIONS = """
             Bạn viết lại các nhận định ngắn cho ứng dụng nhật ký tự suy ngẫm mylog (không phải bác sĩ hay nhà trị liệu).
             Mỗi mục có `facts` (số liệu đã tính sẵn) và `draft` (câu gốc đúng số liệu).
             Hãy viết lại từng `draft` bằng tiếng Việt như một người bạn tinh ý đang trò chuyện: ấm áp, gần gũi, xưng "bạn",
-            không phán xét, tối đa 2 câu và dưới 300 ký tự. Câu đầu nêu điều quan sát được kèm số liệu; câu sau là một lời
-            ghi nhận hoặc gợi ý nhẹ nhàng liên quan. Tránh giọng báo cáo như "Nhận định này dựa trên…", "Theo dữ liệu…".
+            không phán xét, tối đa 3 câu và dưới 380 ký tự. Câu đầu nêu điều quan sát được kèm số liệu; nếu `draft` kết
+            thúc bằng câu hỏi gợi mở hoặc thử nghiệm nhỏ thì câu cuối giữ ý đó. Nếu draft nêu một khả năng ("Có thể…"), giữ nó là khả năng
+            để người dùng tự kiểm chứng, không biến thành nhận xét về tính cách. Tránh giọng báo cáo như "Nhận định này
+            dựa trên…", "Theo dữ liệu…".
             Quy tắc bắt buộc:
             1. Chỉ dùng các con số có trong `draft` (có thể bỏ bớt số); không thêm, làm tròn lại hay suy ra số mới. Giữ dấu phẩy thập phân như trong draft.
             2. Chỉ mô tả điều thường đi cùng nhau; không nói nguyên nhân (không dùng "vì", "do", "khiến", "gây ra").

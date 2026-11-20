@@ -321,7 +321,7 @@ export function CalendarView() {
 
       {/* Search and filters appear before both the calendar and the history list. */}
       <LegacyJournalImport />
-      <div className="bg-surface-card border border-border-soft rounded-2xl p-4 shadow-sm flex flex-col gap-3" role="search" aria-label="Tìm và lọc nhật ký">
+      <div className="bg-surface-card border border-border-soft rounded-2xl p-3 shadow-sm flex flex-col gap-3" role="search" aria-label="Tìm và lọc nhật ký">
             <form onSubmit={(event) => { event.preventDefault(); applySearchNow(); }} className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
               <input

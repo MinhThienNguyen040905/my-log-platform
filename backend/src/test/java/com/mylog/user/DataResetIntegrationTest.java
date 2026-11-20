@@ -69,7 +69,8 @@ class DataResetIntegrationTest {
 
         mvc.perform(reset(owner, session, PASSWORD)).andExpect(status().isNoContent());
         for (String table : new String[] {"journal_entries", "journal_tags", "daily_checkins", "feedback", "safety_events",
-                "ai_jobs", "insights", "reports", "idempotency_keys"})
+                "ai_jobs", "insights", "reports", "idempotency_keys", "entry_pattern_extractions", "entry_pattern_signals",
+                "pattern_recognitions"})
             assertEquals(0, count(table + " where user_id=?", owner), table + " is emptied");
         assertEquals(0, count("outbox_events where aggregate_id=?", entry));
         assertEquals("ACTIVE", jdbc.queryForObject("select status from users where id=?", String.class, owner));
@@ -135,6 +136,20 @@ class DataResetIntegrationTest {
         feedback.submit(user, "IDEA", "Synthetic idea");
         jdbc.update("insert into safety_events(id,user_id,subject_ref,journal_entry_id,risk_level,decision,policy_version,created_at)"
                 + " values (?,?,?,?,'LOW','ALLOW','test',?)", UUID.randomUUID(), user, new byte[] {1}, entry, Timestamp.from(NOW));
+        // A thinking-pattern extraction with one signal, and a card citing it.
+        UUID extraction = UUID.randomUUID(), signal = UUID.randomUUID(), card = UUID.randomUUID();
+        jdbc.update("insert into entry_pattern_extractions(id,user_id,journal_entry_id,content_version,taxonomy_version,signal_count,"
+                + "extractor_provider,extractor_model,extractor_version,created_at) values (?,?,?,1,'tp-v1',1,'fake','rules','v1',?)",
+                extraction, user, entry, Timestamp.from(NOW));
+        jdbc.update("insert into entry_pattern_signals(id,extraction_id,user_id,journal_entry_id,pattern_code,confidence,"
+                + "encrypted_quote,quote_iv,quote_wrapped_key,quote_key_version,created_at) values (?,?,?,?,'RUMINATION',0.8,?,?,?,'synthetic',?)",
+                signal, extraction, user, entry, new byte[] {1}, new byte[] {1}, new byte[] {1}, Timestamp.from(NOW));
+        jdbc.update("insert into pattern_recognitions(id,user_id,pattern_code,taxonomy_version,period_start,period_end,timezone,status,"
+                + "entry_count,week_count,average_confidence,encrypted_narrative,narrative_iv,narrative_wrapped_key,narrative_key_version,"
+                + "generated_by,created_at,updated_at) values (?,?,'RUMINATION','tp-v1','2026-09-11','2026-10-10','Asia/Ho_Chi_Minh','ACTIVE',"
+                + "3,2,0.8,?,?,?,'synthetic','TEMPLATE',?,?)", card, user, new byte[] {1}, new byte[] {1}, new byte[] {1},
+                Timestamp.from(NOW), Timestamp.from(NOW));
+        jdbc.update("insert into pattern_recognition_evidence(recognition_id,signal_id) values (?,?)", card, signal);
         return entry;
     }
 

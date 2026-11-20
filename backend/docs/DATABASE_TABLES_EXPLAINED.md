@@ -98,7 +98,7 @@ Nguồn schema: [V2](../src/main/resources/db/migration/V2__identity_and_rbac.sq
 ### 2.12 `user_consents` — lịch sử quyết định đồng ý
 
 - **Khóa/quan hệ:** PK `id`, FK `user_id`; index `(user_id, consent_type, decided_at DESC)` để lấy quyết định mới nhất.
-- **Cột quan trọng:** `consent_type` gồm `TERMS`, `PRIVACY`, `AI_PROCESSING`, `ANALYTICS`, `MODEL_TRAINING`; `document_version`, `granted`, `decided_at`, `source`.
+- **Cột quan trọng:** `consent_type` gồm `TERMS`, `PRIVACY`, `AI_PROCESSING`, `ANALYTICS`, `MODEL_TRAINING`, và từ V22 thêm `THINKING_PATTERNS` (bật riêng việc đọc nhật ký để nhận diện kiểu suy nghĩ; không có dòng nghĩa là tắt); `document_version`, `granted`, `decided_at`, `source`.
 - **Cách dùng:** lưu cả cấp và rút consent thay vì ghi đè một boolean. Worker phải kiểm tra `AI_PROCESSING` lúc **thực thi**; consent này không cấp quyền train model.
 
 ## 3. Nhật ký, ảnh và check-in — 6 bảng
@@ -236,6 +236,17 @@ Nguồn schema: [V9](../src/main/resources/db/migration/V9__insights_and_reports
 - **Khóa/quan hệ:** PK `id`, FK `report_id` cascade; `insight_id` tùy chọn `ON DELETE SET NULL`; source ID đa loại không có FK trực tiếp.
 - **Cột quan trọng:** source type/date, metric name/value, metadata.
 - **Cách dùng:** giải thích các số trong báo cáo, giữ bằng chứng khi insight tham chiếu bị gỡ; không chép nhật ký thô vào evidence.
+
+### 6.5–6.8 Nhận diện kiểu suy nghĩ (V22)
+
+Nguồn schema: [V22](../src/main/resources/db/migration/V22__thinking_pattern_recognition.sql); thiết kế ở [THINKING_PATTERN_RECOGNITION_PLAN.md](THINKING_PATTERN_RECOGNITION_PLAN.md). Mã kiểu suy nghĩ chỉ được DB kiểm tra định dạng; danh mục hợp lệ theo `taxonomy_version` nằm ở application.
+
+- **`entry_pattern_extractions`** (module `analysis`): mỗi dòng ghi một lần bộ trích đã đọc `(journal_entry_id, content_version, taxonomy_version)` (unique), kể cả khi không tìm thấy gì (`signal_count = 0`), để bài không đổi không bị gửi lại. Lưu provider/model/version của bộ trích. FK entry và user cascade.
+- **`entry_pattern_signals`** (module `analysis`): một câu của bài khớp một mã, kèm `confidence` 0–1 và **câu trích mã hóa** (`encrypted_quote` + IV/wrapped key). Unique `(extraction_id, pattern_code)`. Xóa entry hoặc extraction thì tín hiệu bị xóa theo.
+- **`pattern_recognitions`** (module `insight`): thẻ hiển thị cho một mã trong cửa sổ 30 ngày. Status `ACTIVE/SUPERSEDED/HIDDEN`, tối đa một thẻ `ACTIVE` cho mỗi `(user_id, pattern_code)` (partial unique index) để phản hồi và kế hoạch đi theo thẻ qua các lần làm mới. Có phản hồi `CONFIRMED/NOT_REALLY` (+ lý do tùy chọn), số bài/số tuần/độ tin cậy trung bình, narrative mã hóa, `generated_by` `TEMPLATE/AI_ASSISTED`, bài kiến thức đã dùng và goal của kế hoạch 3 tuần (`ON DELETE SET NULL`).
+- **`pattern_recognition_evidence`**: bảng nối thẻ ↔ tín hiệu (PK ghép), `shown_as_quote` đánh dấu tối đa 2 câu trích hiển thị. Xóa bài kéo theo xóa tín hiệu và dòng bằng chứng, thẻ vẫn còn cho tới lần làm mới tiếp theo.
+
+Cả bốn bảng bật RLS không policy và đã thu hồi quyền `anon`/`authenticated` (ADR-0008). `data:reset` xóa thẻ và extraction của user; xóa tài khoản đi theo FK cascade.
 
 ## 7. Mục tiêu và thói quen tự chăm sóc — 3 bảng
 

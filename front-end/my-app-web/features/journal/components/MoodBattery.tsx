@@ -108,8 +108,8 @@ export function MoodBattery({ value, onChange, label }: MoodBatteryProps) {
                 onClick={(event) => { if (event.detail === 0) commit(index); }}
                 className={`relative flex h-10 flex-col items-center pt-1 ${swatch} ${index < LAST ? 'border-r border-black/30' : ''}`}
               >
-                {/* Cột đang chọn sáng lên nhờ một lớp phủ trắng mờ. */}
-                <span aria-hidden="true" className={`pointer-events-none absolute inset-0 bg-white/45 transition-opacity duration-150 ${active ? 'opacity-100' : 'opacity-0'}`} />
+                {/* Các cột chưa chọn bị phủ trắng mờ; chỉ cột đang chọn hiện rõ màu. */}
+                <span aria-hidden="true" className={`pointer-events-none absolute inset-0 bg-white/55 transition-opacity duration-150 ${active ? 'opacity-0' : 'opacity-100'}`} />
                 <Face className={`relative h-3.5 w-3.5 transition-transform duration-150 ${active ? 'scale-125' : ''}`} strokeWidth={2.4} aria-hidden="true" />
               </button>
             );

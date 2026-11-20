@@ -16,7 +16,7 @@ export function JournalMoodBar({ isSelected, onSelect, trailing }: JournalMoodBa
   const selected = JOURNAL_EMOTION_ORDER.find(isSelected) ?? null;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pl-[10px]">
       <div className="w-[254px] max-w-full shrink-0">
         <MoodBattery value={selected} onChange={onSelect} label="Cảm xúc hôm nay" />
       </div>

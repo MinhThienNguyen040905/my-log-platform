@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, EyeOff, HeartPulse, Layers, Moon, RefreshCw, Sparkles, Tag, TrendingUp, Footprints, BarChart3, ShieldCheck } from 'lucide-react';
+import { ArrowLeftRight, CalendarDays, EyeOff, HeartPulse, Layers, Lightbulb, MessageSquareText, Moon, RefreshCw, Sparkles, Sunrise, Tag, TrendingUp, Footprints, BarChart3, ShieldCheck } from 'lucide-react';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { formatDateRange } from '@/lib/date/format-date';
 import { useAppLanguage } from '@/providers/AppLanguageProvider';
@@ -17,6 +17,10 @@ const TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
   TAG_MOOD_ASSOCIATION: Tag,
   ACTIVITY_MOOD_ASSOCIATION: Footprints,
   SLEEP_MOOD_ASSOCIATION: Moon,
+  EXCEPTION_DAYS: Lightbulb,
+  CONDITION_SHIFT: ArrowLeftRight,
+  TOPIC_SHIFT: MessageSquareText,
+  RECOVERY_SHIFT: Sunrise,
 };
 
 type Props = { insights: Insight[]; loading: boolean; error: boolean; onRetry: () => void };
@@ -79,8 +83,8 @@ function PatternCard({ insight }: { insight: Insight }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['insights'] }),
   });
   const Icon = TYPE_ICONS[insight.type] ?? Layers;
-  // Emotion/tag patterns count journal entries; the others count days.
-  const sampleKey = insight.type === 'EMOTION_TOPIC_COOCCURRENCE' || insight.type === 'TAG_MOOD_ASSOCIATION'
+  // Emotion/tag/topic patterns count journal entries; the others count days.
+  const sampleKey = insight.type === 'EMOTION_TOPIC_COOCCURRENCE' || insight.type === 'TAG_MOOD_ASSOCIATION' || insight.type === 'TOPIC_SHIFT'
     ? 'pattern.sampleEntries' : 'pattern.sampleDays';
 
   return (
@@ -125,7 +129,7 @@ function EvidenceChart({ insight }: { insight: Insight }) {
   if (summary.kind === 'share') {
     return (
       <p className="text-xs font-sans bg-white rounded-xl border border-black p-3">
-        {t('pattern.shareEvidence', { present: summary.present, total: summary.total })}
+        {t(summary.metric.startsWith('TOPIC_') ? 'pattern.topicShareEvidence' : 'pattern.shareEvidence', { present: summary.present, total: summary.total })}
       </p>
     );
   }

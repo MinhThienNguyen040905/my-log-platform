@@ -3,6 +3,7 @@ package com.mylog.insight;
 import com.mylog.insight.application.InsightNarrativeValidator;
 import com.mylog.insight.application.InsightNarrator;
 import com.mylog.insight.application.InsightTemplates;
+import com.mylog.insight.domain.ContrastDetectors;
 import com.mylog.insight.domain.PatternDetectors;
 import com.mylog.insight.domain.PatternFinding;
 import com.mylog.insight.infrastructure.LlmInsightNarrator;
@@ -23,7 +24,9 @@ class InsightNarrativeTest {
             "Điểm căng thẳng của bạn thường cao hơn vào thứ Hai: trung bình 6,4 so với mức chung 4,9. Dựa trên 26 ngày có dữ liệu.";
 
     @Test void templatesUseVietnameseLabelsAndDecimalComma() {
-        assertEquals(WEEKDAY_DRAFT, InsightTemplates.render(weekday(), ""));
+        String weekday = InsightTemplates.render(weekday(), "");
+        assertTrue(weekday.startsWith(WEEKDAY_DRAFT + " Thứ Hai của bạn"), weekday);
+        assertTrue(weekday.endsWith("nhé."), "ends with a small experiment");
         Map<String, Object> facts = new LinkedHashMap<>();
         facts.put("tagId", "00000000-0000-0000-0000-000000000001");
         facts.put("withAverage", new BigDecimal("7.8"));
@@ -33,6 +36,54 @@ class InsightNarrativeTest {
         assertTrue(text.contains("\"Bạn bè\"") && text.contains("7,8") && text.contains("không phải nguyên nhân"));
         assertEquals(InsightTemplates.TAG_PLACEHOLDER, InsightTemplates.readableFacts(tag).get("tag"));
         assertFalse(InsightTemplates.readableFacts(tag).containsKey("tagId"));
+    }
+
+    @Test void contrastTemplatesEndWithAQuestionAndUseNoCausalOrDiagnosticWords() {
+        List<PatternFinding> findings = List.of(
+                finding(ContrastDetectors.EXCEPTION, "UP", Map.of("conditionKind", "ACTIVITY", "conditionCode", "meeting",
+                        "withAverage", new BigDecimal("4.8"), "withoutAverage", new BigDecimal("6.5"), "conditionDays", 6,
+                        "exceptionDays", 3, "featureKind", "ACTIVITY", "featureCode", "walking", "featureDays", 2)),
+                finding(ContrastDetectors.EXCEPTION, "UP", Map.of("conditionKind", "SHORT_SLEEP",
+                        "withAverage", new BigDecimal("4.8"), "withoutAverage", new BigDecimal("6.5"), "conditionDays", 6,
+                        "exceptionDays", 2)),
+                finding(ContrastDetectors.CONDITION_SHIFT, "UP", Map.of("conditionKind", "TOPIC", "conditionCode", "WORK",
+                        "nowWith", new BigDecimal("6.1"), "nowWithout", new BigDecimal("6.5"),
+                        "prevWith", new BigDecimal("4.2"), "prevWithout", new BigDecimal("6.6"))),
+                finding(ContrastDetectors.CONDITION_SHIFT, "DOWN", Map.of("conditionKind", "SHORT_SLEEP",
+                        "nowWith", new BigDecimal("3.9"), "nowWithout", new BigDecimal("6.5"),
+                        "prevWith", new BigDecimal("5.9"), "prevWithout", new BigDecimal("6.4"))),
+                finding(ContrastDetectors.TOPIC_SHIFT, "UP", Map.of("topic", "RELATIONSHIPS", "nowCount", 9L,
+                        "nowTotal", 20, "prevCount", 3L, "prevTotal", 18)),
+                finding(ContrastDetectors.RECOVERY_SHIFT, "UP", Map.of("nowDays", new BigDecimal("1.5"),
+                        "prevDays", new BigDecimal("3.0"))),
+                finding(ContrastDetectors.RECOVERY_SHIFT, "DOWN", Map.of("nowDays", new BigDecimal("3.5"),
+                        "prevDays", new BigDecimal("1.5"))));
+        for (PatternFinding finding : findings) {
+            String text = InsightTemplates.render(finding, "");
+            assertTrue(text.endsWith("?") || text.endsWith("nhé.") || text.endsWith("nhé?"), text);
+            assertTrue(InsightNarrativeValidator.isAcceptable(text, text, false), "template itself passes: " + text);
+        }
+        String exception = InsightTemplates.render(findings.getFirst(), "");
+        assertTrue(exception.startsWith("Những ngày có nhiều cuộc họp, tâm trạng của bạn thường thấp hơn: 4,8 so với 6,5 ở những ngày khác."), exception);
+        assertTrue(exception.contains("3 ngày như vậy bạn vẫn thấy ổn, và 2 ngày trong số đó có đi bộ"), exception);
+        assertTrue(exception.contains("Có thể việc cơ thể được vận động và nghỉ ngơi là một điểm tựa của bạn"), exception);
+        assertEquals("nhiều cuộc họp", InsightTemplates.readableFacts(findings.getFirst()).get("conditionCode"));
+    }
+
+    @Test void tagExceptionUsesThePlaceholderOnceForAi() {
+        Map<String, Object> facts = new LinkedHashMap<>(Map.of("conditionKind", "TAG",
+                "tagId", "00000000-0000-0000-0000-000000000001", "withAverage", new BigDecimal("4.8"),
+                "withoutAverage", new BigDecimal("6.5"), "conditionDays", 6, "exceptionDays", 3,
+                "featureKind", "TOPIC", "featureCode", "RELATIONSHIPS", "featureDays", 2));
+        var finding = new PatternFinding(ContrastDetectors.EXCEPTION, "UP", new BigDecimal("0.6"), 20, facts, List.of());
+        String draft = InsightTemplates.render(finding, InsightTemplates.TAG_PLACEHOLDER);
+        assertTrue(InsightNarrativeValidator.isAcceptable(draft, draft, true), draft);
+        assertTrue(InsightTemplates.render(finding, "Đi học").contains("\"Đi học\""));
+        assertTrue(draft.contains("sự kết nối với người khác"), draft);
+    }
+
+    private static PatternFinding finding(String type, String direction, Map<String, Object> facts) {
+        return new PatternFinding(type, direction, new BigDecimal("0.5"), 20, new LinkedHashMap<>(facts), List.of());
     }
 
     @Test void validatorAcceptsWarmRewordingWithSameNumbers() {

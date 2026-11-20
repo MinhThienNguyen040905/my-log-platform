@@ -290,6 +290,17 @@ public class JournalService implements JournalAnalysisAccess {
     }
 
     @Override @Transactional(readOnly = true)
+    public Input loadForPatterns(UUID userId, UUID entryId, int contentVersion) {
+        return store.find(userId, entryId).filter(e -> e.contentVersion() == contentVersion && e.deletedAt() == null
+                        && "SAVED".equals(e.entryStatus())
+                        && ("NORMAL".equals(e.riskLevel()) || "LOW".equals(e.riskLevel())))
+                .map(e -> {
+                    JournalPayload data = payload(e);
+                    return new Input(userId, entryId, contentVersion, data.title(), data.plainText());
+                }).orElse(null);
+    }
+
+    @Override @Transactional(readOnly = true)
     public Input load(UUID userId, UUID entryId, int contentVersion) {
         return store.find(userId, entryId).filter(e -> e.contentVersion() == contentVersion
                         && ("PENDING".equals(e.analysisStatus()) || "ANALYZING".equals(e.analysisStatus())

@@ -7,6 +7,12 @@ import java.util.UUID;
 public interface JournalAnalysisAccess {
     record Input(UUID userId, UUID entryId, int contentVersion, String title, String plainText) {}
     Input load(UUID userId, UUID entryId, int contentVersion);
+    /**
+     * Text of a saved, not deleted entry at exactly {@code contentVersion} whose screening allowed ordinary AI
+     * processing (risk NORMAL or LOW), whatever its analysis status; null otherwise. Used by thinking-pattern
+     * extraction, which reads entries that may already be analyzed.
+     */
+    Input loadForPatterns(UUID userId, UUID entryId, int contentVersion);
     boolean start(UUID userId, UUID entryId, int contentVersion, Instant now);
     boolean activate(UUID userId, UUID entryId, int contentVersion, UUID analysisId, Instant now);
     void fail(UUID userId, UUID entryId, int contentVersion, Instant now);

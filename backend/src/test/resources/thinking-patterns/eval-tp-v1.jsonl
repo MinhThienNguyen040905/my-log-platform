@@ -1,0 +1,378 @@
+{"id":"p-cat-01","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"Lỡ kỳ này thi trượt môn này thì coi như hết, chẳng trường nào nhận mình nữa."}
+{"id":"p-cat-02","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"Sếp nhắn 'mai gặp em chút' là mình chắc chắn sắp bị đuổi việc rồi."}
+{"id":"p-cat-03","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"Đau đầu mấy hôm nay, chắc là mắc phải chuyện gì nặng lắm rồi."}
+{"id":"p-cat-04","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"Nếu buổi thuyết trình mai mà vấp một câu thôi là cả công ty sẽ coi thường mình mãi mãi."}
+{"id":"p-cat-05","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"Con về muộn mười phút không nghe máy, mình nghĩ ngay chắc có chuyện gì kinh khủng xảy ra."}
+{"id":"p-cat-06","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"Người yêu trả lời tin nhắn chậm, chắc sắp chia tay đến nơi rồi."}
+{"id":"p-cat-07","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"Làm sai một bảng số liệu thôi mà mình thấy như sự nghiệp sắp tiêu tan."}
+{"id":"p-cat-08","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"Mai phỏng vấn mà hỏng thì chắc cả đời mình chẳng xin được việc nào ra hồn."}
+{"id":"p-cat-09","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"lo qua, thang nay ma tre han tien nha la cuoc song coi nhu sup do"}
+{"id":"p-cat-10","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"Chỉ cần mẹ ho vài tiếng là mình đã tưởng tượng tới cảnh phải vào viện cấp cứu."}
+{"id":"p-cat-11","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"Điểm giữa kỳ thấp thế này thì chắc chắn rớt môn, rớt môn là mất học bổng, mất học bổng là phải nghỉ học."}
+{"id":"p-cat-12","kind":"POSITIVE","labels":["CATASTROPHIZING"],"text":"Quên gửi báo cáo đúng hạn, kiểu gì khách hàng cũng cắt hợp đồng và cả team sẽ bị liên lụy."}
+{"id":"h-cat-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"CATASTROPHIZING","why":"Lo có căn cứ và có kế hoạch, không cường điệu kết cục.","text":"Mai thi mà mình chưa ôn chương 3, phải tranh thủ tối nay."}
+{"id":"h-cat-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"CATASTROPHIZING","why":"Tính phương án dự phòng một cách bình thản.","text":"Nếu trễ chuyến xe cuối thì mình sẽ phải đi taxi, hơi tốn nhưng không sao."}
+{"id":"h-cat-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"CATASTROPHIZING","why":"Thông tin thực tế, không phải suy đoán.","text":"Bác sĩ dặn nếu sốt quá ba ngày thì phải quay lại khám."}
+{"id":"h-cat-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"CATASTROPHIZING","why":"Lo bình thường, không nhảy tới kết cục xấu nhất.","text":"Mình hơi lo buổi thuyết trình nhưng đã tập ba lần rồi."}
+{"id":"h-cat-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"CATASTROPHIZING","why":"Sự kiện có thật, phản ứng hợp lý.","text":"Công ty thông báo cắt giảm 20% nhân sự, mình cần chuẩn bị CV phòng khi cần."}
+{"id":"h-cat-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"CATASTROPHIZING","why":"Đã tự điều chỉnh suy nghĩ.","text":"Hôm qua mình nghĩ tới kịch bản xấu nhất, nhưng rồi tự nhắc mình khả năng đó rất thấp."}
+{"id":"p-aon-01","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"Bài luận không được điểm tuyệt đối thì coi như mình viết công cốc."}
+{"id":"p-aon-02","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"Hôm nay ăn lỡ một miếng bánh ngọt, vậy là kế hoạch ăn uống lành mạnh thất bại hoàn toàn."}
+{"id":"p-aon-03","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"Hoặc là làm cho xong hết trong tối nay, hoặc là thôi khỏi làm luôn."}
+{"id":"p-aon-04","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"Không được thăng chức đợt này nghĩa là mấy năm qua mình làm chẳng được gì."}
+{"id":"p-aon-05","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"Một người trong nhóm góp ý là mình thấy cả dự án hỏng bét."}
+{"id":"p-aon-06","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"Nếu không chạy đủ năm cây số thì chạy làm gì cho mất công."}
+{"id":"p-aon-07","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"Hoặc mình là người bạn hoàn hảo, hoặc mình là người bạn tồi, chẳng có ở giữa."}
+{"id":"p-aon-08","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"Bỏ lỡ một buổi tập là coi như chuỗi tập luyện cả tháng đổ sông đổ biển."}
+{"id":"p-aon-09","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"Thi được 8 điểm mà không phải 10 thì cũng như trượt thôi."}
+{"id":"p-aon-10","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"ko làm đc hết list việc hôm nay thì coi như ngày hôm nay vứt đi"}
+{"id":"p-aon-11","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"Cãi nhau một trận là mình thấy mối quan hệ này chẳng còn gì tốt đẹp."}
+{"id":"p-aon-12","kind":"POSITIVE","labels":["ALL_OR_NOTHING"],"text":"Thuyết trình vấp một chỗ, vậy là cả bài thuyết trình thất bại."}
+{"id":"h-aon-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"ALL_OR_NOTHING","why":"Thấy được mức ở giữa.","text":"Bài này mình làm được khoảng bảy phần, phần còn lại mai làm tiếp."}
+{"id":"h-aon-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"ALL_OR_NOTHING","why":"Ghi nhận kết quả một phần.","text":"Hôm nay chỉ chạy được hai cây số, ít hơn mọi ngày nhưng vẫn hơn không."}
+{"id":"h-aon-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"ALL_OR_NOTHING","why":"Đánh giá cân bằng.","text":"Dự án có vài chỗ chưa ổn nhưng nhìn chung khá tốt."}
+{"id":"h-aon-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"ALL_OR_NOTHING","why":"Lựa chọn thật giữa hai phương án.","text":"Mình phải chọn giữa hai lời mời làm việc, cả hai đều có điểm hay."}
+{"id":"h-aon-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"ALL_OR_NOTHING","why":"Không coi một lần lệch là thất bại hoàn toàn.","text":"Kế hoạch ăn uống hôm nay lệch một chút, mai quay lại bình thường."}
+{"id":"h-aon-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"ALL_OR_NOTHING","why":"Hai cực thuộc về đề thi, không phải cách đánh giá bản thân.","text":"Đề thi chỉ có đúng hoặc sai, mình được 7 trên 10 câu."}
+{"id":"p-ovg-01","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"Lúc nào cũng vậy, cứ đến lượt mình là mọi thứ hỏng."}
+{"id":"p-ovg-02","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"Mình chẳng bao giờ làm được việc gì cho đến nơi đến chốn."}
+{"id":"p-ovg-03","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"Lần này lại bị từ chối, chắc chẳng ai muốn tuyển mình đâu."}
+{"id":"p-ovg-04","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"Ai cũng bỏ đi khi biết rõ con người mình."}
+{"id":"p-ovg-05","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"Mình nấu món nào cũng dở."}
+{"id":"p-ovg-06","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"Hễ mình mở lời là y như rằng cuộc nói chuyện trở nên khó xử."}
+{"id":"p-ovg-07","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"Lại thêm một lần hẹn hò thất bại, mình sẽ mãi mãi ở một mình."}
+{"id":"p-ovg-08","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"Mình luôn là người bị bỏ quên trong mọi cuộc vui."}
+{"id":"p-ovg-09","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"Năm nào kỳ thi cũng tệ với mình, năm nay chắc cũng thế."}
+{"id":"p-ovg-10","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"kiểu gì t cũng làm hỏng, lần nào chả vậy"}
+{"id":"p-ovg-11","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"Không ai trong nhà này bao giờ lắng nghe mình cả."}
+{"id":"p-ovg-12","kind":"POSITIVE","labels":["OVERGENERALIZATION"],"text":"Chuyện gì mình cố gắng rồi cuối cùng cũng đổ bể hết."}
+{"id":"h-ovg-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"OVERGENERALIZATION","why":"Mô tả sự việc cụ thể, không khái quát.","text":"Tuần này mình bị muộn hai lần vì tắc đường."}
+{"id":"h-ovg-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"OVERGENERALIZATION","why":"'Luôn' mô tả thói quen trung tính.","text":"Mình luôn uống một cốc nước ấm sau khi ngủ dậy."}
+{"id":"h-ovg-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"OVERGENERALIZATION","why":"Không rút ra quy luật chung.","text":"Lần này bị từ chối, mình sẽ hỏi lại xem cần cải thiện gì."}
+{"id":"h-ovg-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"OVERGENERALIZATION","why":"Thống kê thật kèm hành động.","text":"Ba lần nộp đơn gần nhất đều chưa được, mình sẽ nhờ người xem lại CV."}
+{"id":"h-ovg-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"OVERGENERALIZATION","why":"Thói quen của người khác, không tiêu cực.","text":"Mẹ mình lúc nào cũng dậy sớm nấu cơm."}
+{"id":"h-ovg-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"OVERGENERALIZATION","why":"Một sự việc, không khái quát thành mọi món.","text":"Hôm nay mình nấu canh hơi mặn."}
+{"id":"p-mrd-01","kind":"POSITIVE","labels":["MIND_READING"],"text":"Chắc chị trưởng nhóm nghĩ mình kém cỏi nên mới giao việc cho người khác."}
+{"id":"p-mrd-02","kind":"POSITIVE","labels":["MIND_READING"],"text":"Lúc mình phát biểu, mọi người im lặng, chắc ai cũng thấy mình nói nhảm."}
+{"id":"p-mrd-03","kind":"POSITIVE","labels":["MIND_READING"],"text":"Bạn ấy không thả tim ảnh mình, chắc đang giận mình chuyện hôm trước."}
+{"id":"p-mrd-04","kind":"POSITIVE","labels":["MIND_READING"],"text":"Thầy nhìn bài mình lâu như vậy, chắc thầy đang nghĩ mình lười."}
+{"id":"p-mrd-05","kind":"POSITIVE","labels":["MIND_READING"],"text":"Mọi người trong lớp chắc thấy mình phiền khi hỏi nhiều."}
+{"id":"p-mrd-06","kind":"POSITIVE","labels":["MIND_READING"],"text":"Mẹ im lặng cả bữa tối, chắc mẹ thất vọng về mình lắm."}
+{"id":"p-mrd-07","kind":"POSITIVE","labels":["MIND_READING"],"text":"Đồng nghiệp cười với nhau khi mình đi ngang qua, chắc là đang nói xấu mình."}
+{"id":"p-mrd-08","kind":"POSITIVE","labels":["MIND_READING"],"text":"Anh ấy bảo bận, chắc thật ra là không muốn gặp mình."}
+{"id":"p-mrd-09","kind":"POSITIVE","labels":["MIND_READING"],"text":"Khách hàng trả lời ngắn gọn thế, chắc họ chán làm việc với mình rồi."}
+{"id":"p-mrd-10","kind":"POSITIVE","labels":["MIND_READING"],"text":"chắc tụi nó nghĩ mình ké nhóm chứ chẳng làm gì"}
+{"id":"p-mrd-11","kind":"POSITIVE","labels":["MIND_READING"],"text":"Nhìn mặt sếp lúc họp là biết sếp không tin tưởng mình."}
+{"id":"p-mrd-12","kind":"POSITIVE","labels":["MIND_READING"],"text":"Hàng xóm chào hơi gượng, chắc họ khó chịu vì nhà mình ồn."}
+{"id":"h-mrd-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"MIND_READING","why":"Người kia đã nói ra.","text":"Chị trưởng nhóm nói thẳng là báo cáo của mình cần sửa phần số liệu."}
+{"id":"h-mrd-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"MIND_READING","why":"Thừa nhận không biết và định hỏi.","text":"Mình không biết bạn ấy nghĩ gì, mai sẽ hỏi thử."}
+{"id":"h-mrd-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"MIND_READING","why":"Thông tin trực tiếp từ mẹ.","text":"Mẹ bảo mẹ hơi buồn vì mình không về quê dịp lễ."}
+{"id":"h-mrd-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"MIND_READING","why":"Suy luận trung tính, có căn cứ.","text":"Mình đoán anh ấy bận vì cả tuần nay anh ấy trực đêm."}
+{"id":"h-mrd-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"MIND_READING","why":"Sự việc, không đoán ý.","text":"Sếp khen mình trong buổi họp sáng nay."}
+{"id":"h-mrd-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"MIND_READING","why":"Người kia đã nói rõ.","text":"Bạn ấy nhắn là đang giận mình chuyện hôm trước."}
+{"id":"p-shd-01","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"Mình phải luôn vui vẻ trước mặt mọi người, không được để ai thấy mình buồn."}
+{"id":"p-shd-02","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"Đáng lẽ ở tuổi này mình phải có nhà có xe rồi."}
+{"id":"p-shd-03","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"Người lớn rồi thì không được khóc."}
+{"id":"p-shd-04","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"Mình phải trả lời tin nhắn công việc ngay lập tức, kể cả lúc nửa đêm."}
+{"id":"p-shd-05","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"Đáng lẽ mình không được thấy mệt, người khác còn vất vả hơn nhiều."}
+{"id":"p-shd-06","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"Làm con thì phải luôn nghe lời bố mẹ, không được có ý kiến riêng."}
+{"id":"p-shd-07","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"Mình phải học giỏi hơn em họ thì mới xứng đáng."}
+{"id":"p-shd-08","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"Đáng lẽ mình phải biết trước chuyện này mà chuẩn bị."}
+{"id":"p-shd-09","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"Một người mẹ tốt thì không bao giờ được nổi nóng với con."}
+{"id":"p-shd-10","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"mình phải hoàn thành hết mọi thứ trước khi được phép nghỉ ngơi"}
+{"id":"p-shd-11","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"Lẽ ra mình không nên cảm thấy ghen tị như vậy."}
+{"id":"p-shd-12","kind":"POSITIVE","labels":["SHOULD_STATEMENTS"],"text":"Đã nhận lời thì phải làm cho bằng được, mệt mấy cũng phải cố."}
+{"id":"h-shd-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SHOULD_STATEMENTS","why":"Hạn chót có thật.","text":"Mình phải nộp báo cáo trước năm giờ chiều mai."}
+{"id":"h-shd-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SHOULD_STATEMENTS","why":"Lời khuyên thực tế từ người khác.","text":"Bác sĩ nói mình nên ngủ trước mười một giờ."}
+{"id":"h-shd-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SHOULD_STATEMENTS","why":"Nghĩa vụ thực tế.","text":"Mai phải dậy sớm để kịp chuyến tàu."}
+{"id":"h-shd-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SHOULD_STATEMENTS","why":"Mong muốn tự chọn, không phải quy tắc cứng.","text":"Mình muốn tập thể dục đều hơn vào tháng tới."}
+{"id":"h-shd-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SHOULD_STATEMENTS","why":"Quy định khách quan.","text":"Theo nội quy, nhân viên phải đeo thẻ khi vào tòa nhà."}
+{"id":"h-shd-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SHOULD_STATEMENTS","why":"Lời nhắc thực tế.","text":"Mình nên mang ô vì dự báo chiều nay mưa."}
+{"id":"p-lbl-01","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"Mình đúng là đồ vô dụng."}
+{"id":"p-lbl-02","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"Quên sinh nhật bạn thân, mình đúng là một đứa bạn tồi."}
+{"id":"p-lbl-03","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"Lại làm vỡ cốc, mình là đồ hậu đậu hết thuốc chữa."}
+{"id":"p-lbl-04","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"Mình là kẻ thất bại."}
+{"id":"p-lbl-05","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"Trả lời sai câu dễ như vậy, mình ngu thật."}
+{"id":"p-lbl-06","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"Mình là đứa lười biếng, không hơn không kém."}
+{"id":"p-lbl-07","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"Mình đúng là một người mẹ tệ."}
+{"id":"p-lbl-08","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"Nói chuyện lắp bắp, mình là đứa vụng về chẳng ai muốn nói chuyện cùng."}
+{"id":"p-lbl-09","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"tao đúng là đồ ăn hại"}
+{"id":"p-lbl-10","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"Mình là loại người chẳng làm nên trò trống gì."}
+{"id":"p-lbl-11","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"Đến muộn lần nữa, mình là người vô trách nhiệm."}
+{"id":"p-lbl-12","kind":"POSITIVE","labels":["SELF_LABELING"],"text":"Mình đúng là đồ ích kỷ."}
+{"id":"h-lbl-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SELF_LABELING","why":"Mô tả hành động, không dán nhãn con người.","text":"Hôm nay mình làm vỡ cốc, phải cẩn thận hơn khi rửa bát."}
+{"id":"h-lbl-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SELF_LABELING","why":"Nói về hành động và lý do cụ thể.","text":"Mình trả lời sai câu hỏi đó, chắc do chưa đọc kỹ đề."}
+{"id":"h-lbl-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SELF_LABELING","why":"Lời đùa của người khác.","text":"Bạn trêu mình là đồ ham ăn, cả nhóm cười vui vẻ."}
+{"id":"h-lbl-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SELF_LABELING","why":"Tự mô tả trung tính.","text":"Mình là người hướng nội, thích những buổi tối yên tĩnh."}
+{"id":"h-lbl-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SELF_LABELING","why":"Thông tin thực tế.","text":"Mình là sinh viên năm hai ngành kế toán."}
+{"id":"h-lbl-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SELF_LABELING","why":"Trạng thái trong ngày, không phải nhãn cố định.","text":"Hôm nay mình hơi lười, nên để việc nhà sang mai."}
+{"id":"p-prs-01","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"Dự án trễ hạn là tại mình, dù cả nhóm ai cũng bận."}
+{"id":"p-prs-02","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"Bố mẹ cãi nhau, chắc là do mình không ngoan."}
+{"id":"p-prs-03","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"Buổi tiệc không vui là lỗi của mình vì mình chọn quán."}
+{"id":"p-prs-04","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"Bạn ấy buồn hôm nay, chắc chắn là vì mình nói gì đó sai."}
+{"id":"p-prs-05","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"Đội thua trận là tại mình chuyền hỏng một quả."}
+{"id":"p-prs-06","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"Con bị điểm kém là vì mình không đủ quan tâm."}
+{"id":"p-prs-07","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"Công ty cắt giảm nhân sự, mình thấy như mọi chuyện là do mình làm chưa tốt."}
+{"id":"p-prs-08","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"Trời mưa làm hỏng chuyến đi, mình cứ thấy có lỗi vì đã rủ mọi người."}
+{"id":"p-prs-09","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"Nhóm bạn dạo này ít tụ tập, chắc tại mình nhạt."}
+{"id":"p-prs-10","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"tại t hết, nếu t ko nói thì 2 đứa nó đã ko giận nhau"}
+{"id":"p-prs-11","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"Sếp cáu cả phòng sáng nay, chắc là vì báo cáo của mình."}
+{"id":"p-prs-12","kind":"POSITIVE","labels":["PERSONALIZATION"],"text":"Em gái thi trượt, mình thấy là lỗi của mình vì không kèm em kỹ hơn."}
+{"id":"h-prs-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERSONALIZATION","why":"Lỗi thật, nhận đúng phần của mình.","text":"Mình gửi nhầm file nên dự án trễ một ngày, mình đã xin lỗi và sửa lại."}
+{"id":"h-prs-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERSONALIZATION","why":"Trách nhiệm chung, không tự nhận hết.","text":"Đội thua trận, cả đội cùng xem lại băng hình để rút kinh nghiệm."}
+{"id":"h-prs-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERSONALIZATION","why":"Buồn nhưng không nhận lỗi về mình.","text":"Bố mẹ cãi nhau về chuyện tiền bạc, mình thấy buồn."}
+{"id":"h-prs-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERSONALIZATION","why":"Có lỗi cụ thể và sửa.","text":"Mình quên gọi cho bạn nên bạn hơi dỗi, mai mình sẽ gọi lại."}
+{"id":"h-prs-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERSONALIZATION","why":"Nguyên nhân bên ngoài, nói khách quan.","text":"Công ty cắt giảm nhân sự do thị trường khó khăn."}
+{"id":"h-prs-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERSONALIZATION","why":"Không liên hệ với bản thân.","text":"Buổi tiệc vắng vì trời mưa to."}
+{"id":"p-dsc-01","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"Được khen bài thuyết trình nhưng chắc mọi người chỉ nói cho có."}
+{"id":"p-dsc-02","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"Đậu phỏng vấn chỉ là may thôi, đợt này họ thiếu người."}
+{"id":"p-dsc-03","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"Hoàn thành dự án đúng hạn thì có gì đâu, ai chả làm được."}
+{"id":"p-dsc-04","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"Bạn bảo mình mặc đẹp, chắc là bạn lịch sự thôi."}
+{"id":"p-dsc-05","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"Điểm cao kỳ này là do đề dễ chứ mình chẳng giỏi gì."}
+{"id":"p-dsc-06","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"Chạy được mười cây số nhưng người khác chạy cả marathon, chuyện nhỏ thôi."}
+{"id":"p-dsc-07","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"Sếp tăng lương nhưng chắc tại công ty tăng cho cả phòng."}
+{"id":"p-dsc-08","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"Mọi người cảm ơn mình đã giúp, nhưng việc đó ai làm chả được."}
+{"id":"p-dsc-09","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"dc khen đẹp thì chắc ng ta nói xã giao thôi"}
+{"id":"p-dsc-10","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"Bánh mình làm được khen ngon, chắc tại mọi người đói."}
+{"id":"p-dsc-11","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"Giữ được thói quen đọc sách hai tuần cũng chẳng có gì đáng kể."}
+{"id":"p-dsc-12","kind":"POSITIVE","labels":["DISCOUNTING_POSITIVE"],"text":"Được nhận học bổng nhưng chắc tại năm nay ít người nộp."}
+{"id":"h-dsc-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"DISCOUNTING_POSITIVE","why":"Đón nhận điều tốt.","text":"Được khen bài thuyết trình, mình vui cả buổi chiều."}
+{"id":"h-dsc-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"DISCOUNTING_POSITIVE","why":"Ghi nhận cân bằng.","text":"Mình đậu phỏng vấn, một phần nhờ chuẩn bị kỹ, một phần nhờ may mắn."}
+{"id":"h-dsc-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"DISCOUNTING_POSITIVE","why":"Ghi nhận thành quả.","text":"Chạy được mười cây số, tự hào ghê."}
+{"id":"h-dsc-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"DISCOUNTING_POSITIVE","why":"Sự thật khách quan.","text":"Sếp tăng lương cho cả phòng, mình cũng được tăng."}
+{"id":"h-dsc-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"DISCOUNTING_POSITIVE","why":"Đón nhận lời khen.","text":"Bạn khen bánh ngon, mình hứa lần sau làm thêm."}
+{"id":"h-dsc-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"DISCOUNTING_POSITIVE","why":"Ghi nhận đúng phần của mình.","text":"Dự án thành công là nhờ cả đội, mình đóng góp phần thiết kế."}
+{"id":"p-emr-01","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"Mình thấy mình kém cỏi, vậy chắc mình kém cỏi thật."}
+{"id":"p-emr-02","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"Cảm giác như mọi người ghét mình, nên chắc là họ ghét mình thật."}
+{"id":"p-emr-03","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"Mình thấy lo quá, chắc chắn có chuyện chẳng lành sắp xảy ra."}
+{"id":"p-emr-04","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"Mình thấy tội lỗi, nghĩa là mình đã làm sai điều gì đó."}
+{"id":"p-emr-05","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"Cảm thấy quá tải nên chắc việc này không thể làm nổi."}
+{"id":"p-emr-06","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"Mình thấy xấu hổ, vậy chắc mình đã làm trò cười cho cả lớp."}
+{"id":"p-emr-07","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"Mình cảm thấy không được yêu thương, nên chắc chẳng ai yêu thương mình."}
+{"id":"p-emr-08","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"Thấy bất an trong mối quan hệ này thì chắc anh ấy đang giấu mình điều gì."}
+{"id":"p-emr-09","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"thấy sợ vậy thì chắc chuyến đi này nguy hiểm thật"}
+{"id":"p-emr-10","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"Cảm giác mình là kẻ mạo danh ở công ty mới, chắc họ tuyển nhầm người."}
+{"id":"p-emr-11","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"Mình thấy vô vọng về kỳ thi, nên chắc chắn là không có cách nào qua được."}
+{"id":"p-emr-12","kind":"POSITIVE","labels":["EMOTIONAL_REASONING"],"text":"Vì mình thấy giận, chắc chắn là bạn ấy cố tình làm vậy."}
+{"id":"h-emr-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"EMOTIONAL_REASONING","why":"Cảm xúc dẫn tới hành động kiểm tra.","text":"Mình thấy lo, nên mình gọi hỏi thăm cho yên tâm."}
+{"id":"h-emr-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"EMOTIONAL_REASONING","why":"Cảm giác cơ thể, phản ứng hợp lý.","text":"Mình thấy mệt, chắc tối nay cần ngủ sớm."}
+{"id":"h-emr-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"EMOTIONAL_REASONING","why":"Chỉ nêu cảm xúc và lý do.","text":"Mình thấy buồn vì chuyến đi bị hủy."}
+{"id":"h-emr-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"EMOTIONAL_REASONING","why":"Dùng cảm giác như tín hiệu để kiểm tra, không coi là kết luận.","text":"Cảm giác có gì đó chưa ổn với bản kế hoạch, mình sẽ đọc lại số liệu."}
+{"id":"h-emr-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"EMOTIONAL_REASONING","why":"Cảm xúc có lý do rõ ràng.","text":"Mình thấy giận khi bị chen hàng."}
+{"id":"h-emr-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"EMOTIONAL_REASONING","why":"Chỉ nêu cảm xúc.","text":"Hôm nay mình thấy tự tin hơn mọi ngày."}
+{"id":"p-rum-01","kind":"POSITIVE","labels":["RUMINATION"],"text":"Cả tối mình cứ nghĩ đi nghĩ lại câu nói hớ trong buổi họp sáng nay."}
+{"id":"p-rum-02","kind":"POSITIVE","labels":["RUMINATION"],"text":"Đã ba tháng rồi mà mình vẫn không dứt ra được chuyện chia tay."}
+{"id":"p-rum-03","kind":"POSITIVE","labels":["RUMINATION"],"text":"Nằm trên giường mà cứ tua lại cuộc cãi nhau với mẹ hôm qua."}
+{"id":"p-rum-04","kind":"POSITIVE","labels":["RUMINATION"],"text":"Mình cứ tự hỏi mãi tại sao lúc đó mình lại nói như vậy."}
+{"id":"p-rum-05","kind":"POSITIVE","labels":["RUMINATION"],"text":"Cả tuần nay đầu óc chỉ quanh quẩn với lời chê của thầy."}
+{"id":"p-rum-06","kind":"POSITIVE","labels":["RUMINATION"],"text":"Cứ rảnh ra là mình lại nhớ tới lần bị bêu tên trước lớp năm cấp ba."}
+{"id":"p-rum-07","kind":"POSITIVE","labels":["RUMINATION"],"text":"Biết là chuyện đã qua nhưng mình không ngừng nghĩ về nó được."}
+{"id":"p-rum-08","kind":"POSITIVE","labels":["RUMINATION"],"text":"Đánh răng, đi tắm, đi làm, lúc nào cũng nghĩ về cái email gửi nhầm hôm thứ Hai."}
+{"id":"p-rum-09","kind":"POSITIVE","labels":["RUMINATION"],"text":"cứ nghĩ mãi vụ hôm qua, ko tập trung làm gì đc"}
+{"id":"p-rum-10","kind":"POSITIVE","labels":["RUMINATION"],"text":"Mình đọc lại đoạn tin nhắn cũ cả chục lần để xem mình sai ở đâu."}
+{"id":"p-rum-11","kind":"POSITIVE","labels":["RUMINATION"],"text":"Giá như hôm đó mình chọn khác, câu này cứ lặp trong đầu cả ngày."}
+{"id":"p-rum-12","kind":"POSITIVE","labels":["RUMINATION"],"text":"Mấy năm rồi mà mình vẫn hay nghĩ về việc đã bỏ lỡ cơ hội du học."}
+{"id":"h-rum-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"RUMINATION","why":"Suy ngẫm có kết luận.","text":"Mình nghĩ lại buổi họp sáng nay và rút ra hai điều cần làm khác."}
+{"id":"h-rum-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"RUMINATION","why":"Nhìn lại có ích.","text":"Đọc lại nhật ký tháng trước, mình thấy mình đã tiến bộ."}
+{"id":"h-rum-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"RUMINATION","why":"Chia sẻ giúp nhẹ lòng, không lặp lại.","text":"Hôm nay mình kể với bạn chuyện chia tay, nói ra thấy nhẹ hơn."}
+{"id":"h-rum-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"RUMINATION","why":"Hồi tưởng nhẹ nhàng.","text":"Mình nhớ ông bà, tối nay xem lại ảnh cũ."}
+{"id":"h-rum-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"RUMINATION","why":"Mô tả sự việc.","text":"Tối qua mình ngủ không ngon vì phòng nóng."}
+{"id":"h-rum-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"RUMINATION","why":"Cân nhắc có kết thúc.","text":"Mình đã nghĩ kỹ về chuyện chuyển việc trong một tuần rồi quyết định ở lại."}
+{"id":"p-wry-01","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"Mình lo không ngủ được, nghĩ hết kịch bản này tới kịch bản khác cho buổi phỏng vấn."}
+{"id":"p-wry-02","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"Cả ngày cứ lo chuyện tiền nhà tháng sau, biết lo cũng không giải quyết được gì nhưng không dừng được."}
+{"id":"p-wry-03","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"Mình cứ nghĩ: lỡ mai trời mưa, lỡ xe hỏng, lỡ đến muộn, lỡ quên giấy tờ."}
+{"id":"p-wry-04","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"Đầu óc chạy liên tục về chuyện sức khỏe của bố, hết lo cái này lại lo cái khác."}
+{"id":"p-wry-05","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"Lo xong chuyện công việc thì lại quay sang lo chuyện học của con."}
+{"id":"p-wry-06","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"Đã kiểm tra vé máy bay năm lần rồi mà vẫn thấy lo lo."}
+{"id":"p-wry-07","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"Nghĩ mãi về kỳ thi tuần sau, càng nghĩ càng thấy rối."}
+{"id":"p-wry-08","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"lo lo đủ thứ, nằm 2 tiếng chưa ngủ đc"}
+{"id":"p-wry-09","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"Mình biết là chưa có chuyện gì xảy ra nhưng không ngăn được việc lo trước."}
+{"id":"p-wry-10","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"Cứ mỗi lần điện thoại rung là mình lại nghĩ đến đủ thứ chuyện có thể xảy ra."}
+{"id":"p-wry-11","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"Tối nào cũng nằm tính toán xem nếu mất việc thì sẽ xoay xở thế nào."}
+{"id":"p-wry-12","kind":"POSITIVE","labels":["WORRY_LOOP"],"text":"Mình lo đủ chuyện cho chuyến đi đến mức chẳng còn háo hức nữa."}
+{"id":"h-wry-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"WORRY_LOOP","why":"Chuẩn bị thay vì lo vòng tròn.","text":"Mai phỏng vấn, mình chuẩn bị ba câu trả lời cho các câu hỏi hay gặp."}
+{"id":"h-wry-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"WORRY_LOOP","why":"Lo dẫn tới hành động cụ thể.","text":"Mình hơi lo tiền nhà tháng sau nên lập bảng chi tiêu."}
+{"id":"h-wry-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"WORRY_LOOP","why":"Kiểm tra một lần cho chắc.","text":"Mình kiểm tra lại vé máy bay một lần trước khi đi ngủ."}
+{"id":"h-wry-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"WORRY_LOOP","why":"Mô tả sự việc.","text":"Bố đi khám sức khỏe định kỳ, kết quả tuần sau mới có."}
+{"id":"h-wry-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"WORRY_LOOP","why":"Lo thoáng qua, không lặp lại.","text":"Mình lo một chút về kỳ thi, rồi đi ngủ."}
+{"id":"h-wry-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"WORRY_LOOP","why":"Lập kế hoạch.","text":"Mình ghi các việc cần làm cho chuyến đi vào danh sách để khỏi quên."}
+{"id":"p-avd-01","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"Có tin nhắn của sếp từ sáng mà mình vẫn chưa dám mở."}
+{"id":"p-avd-02","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"Mình lại hủy hẹn khám răng lần thứ ba vì ngại."}
+{"id":"p-avd-03","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"Thấy cuộc gọi của chủ nhà là mình để máy im lặng luôn."}
+{"id":"p-avd-04","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"Mình không dám xem điểm thi, cứ để đó cho qua."}
+{"id":"p-avd-05","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"Có buổi gặp lớp nhưng mình viện cớ bận để không phải đi."}
+{"id":"p-avd-06","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"Hóa đơn thẻ tín dụng mình cất ngăn kéo, không muốn nhìn."}
+{"id":"p-avd-07","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"Mình né nói chuyện với bố về chuyện chuyển ngành dù biết sớm muộn cũng phải nói."}
+{"id":"p-avd-08","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"Thấy email từ trường là mình đóng ứng dụng ngay."}
+{"id":"p-avd-09","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"ko dám mở tin nhắn của nó, sợ nó trách"}
+{"id":"p-avd-10","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"Mình đổi đường đi làm để khỏi phải đi qua công ty cũ."}
+{"id":"p-avd-11","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"Bác sĩ hẹn tái khám mà mình cứ lần lữa mãi vì sợ nghe kết quả."}
+{"id":"p-avd-12","kind":"POSITIVE","labels":["AVOIDANCE"],"text":"Mình xin nghỉ buổi thuyết trình vì không muốn đứng trước lớp."}
+{"id":"h-avd-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"AVOIDANCE","why":"Ranh giới lành mạnh có chủ đích.","text":"Mình tắt điện thoại sau mười giờ tối để nghỉ ngơi."}
+{"id":"h-avd-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"AVOIDANCE","why":"Lý do thực tế.","text":"Mình từ chối buổi tiệc vì đã có hẹn với gia đình."}
+{"id":"h-avd-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"AVOIDANCE","why":"Lý do thực tế.","text":"Mình chưa mở email vì đang lái xe."}
+{"id":"h-avd-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"AVOIDANCE","why":"Lựa chọn có chủ đích để bảo vệ mình.","text":"Mình chọn không đọc bình luận tiêu cực trên mạng nữa."}
+{"id":"h-avd-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"AVOIDANCE","why":"Hoãn có lý do, không vì sợ.","text":"Mình hoãn buổi khám sang tuần sau vì bị trùng lịch thi."}
+{"id":"h-avd-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"AVOIDANCE","why":"Lý do thực tế.","text":"Mình đi đường khác vì đoạn đó đang sửa đường."}
+{"id":"p-prc-01","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"Lại lướt điện thoại cả tối thay vì làm bài, giờ thấy ghét bản thân."}
+{"id":"p-prc-02","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"Hạn nộp là mai mà mình mới bắt đầu, tự trách mình mãi."}
+{"id":"p-prc-03","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"Ngồi vào bàn ba tiếng mà chỉ dọn bàn với pha trà, thấy mình thật tệ."}
+{"id":"p-prc-04","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"Mình hứa sẽ dọn nhà từ tuần trước, giờ vẫn bừa bộn và mình thấy có lỗi kinh khủng."}
+{"id":"p-prc-05","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"Để dồn việc đến sát hạn rồi lại thức trắng, lần nào cũng tự hứa không lặp lại."}
+{"id":"p-prc-06","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"Cả ngày chủ nhật trôi qua mà chưa làm được gì, cảm giác tội lỗi đè nặng."}
+{"id":"p-prc-07","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"Lại xem thêm một tập phim nữa, biết là không nên mà vẫn làm, giờ thấy áy náy."}
+{"id":"p-prc-08","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"hôm nay lại trì hoãn tiếp, chán bản thân ghê"}
+{"id":"p-prc-09","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"Đặt lịch tập thể dục rồi lại để đó, tối đến thấy áy náy."}
+{"id":"p-prc-10","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"Email cần trả lời từ thứ Hai mà giờ vẫn chưa gửi, mình thấy mình thật vô kỷ luật."}
+{"id":"p-prc-11","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"Cứ định làm hồ sơ xin việc, tuần nào cũng hoãn, rồi tuần nào cũng tự trách."}
+{"id":"p-prc-12","kind":"POSITIVE","labels":["PROCRASTINATION_GUILT"],"text":"Ngồi lướt mạng đến hai giờ sáng rồi giận bản thân vì không ngủ sớm."}
+{"id":"h-prc-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PROCRASTINATION_GUILT","why":"Nghỉ có chủ đích, không tự trách.","text":"Hôm nay mình nghỉ ngơi xem phim cả tối, thấy thư giãn."}
+{"id":"h-prc-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PROCRASTINATION_GUILT","why":"Dời có lý do, không tự trách.","text":"Mình dời việc dọn nhà sang thứ Bảy vì tối nay mệt."}
+{"id":"h-prc-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PROCRASTINATION_GUILT","why":"Còn kịp hạn, không tự trách.","text":"Mình chưa làm bài tập, tối mai mới đến hạn."}
+{"id":"h-prc-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PROCRASTINATION_GUILT","why":"Không tự trách.","text":"Mình hoàn thành báo cáo hơi sát giờ nhưng vẫn kịp."}
+{"id":"h-prc-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PROCRASTINATION_GUILT","why":"Mô tả sự việc.","text":"Mình lướt điện thoại một lúc rồi đi ngủ."}
+{"id":"h-prc-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PROCRASTINATION_GUILT","why":"Thừa nhận và điều chỉnh, giọng trung tính.","text":"Tuần này mình làm chậm hơn kế hoạch, cần sắp xếp lại lịch."}
+{"id":"p-pft-01","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"Slide đã làm lại lần thứ tư mà vẫn thấy chưa đủ tốt để gửi."}
+{"id":"p-pft-02","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"Mình không nộp bài vì chưa hoàn hảo, dù đã quá hạn hai ngày."}
+{"id":"p-pft-03","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"Viết một email ngắn mà mình sửa đi sửa lại gần một tiếng."}
+{"id":"p-pft-04","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"Chỉ cần một lỗi chính tả nhỏ là mình thấy cả báo cáo không dùng được."}
+{"id":"p-pft-05","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"Mình không đăng tranh lên vì sợ chưa đủ đẹp."}
+{"id":"p-pft-06","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"Dọn nhà mà phải sạch từng góc mới chịu, mất cả ngày chủ nhật."}
+{"id":"p-pft-07","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"Mình đặt chuẩn cho bản thân cao đến mức chẳng bao giờ thấy mình đạt."}
+{"id":"p-pft-08","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"sửa cái CV lần thứ n rồi mà vẫn thấy chưa ổn"}
+{"id":"p-pft-09","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"Chưa chắc chắn trăm phần trăm thì mình không dám phát biểu."}
+{"id":"p-pft-10","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"Được 9 điểm mà mình chỉ nhìn vào câu sai duy nhất."}
+{"id":"p-pft-11","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"Kế hoạch tuần phải chi tiết đến từng phút, lệch một chút là thấy bứt rứt."}
+{"id":"p-pft-12","kind":"POSITIVE","labels":["PERFECTIONISM"],"text":"Mình chưa bắt đầu học tiếng Anh vì chưa tìm được phương pháp hoàn hảo."}
+{"id":"h-pft-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERFECTIONISM","why":"Kiểm tra hợp lý.","text":"Mình đọc lại email một lần trước khi gửi."}
+{"id":"h-pft-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERFECTIONISM","why":"Yêu cầu thật của công việc.","text":"Bản vẽ kỹ thuật cần chính xác đến từng milimet nên mình kiểm tra kỹ."}
+{"id":"h-pft-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERFECTIONISM","why":"Sửa có giới hạn và hoàn thành.","text":"Mình sửa slide theo góp ý của sếp rồi gửi đi."}
+{"id":"h-pft-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERFECTIONISM","why":"Mong muốn làm tốt, không cực đoan.","text":"Mình muốn làm tốt bài thuyết trình nên tập thêm một lần."}
+{"id":"h-pft-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERFECTIONISM","why":"Nhìn lỗi một cách bình thản.","text":"Bài làm có vài lỗi nhỏ, mình ghi lại để lần sau chú ý."}
+{"id":"h-pft-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PERFECTIONISM","why":"Sở thích, không gây áp lực.","text":"Mình thích sắp xếp bàn làm việc gọn gàng."}
+{"id":"p-ppl-01","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"Đồng nghiệp nhờ làm hộ báo cáo, mình không dám từ chối dù đang ngập việc."}
+{"id":"p-ppl-02","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"Mình đồng ý đi ăn tối dù rất mệt vì sợ bạn buồn."}
+{"id":"p-ppl-03","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"Mình luôn nói 'được' kể cả khi trong lòng muốn nói 'không'."}
+{"id":"p-ppl-04","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"Mình cho bạn mượn tiền lần nữa dù bản thân đang thiếu, vì ngại từ chối."}
+{"id":"p-ppl-05","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"Họp nhóm ai cũng đẩy việc cho mình mà mình vẫn cười nhận hết."}
+{"id":"p-ppl-06","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"Mình nhịn không nói ý kiến thật để mọi người khỏi khó chịu."}
+{"id":"p-ppl-07","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"Cuối tuần định nghỉ ngơi nhưng họ hàng nhờ là mình lại gác hết để đi giúp."}
+{"id":"p-ppl-08","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"Mình xin lỗi liên tục kể cả khi không phải lỗi của mình, chỉ để không khí dễ chịu."}
+{"id":"p-ppl-09","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"ngại từ chối quá nên lại nhận thêm ca"}
+{"id":"p-ppl-10","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"Mình chọn món theo ý mọi người dù mình không thích món đó."}
+{"id":"p-ppl-11","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"Sợ mất lòng nên mình đồng ý làm trưởng nhóm dù không muốn."}
+{"id":"p-ppl-12","kind":"POSITIVE","labels":["PEOPLE_PLEASING"],"text":"Mình trả lời tin nhắn ngay kể cả lúc đang nghỉ, vì sợ người ta nghĩ mình thờ ơ."}
+{"id":"h-ppl-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PEOPLE_PLEASING","why":"Giúp vì muốn và còn sức.","text":"Mình giúp đồng nghiệp làm báo cáo vì hôm nay mình rảnh."}
+{"id":"h-ppl-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PEOPLE_PLEASING","why":"Từ chối được.","text":"Mình từ chối lời nhờ vì đang bận, bạn ấy cũng hiểu."}
+{"id":"h-ppl-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PEOPLE_PLEASING","why":"Đi vì muốn.","text":"Mình đi ăn tối với bạn vì lâu rồi chưa gặp, vui lắm."}
+{"id":"h-ppl-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PEOPLE_PLEASING","why":"Giúp trong khả năng.","text":"Mình cho bạn mượn tiền vì bạn đang cần và mình còn dư."}
+{"id":"h-ppl-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PEOPLE_PLEASING","why":"Xin lỗi khi thật sự có lỗi.","text":"Mình xin lỗi vì đã đến muộn mười phút."}
+{"id":"h-ppl-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"PEOPLE_PLEASING","why":"Thật sự không quan trọng với mình.","text":"Cả nhóm chọn món, mình theo ý mọi người vì mình ăn gì cũng được."}
+{"id":"p-hsc-01","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"Sao mình lúc nào cũng thảm hại thế này."}
+{"id":"p-hsc-02","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"Mình không xứng đáng được mọi người đối xử tốt."}
+{"id":"p-hsc-03","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"Mình tự mắng mình cả buổi tối vì nói sai một câu."}
+{"id":"p-hsc-04","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"Người khác làm được còn mình thì chẳng ra gì."}
+{"id":"p-hsc-05","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"Mình tự nhủ mình phải bị phạt vì đã để mọi người thất vọng."}
+{"id":"p-hsc-06","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"Nhìn vào gương là chỉ thấy toàn khuyết điểm."}
+{"id":"p-hsc-07","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"Mình thật đáng xấu hổ khi để mọi chuyện thành ra thế này."}
+{"id":"p-hsc-08","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"Mình không đáng được nghỉ ngơi khi chưa làm được gì ra hồn."}
+{"id":"p-hsc-09","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"bản thân thật sự tệ hại, chẳng có gì đáng tự hào"}
+{"id":"p-hsc-10","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"Mỗi lần mắc lỗi là trong đầu lại vang lên giọng chê bai không dứt."}
+{"id":"p-hsc-11","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"Mình tự trách bản thân thậm tệ vì chỉ được hạng nhì."}
+{"id":"p-hsc-12","kind":"POSITIVE","labels":["HARSH_SELF_CRITICISM"],"text":"Mình thấy chán ghét bản thân vì đã ăn quá nhiều tối nay."}
+{"id":"h-hsc-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"HARSH_SELF_CRITICISM","why":"Nhận lỗi nhẹ nhàng.","text":"Mình nói sai một câu trong buổi họp, hơi ngượng nhưng không sao."}
+{"id":"h-hsc-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"HARSH_SELF_CRITICISM","why":"Rút kinh nghiệm, giọng tử tế.","text":"Lần sau mình cần chuẩn bị kỹ hơn."}
+{"id":"h-hsc-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"HARSH_SELF_CRITICISM","why":"Đánh giá kết quả, không mắng mỏ.","text":"Mình chưa hài lòng với kết quả này, sẽ cố hơn kỳ sau."}
+{"id":"h-hsc-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"HARSH_SELF_CRITICISM","why":"Tự nói với mình bằng giọng tử tế.","text":"Mình tự nhắc mình là ai cũng có lúc sai."}
+{"id":"h-hsc-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"HARSH_SELF_CRITICISM","why":"Nhận lỗi và sửa.","text":"Hôm nay mình hơi nóng với em, mình sẽ xin lỗi em."}
+{"id":"h-hsc-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"HARSH_SELF_CRITICISM","why":"Tự nhận xét trung tính.","text":"Mình không giỏi nấu ăn lắm nhưng đang học dần."}
+{"id":"p-wdr-01","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"Cả tuần nay mình không muốn gặp ai, chỉ ở trong phòng."}
+{"id":"p-wdr-02","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"Bạn rủ đi cà phê nhưng mình bảo bận, thật ra chỉ muốn tránh mặt mọi người."}
+{"id":"p-wdr-03","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"Mình tắt thông báo nhóm chat lớp mấy tuần rồi, chẳng muốn đọc tin nhắn của ai."}
+{"id":"p-wdr-04","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"Không trả lời tin nhắn của ai từ hôm thứ Ba."}
+{"id":"p-wdr-05","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"Gia đình gọi video mà mình không bắt máy, chẳng muốn nói chuyện."}
+{"id":"p-wdr-06","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"Mình bỏ luôn câu lạc bộ cầu lông vì không muốn gặp mọi người nữa."}
+{"id":"p-wdr-07","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"Đi làm về là đóng cửa phòng, không ra ăn cơm cùng nhà."}
+{"id":"p-wdr-08","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"ở nhà cả tuần, ko muốn gặp ai hết"}
+{"id":"p-wdr-09","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"Mình từ chối hết các lời mời cuối tuần dạo gần đây."}
+{"id":"p-wdr-10","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"Ăn trưa một mình ở bàn làm việc để khỏi phải nói chuyện với ai."}
+{"id":"p-wdr-11","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"Mình xóa ứng dụng nhắn tin cho đỡ phải trả lời ai."}
+{"id":"p-wdr-12","kind":"POSITIVE","labels":["SOCIAL_WITHDRAWAL"],"text":"Lâu lắm rồi mình không chủ động liên lạc với bạn bè nào."}
+{"id":"h-wdr-01","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SOCIAL_WITHDRAWAL","why":"Nạp năng lượng có chủ đích.","text":"Cuối tuần này mình muốn ở nhà nghỉ ngơi sau một tuần nhiều sự kiện."}
+{"id":"h-wdr-02","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SOCIAL_WITHDRAWAL","why":"Ở một mình mà thấy dễ chịu.","text":"Mình thích đi dạo một mình vào buổi sáng."}
+{"id":"h-wdr-03","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SOCIAL_WITHDRAWAL","why":"Lý do thực tế, tạm thời.","text":"Mình tắt thông báo nhóm chat khi làm việc để tập trung."}
+{"id":"h-wdr-04","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SOCIAL_WITHDRAWAL","why":"Hoàn cảnh, không né tránh.","text":"Mình ăn trưa một mình hôm nay vì cả nhóm đi họp."}
+{"id":"h-wdr-05","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SOCIAL_WITHDRAWAL","why":"Lý do sức khỏe, vẫn giữ liên lạc.","text":"Mình ở nhà vì bị cảm, đã nhắn bạn hẹn hôm khác."}
+{"id":"h-wdr-06","kind":"HARD_NEGATIVE","labels":[],"confusableWith":"SOCIAL_WITHDRAWAL","why":"Hoạt động một mình tích cực.","text":"Hôm nay mình đọc sách cả buổi chiều, thấy dễ chịu."}
+{"id":"m-01","kind":"MULTI","labels":["CATASTROPHIZING","OVERGENERALIZATION"],"text":"Lỡ bài thi này hỏng thì coi như hết, mình chẳng bao giờ làm được gì ra hồn."}
+{"id":"m-02","kind":"MULTI","labels":["SELF_LABELING","OVERGENERALIZATION"],"text":"Mình đúng là đồ vô dụng, lúc nào cũng làm hỏng mọi thứ."}
+{"id":"m-03","kind":"MULTI","labels":["MIND_READING","SOCIAL_WITHDRAWAL"],"text":"Chắc mọi người thấy mình phiền, nên dạo này mình không muốn gặp ai nữa."}
+{"id":"m-04","kind":"MULTI","labels":["PROCRASTINATION_GUILT","SELF_LABELING"],"text":"Lại để dồn việc tới sát hạn rồi tự trách cả đêm, mình đúng là kẻ vô dụng."}
+{"id":"m-05","kind":"MULTI","labels":["PERSONALIZATION","SHOULD_STATEMENTS"],"text":"Bố mẹ buồn là tại mình, đáng lẽ mình phải giỏi hơn."}
+{"id":"m-06","kind":"MULTI","labels":["PERFECTIONISM","MIND_READING"],"text":"Slide chưa hoàn hảo nên mình chưa dám gửi, chắc sếp sẽ nghĩ mình kém."}
+{"id":"m-07","kind":"MULTI","labels":["RUMINATION","HARSH_SELF_CRITICISM"],"text":"Cứ nghĩ mãi về lỗi hôm qua, càng nghĩ càng thấy mình thật thảm hại."}
+{"id":"m-08","kind":"MULTI","labels":["PEOPLE_PLEASING","SHOULD_STATEMENTS"],"text":"Không dám từ chối nên lại nhận thêm việc, mình phải làm vừa lòng tất cả mọi người."}
+{"id":"m-09","kind":"MULTI","labels":["DISCOUNTING_POSITIVE","EMOTIONAL_REASONING"],"text":"Được khen nhưng chắc chỉ là xã giao, mình thấy mình kém thì chắc kém thật."}
+{"id":"m-10","kind":"MULTI","labels":["AVOIDANCE","CATASTROPHIZING"],"text":"Mình không dám mở thư của trường, lỡ bị đuổi học thì coi như hết."}
+{"id":"m-11","kind":"MULTI","labels":["WORRY_LOOP","CATASTROPHIZING"],"text":"Nằm lo đủ kịch bản cho ngày mai, lỡ hỏng thì cả đời coi như bỏ."}
+{"id":"m-12","kind":"MULTI","labels":["ALL_OR_NOTHING","SELF_LABELING"],"text":"Không đạt điểm tối đa thì coi như thất bại, mình đúng là đồ kém cỏi."}
+{"id":"n-001","kind":"NEUTRAL","labels":[],"text":"Sáng nay mình dậy lúc sáu rưỡi, trời mát nên đi bộ ra chợ."}
+{"id":"n-002","kind":"NEUTRAL","labels":[],"text":"Trưa nay cả phòng gọi cơm văn phòng, món cá kho khá ngon."}
+{"id":"n-003","kind":"NEUTRAL","labels":[],"text":"Mình đọc xong chương bốn của cuốn sách về lịch sử Huế."}
+{"id":"n-004","kind":"NEUTRAL","labels":[],"text":"Chiều nay họp nhóm một tiếng để chia việc cho tuần sau."}
+{"id":"n-005","kind":"NEUTRAL","labels":[],"text":"Tối về mình nấu canh chua và rau muống xào tỏi."}
+{"id":"n-006","kind":"NEUTRAL","labels":[],"text":"Hôm nay trời mưa từ trưa đến tối nên mình ở nhà dọn tủ quần áo."}
+{"id":"n-007","kind":"NEUTRAL","labels":[],"text":"Mình gọi điện cho bà ngoại, bà kể chuyện vườn cam năm nay sai quả."}
+{"id":"n-008","kind":"NEUTRAL","labels":[],"text":"Lớp tiếng Anh tối nay học về cách viết email trang trọng."}
+{"id":"n-009","kind":"NEUTRAL","labels":[],"text":"Mình chạy bộ ba cây số quanh hồ, gió hơi lạnh."}
+{"id":"n-010","kind":"NEUTRAL","labels":[],"text":"Em trai mình vừa thi xong học kỳ, cả nhà đi ăn lẩu."}
+{"id":"n-011","kind":"NEUTRAL","labels":[],"text":"Mình đổi màn hình máy tính sang chế độ tối cho đỡ mỏi mắt."}
+{"id":"n-012","kind":"NEUTRAL","labels":[],"text":"Sáng nay tắc đường ở ngã tư nên mình đến công ty muộn mười phút."}
+{"id":"n-013","kind":"NEUTRAL","labels":[],"text":"Mình mua thêm một chậu trầu bà để trên bàn làm việc."}
+{"id":"n-014","kind":"NEUTRAL","labels":[],"text":"Buổi chiều mình ngồi cà phê với chị đồng nghiệp, nói chuyện về phim mới."}
+{"id":"n-015","kind":"NEUTRAL","labels":[],"text":"Hôm nay mình hoàn thành phần nhập liệu cho báo cáo tháng."}
+{"id":"n-016","kind":"NEUTRAL","labels":[],"text":"Tối nay xem trận bóng cùng bố, đội nhà hòa một đều."}
+{"id":"n-017","kind":"NEUTRAL","labels":[],"text":"Mình đặt lịch cắt tóc vào sáng thứ Bảy."}
+{"id":"n-018","kind":"NEUTRAL","labels":[],"text":"Con mèo nhà mình hôm nay ngủ cả ngày trên bậu cửa sổ."}
+{"id":"n-019","kind":"NEUTRAL","labels":[],"text":"Mình thử pha cà phê muối theo công thức trên mạng."}
+{"id":"n-020","kind":"NEUTRAL","labels":[],"text":"Cuối tuần này cả nhà định về quê ăn giỗ ông."}
+{"id":"n-021","kind":"NEUTRAL","labels":[],"text":"Hôm nay mình học được cách dùng bảng tổng hợp trong Excel."}
+{"id":"n-022","kind":"NEUTRAL","labels":[],"text":"Mình đi siêu thị mua đồ ăn cho cả tuần."}
+{"id":"n-023","kind":"NEUTRAL","labels":[],"text":"Buổi tối mình nghe một tập podcast về nấu ăn."}
+{"id":"n-024","kind":"NEUTRAL","labels":[],"text":"Sáng nay mình tập giãn cơ mười lăm phút trước khi đi làm."}
+{"id":"n-025","kind":"NEUTRAL","labels":[],"text":"Mình gửi hồ sơ đăng ký khóa học kỹ năng thuyết trình."}
+{"id":"n-026","kind":"NEUTRAL","labels":[],"text":"Trưa nay mình ngủ trưa hai mươi phút, dậy thấy tỉnh hơn."}
+{"id":"n-027","kind":"NEUTRAL","labels":[],"text":"Mình với bạn thân đi xem triển lãm tranh ở bảo tàng."}
+{"id":"n-028","kind":"NEUTRAL","labels":[],"text":"Hôm nay công ty tổ chức sinh nhật chung cho các bạn tháng mười một."}
+{"id":"n-029","kind":"NEUTRAL","labels":[],"text":"Mình sắp xếp lại lịch học cho kỳ thi cuối kỳ."}
+{"id":"n-030","kind":"NEUTRAL","labels":[],"text":"Tối nay mình gọi video cho bạn đang du học bên Nhật."}
+{"id":"n-031","kind":"NEUTRAL","labels":[],"text":"Mình thay dầu xe máy ở tiệm gần nhà."}
+{"id":"n-032","kind":"NEUTRAL","labels":[],"text":"Bố mình hôm nay sửa lại cái quạt bị kêu."}
+{"id":"n-033","kind":"NEUTRAL","labels":[],"text":"Mình tập một bài yoga ngắn trước khi ngủ."}
+{"id":"n-034","kind":"NEUTRAL","labels":[],"text":"Hôm nay mình viết được ba trang cho bài tiểu luận."}
+{"id":"n-035","kind":"NEUTRAL","labels":[],"text":"Cả nhóm thống nhất chọn đề tài về năng lượng tái tạo."}
+{"id":"n-036","kind":"NEUTRAL","labels":[],"text":"Mình nấu cháo cho mẹ vì mẹ hơi cảm."}
+{"id":"n-037","kind":"NEUTRAL","labels":[],"text":"Sáng nay mình ăn bánh mì ốp la ở quán đầu ngõ."}
+{"id":"n-038","kind":"NEUTRAL","labels":[],"text":"Mình đăng ký thẻ thư viện mới."}
+{"id":"n-039","kind":"NEUTRAL","labels":[],"text":"Tối nay mình dọn lại thư mục ảnh trong điện thoại."}
+{"id":"n-040","kind":"NEUTRAL","labels":[],"text":"Hôm nay mình đi khám răng định kỳ, mọi thứ ổn."}
+{"id":"n-041","kind":"NEUTRAL","labels":[],"text":"Mình nhận được bưu kiện sách đặt từ tuần trước."}
+{"id":"n-042","kind":"NEUTRAL","labels":[],"text":"Chiều nay mình đi bơi cùng đứa em họ."}
+{"id":"n-043","kind":"NEUTRAL","labels":[],"text":"Mình học thêm mười từ vựng tiếng Nhật."}
+{"id":"n-044","kind":"NEUTRAL","labels":[],"text":"Trời hôm nay nắng đẹp, mình phơi chăn màn."}
+{"id":"n-045","kind":"NEUTRAL","labels":[],"text":"Mình làm xong slide cho buổi báo cáo thứ Sáu."}
+{"id":"n-046","kind":"NEUTRAL","labels":[],"text":"Bạn cùng phòng nấu bún bò, mời mình ăn cùng."}
+{"id":"n-047","kind":"NEUTRAL","labels":[],"text":"Mình đi dạo công viên sau bữa tối."}
+{"id":"n-048","kind":"NEUTRAL","labels":[],"text":"Hôm nay mình trực quầy tư vấn ở ngày hội việc làm của trường."}
+{"id":"n-049","kind":"NEUTRAL","labels":[],"text":"Mình viết thiệp chúc mừng đám cưới cho anh họ."}
+{"id":"n-050","kind":"NEUTRAL","labels":[],"text":"Tối nay mình thử chơi một ván cờ vua trên mạng."}
+{"id":"n-051","kind":"NEUTRAL","labels":[],"text":"Mình ghi lại chi tiêu trong ngày vào sổ."}
+{"id":"n-052","kind":"NEUTRAL","labels":[],"text":"Hôm nay mình ôn lại phần kế toán chi phí."}
+{"id":"n-053","kind":"NEUTRAL","labels":[],"text":"Sáng nay mình tưới cây và lau ban công."}
+{"id":"n-054","kind":"NEUTRAL","labels":[],"text":"Mình xem một bộ phim tài liệu về đại dương."}
+{"id":"n-055","kind":"NEUTRAL","labels":[],"text":"Mình đặt vé xe về quê cho dịp Tết."}
+{"id":"n-056","kind":"NEUTRAL","labels":[],"text":"Hôm nay lớp mình có giảng viên mời từ doanh nghiệp đến chia sẻ."}
+{"id":"n-057","kind":"NEUTRAL","labels":[],"text":"Mình làm bánh flan, lần này mềm hơn lần trước."}
+{"id":"n-058","kind":"NEUTRAL","labels":[],"text":"Tối nay mình gọi cho mẹ hỏi công thức kho thịt."}
+{"id":"n-059","kind":"NEUTRAL","labels":[],"text":"Mình đi làm bằng xe buýt vì xe máy đang sửa."}
+{"id":"n-060","kind":"NEUTRAL","labels":[],"text":"Hôm nay mình viết nhật ký sớm hơn mọi ngày."}

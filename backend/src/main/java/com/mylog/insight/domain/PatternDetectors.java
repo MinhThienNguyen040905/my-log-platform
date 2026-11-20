@@ -43,15 +43,25 @@ public final class PatternDetectors {
 
     private PatternDetectors() {}
 
-    /** Runs every detector and keeps the strongest {@code limit} findings. */
-    public static List<PatternFinding> findAll(List<DailyMetric> days, List<EntrySignal> entries,
-                                               List<ActivitySignal> activities, LocalDate from, LocalDate to,
+    /**
+     * Runs every detector on {@code current} and keeps the strongest {@code limit} findings. Associations
+     * everyone expects ({@link ExpectedPatterns}) are dropped; {@code previous} (the window just before) is
+     * only used to compare the user with themselves.
+     */
+    public static List<PatternFinding> findAll(PatternWindow current, PatternWindow previous,
                                                int minimumSamples, int limit) {
+        List<DailyMetric> days = current.days();
+        List<EntrySignal> entries = current.entries();
+        PatternFinding exception = ContrastDetectors.exceptionDays(current);
         List<PatternFinding> all = new ArrayList<>();
         for (PatternFinding finding : new PatternFinding[] {
-                sleepMood(days, minimumSamples), weekday(days), trendShift(days, from, to),
-                emotionTopic(entries), tagMood(entries), activityMood(days, activities)}) {
-            if (finding != null) all.add(finding);
+                sleepMood(days, minimumSamples), weekday(days), trendShift(days, current.from(), current.to()),
+                emotionTopic(entries), tagMood(entries), activityMood(days, current.activities()), exception,
+                ContrastDetectors.conditionShift(current, previous), ContrastDetectors.topicShift(current, previous),
+                ContrastDetectors.recoveryShift(current, previous)}) {
+            if (finding == null || ExpectedPatterns.isExpected(finding)
+                    || ContrastDetectors.coveredBy(exception, finding)) continue;
+            all.add(finding);
         }
         all.sort(Comparator.comparing(PatternFinding::strength).reversed().thenComparing(PatternFinding::type));
         return all.size() > limit ? List.copyOf(all.subList(0, limit)) : List.copyOf(all);
@@ -256,16 +266,16 @@ public final class PatternDetectors {
         return days.stream().mapToDouble(d -> value.apply(d).doubleValue()).average().orElseThrow();
     }
 
-    private static PatternFinding.EvidencePoint point(DailyMetric day, String metric, BigDecimal value) {
+    static PatternFinding.EvidencePoint point(DailyMetric day, String metric, BigDecimal value) {
         return new PatternFinding.EvidencePoint(day.date(), "CHECKIN".equals(day.source()) ? "CHECKIN" : "JOURNAL",
                 day.sourceId(), metric, value);
     }
 
-    private static BigDecimal one(double value) {
+    static BigDecimal one(double value) {
         return BigDecimal.valueOf(value).setScale(1, RoundingMode.HALF_UP);
     }
 
-    private static BigDecimal strength(double value) {
+    static BigDecimal strength(double value) {
         return BigDecimal.valueOf(Math.max(0, Math.min(1, value))).setScale(5, RoundingMode.HALF_UP);
     }
 }
