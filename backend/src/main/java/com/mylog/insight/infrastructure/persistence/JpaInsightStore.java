@@ -94,12 +94,14 @@ class JpaInsightStore implements InsightStore {
                                 List<PatternInsight> insights, Instant now) {
         em.createNativeQuery("SELECT pg_advisory_xact_lock(hashtextextended(?1,0))")
                 .setParameter(1, userId + ":patterns:" + algorithmVersion).getSingleResult();
+        // Every version of the same detector family ("pattern-30d-v1", "-v2", ...) is one stream for the user.
+        String family = algorithmVersion.replaceFirst("-v\\d+$", "") + "-v%";
         // A type the user hid for an overlapping window stays hidden after a refresh.
         @SuppressWarnings("unchecked")
         List<String> hiddenTypes = em.createNativeQuery("""
                 SELECT DISTINCT insight_type FROM insights
-                WHERE user_id=?1 AND algorithm_version=?2 AND status='HIDDEN' AND period_end>=?3
-                """, String.class).setParameter(1, userId).setParameter(2, algorithmVersion).setParameter(3, from)
+                WHERE user_id=?1 AND algorithm_version LIKE ?2 AND status='HIDDEN' AND period_end>=?3
+                """, String.class).setParameter(1, userId).setParameter(2, family).setParameter(3, from)
                 .getResultList();
         // A second refresh on the same day replaces that day's rows (unique user/type/period/version).
         em.createNativeQuery("""
@@ -108,8 +110,8 @@ class JpaInsightStore implements InsightStore {
                 .setParameter(4, to).executeUpdate();
         em.createNativeQuery("""
                 UPDATE insights SET status='SUPERSEDED', superseded_at=?3
-                WHERE user_id=?1 AND algorithm_version=?2 AND status='ACTIVE'
-                """).setParameter(1, userId).setParameter(2, algorithmVersion).setParameter(3, now).executeUpdate();
+                WHERE user_id=?1 AND algorithm_version LIKE ?2 AND status='ACTIVE'
+                """).setParameter(1, userId).setParameter(2, family).setParameter(3, now).executeUpdate();
         for (PatternInsight item : insights) {
             var finding = item.finding();
             Insight insight = new Insight();

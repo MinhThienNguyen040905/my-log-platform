@@ -14,12 +14,20 @@
 //        # grant AI_PROCESSING (synthetic account only), synthetic emotions for the last 30 days,
 //        # then POST /insights:refresh and print the pattern insights (--analyze does it after seeding);
 //        # add --reseed-analysis to replace earlier synthetic analyses after the seeder rules change
+//   node backend/scripts/seed-demo-journal.mjs --email ... --password ... --plant-patterns
+//        # thinking-pattern prototype: append labelled synthetic sentences to entries of the last 30 days
+//        # (some codes must become a card, some must not), write the answer key to
+//        # backend/scratch/planted-patterns.json, then re-run the synthetic analysis + insight refresh
+//   node backend/scripts/seed-demo-journal.mjs --email ... --password ... --extract-patterns
+//        # grant AI_PROCESSING + THINKING_PATTERNS (synthetic account only) and run the local thinking-pattern
+//        # extractor (backend needs MYLOG_PATTERNS_EXTRACTOR=fake|openai and MYLOG_SAFETY_DEV_ALLOW=true so
+//        # entries are screened ALLOW) over the last 30 days
 //
 // Env: MYLOG_API_URL (default http://localhost:8080), MAILPIT_URL (default http://localhost:8025).
 // All content is synthetic. Never point this at staging/prod or at a real person's account.
 
 import { randomBytes, randomUUID } from 'node:crypto';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -269,6 +277,49 @@ const ACTIVITIES = {
   lowPeriod: ['journaling', 'walking'],
   recovery: ['walking', 'meditation', 'journaling'],
 };
+
+// Thinking-pattern prototype (tp-v1): labelled synthetic sentences planted into the last 30 days so the
+// extractor and the 30-day card rules have a known answer. A code becomes a card only with >= 3 entries
+// spread over >= 2 calendar weeks; MIND_READING (one week) and SHOULD_STATEMENTS (two entries) must not.
+// Different sentences from src/test/resources/thinking-patterns/eval-tp-v1.jsonl on purpose.
+const PLANTED_PATTERNS = [
+  { code: 'CATASTROPHIZING', expect: 'ELIGIBLE', daysAgo: [2, 9, 16, 23], sentences: [
+    'Lỡ dự án này trễ thêm một tuần nữa thì coi như sự nghiệp của mình tiêu tan.',
+    'Chỉ cần bị nhắc nhở thêm một lần là chắc chắn mình sẽ mất việc, rồi mọi thứ sụp đổ hết.',
+    'Ngày mai mà nói hỏng trong buổi họp thì cả phòng sẽ coi thường mình mãi mãi.',
+    'Lỡ kết quả kiểm tra sức khỏe có vấn đề thì coi như mọi kế hoạch đều đổ bể.',
+  ] },
+  { code: 'HARSH_SELF_CRITICISM', expect: 'ELIGIBLE', daysAgo: [4, 12, 20], sentences: [
+    'Mình tự mắng mình suốt đường về chỉ vì quên một con số trong báo cáo.',
+    'Mình thấy mình không xứng đáng được nghỉ khi việc còn dang dở.',
+    'Nhìn lại cả tuần chỉ thấy toàn khuyết điểm của bản thân.',
+  ] },
+  { code: 'RUMINATION', expect: 'ELIGIBLE', daysAgo: [6, 14, 22], sentences: [
+    'Cả tối mình cứ tua lại câu nói vụng về với chị trưởng phòng.',
+    'Mình vẫn không dứt ra được chuyện bị góp ý trước cả nhóm hôm trước.',
+    'Giá như hôm đó mình trả lời khác, câu này cứ lặp trong đầu mãi.',
+  ] },
+  { code: 'MIND_READING', expect: 'NOT_ELIGIBLE_SINGLE_WEEK', sameWeekAround: 10, sentences: [
+    'Chắc cả nhóm nghĩ mình làm chậm nên mới không hỏi ý mình.',
+    'Bạn ấy đọc tin nhắn mà không trả lời, chắc đang khó chịu với mình.',
+    'Nhìn mặt anh quản lý là biết anh ấy không hài lòng về mình.',
+  ] },
+  { code: 'SHOULD_STATEMENTS', expect: 'NOT_ELIGIBLE_TOO_FEW', daysAgo: [5, 18], sentences: [
+    'Đáng lẽ mình phải xử lý xong hết việc trước khi được phép mệt.',
+    'Mình phải luôn tỏ ra ổn trước mọi người, không được để ai lo.',
+  ] },
+];
+// Sound like a pattern but are not; the extractor should return nothing for them.
+const PLANTED_HARD_NEGATIVES = [
+  { confusableWith: 'CATASTROPHIZING', daysAgo: 3,
+    sentence: 'Mình hơi lo buổi báo cáo ngày mai nên đã chuẩn bị thêm vài số liệu dự phòng.' },
+  { confusableWith: 'RUMINATION', daysAgo: 11,
+    sentence: 'Nghĩ lại buổi họp hôm qua, mình rút ra được một điều cần nói rõ hơn.' },
+  { confusableWith: 'HARSH_SELF_CRITICISM', daysAgo: 19,
+    sentence: 'Mình làm sai một bước nhỏ, ghi lại để lần sau chú ý là được.' },
+  { confusableWith: 'SHOULD_STATEMENTS', daysAgo: 26,
+    sentence: 'Mình phải nộp tờ khai trước thứ Sáu nên tối nay làm luôn.' },
+];
 
 const wordCount = (text) => text.split(/\s+/).filter(Boolean).length;
 
@@ -551,6 +602,161 @@ async function rewriteShortEntries(from, to) {
   return rewritten;
 }
 
+// ISO-8601 week key ("2026-W47") of a YYYY-MM-DD local date.
+function isoWeek(iso) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return `${d.getUTCFullYear()}-W${String(Math.ceil(((d - yearStart) / 86400000 + 1) / 7)).padStart(2, '0')}`;
+}
+
+// Appends one sentence to the theme paragraph (or the last paragraph) of a TipTap document.
+function appendSentence(doc, sentence) {
+  const copy = structuredClone(doc);
+  const paragraphs = (copy.content ?? []).filter((n) => n.type === 'paragraph' && n.content?.length);
+  const target = paragraphs[1] ?? paragraphs[paragraphs.length - 1];
+  if (!target) {
+    copy.content = [...(copy.content ?? []), { type: 'paragraph', content: [{ type: 'text', text: sentence }] }];
+    return copy;
+  }
+  const last = target.content[target.content.length - 1];
+  if (last.type === 'text') last.text = `${last.text.trimEnd()} ${sentence}`;
+  else target.content.push({ type: 'text', text: ` ${sentence}` });
+  return copy;
+}
+
+// --plant-patterns: plants PLANTED_PATTERNS / PLANTED_HARD_NEGATIVES into existing entries of the last
+// 30 days and writes the answer key. Refuses to plant twice into the same window.
+async function plantPatterns() {
+  const to = dayInfo(0).iso;
+  const from = dayInfo(29).iso;
+  const entries = await listEntries(from, to);
+  const details = new Map();
+  for (const e of entries) {
+    const { data, etag } = await http('GET', `/api/v1/journal-entries/${e.id}`);
+    details.set(e.id, { data, etag, localDate: e.localDate });
+  }
+  const allPlanted = [...PLANTED_PATTERNS.flatMap((p) => p.sentences), ...PLANTED_HARD_NEGATIVES.map((h) => h.sentence)];
+  const already = [...details.values()].some((d) => allPlanted.some((s) => plainText(d.data.contentJson).includes(s)));
+  if (already) fail('Cửa sổ 30 ngày đã có câu được cài từ lần chạy trước. Dùng --reset rồi seed lại nếu muốn cài mới.');
+
+  const used = new Set();
+  const byDate = new Map();
+  for (const e of entries) {
+    if (!byDate.has(e.localDate)) byDate.set(e.localDate, []);
+    byDate.get(e.localDate).push(e.id);
+  }
+  // Nearest unused entry to `daysAgo` (searching up to 6 days either way, since the seed leaves gaps).
+  const nearest = (daysAgo) => {
+    for (const offset of [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6]) {
+      const d = daysAgo + offset;
+      if (d < 0 || d > 29) continue;
+      const id = (byDate.get(dayInfo(d).iso) ?? []).find((x) => !used.has(x));
+      if (id) { used.add(id); return id; }
+    }
+    fail(`Không tìm được nhật ký gần ngày cách đây ${daysAgo} ngày. Seed thêm dữ liệu trước khi cài.`);
+  };
+  // `count` unused entries of one ISO week, starting from the week of `daysAgo`, moving older.
+  const sameWeek = (daysAgo, count) => {
+    for (let start = daysAgo; start <= 29; start += 7) {
+      const week = isoWeek(dayInfo(start).iso);
+      const ids = entries.filter((e) => isoWeek(e.localDate) === week && !used.has(e.id)).map((e) => e.id);
+      if (ids.length >= count) { ids.slice(0, count).forEach((id) => used.add(id)); return ids.slice(0, count); }
+    }
+    fail('Không tìm được tuần nào có đủ nhật ký để cài nhóm cùng tuần.');
+  };
+
+  const plan = [];
+  for (const p of PLANTED_PATTERNS) {
+    const ids = p.sameWeekAround != null ? sameWeek(p.sameWeekAround, p.sentences.length) : p.daysAgo.map(nearest);
+    ids.forEach((id, i) => plan.push({ kind: 'PATTERN', code: p.code, expect: p.expect, id, sentence: p.sentences[i] }));
+  }
+  for (const h of PLANTED_HARD_NEGATIVES) {
+    plan.push({ kind: 'HARD_NEGATIVE', confusableWith: h.confusableWith, id: nearest(h.daysAgo), sentence: h.sentence });
+  }
+
+  for (const [i, item] of plan.entries()) {
+    const { data, etag } = details.get(item.id);
+    await http('PATCH', `/api/v1/journal-entries/${item.id}`, {
+      headers: { 'If-Match': etag },
+      body: { title: data.title, contentJson: appendSentence(data.contentJson, item.sentence) },
+    });
+    process.stdout.write(`\r  Cài câu mẫu: ${i + 1}/${plan.length}   `);
+  }
+  console.log('');
+
+  const key = {
+    taxonomyVersion: 'tp-v1',
+    window: { from, to },
+    rule: '>= 3 entries over >= 2 ISO weeks',
+    generatedAt: new Date().toISOString(),
+    patterns: PLANTED_PATTERNS.map((p) => {
+      const items = plan.filter((x) => x.code === p.code)
+        .map((x) => ({ entryId: x.id, localDate: details.get(x.id).localDate, sentence: x.sentence }));
+      return { code: p.code, expect: p.expect, entries: items.length,
+        weeks: new Set(items.map((x) => isoWeek(x.localDate))).size, items };
+    }),
+    hardNegatives: plan.filter((x) => x.kind === 'HARD_NEGATIVE')
+      .map((x) => ({ confusableWith: x.confusableWith, entryId: x.id, localDate: details.get(x.id).localDate, sentence: x.sentence })),
+  };
+  const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'scratch', 'planted-patterns.json');
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, JSON.stringify(key, null, 2));
+  console.log(`Đã cài ${plan.length} câu. Đáp án: backend/scratch/planted-patterns.json`);
+  for (const p of key.patterns) {
+    console.log(`  ${p.code}: ${p.entries} bài / ${p.weeks} tuần → ${p.expect}`);
+    if (p.expect === 'ELIGIBLE' && (p.entries < 3 || p.weeks < 2))
+      console.log(`    Cảnh báo: dữ liệu seed thiếu ngày nên ${p.code} không còn đủ điều kiện; đáp án này không đúng nữa.`);
+  }
+  // Planting bumps contentVersion, so earlier synthetic analyses of those entries are stale now.
+  await analyzeAndRefresh();
+}
+
+// --extract-patterns: synthetic account only. Runs the dev extractor until no entry of the window is waiting.
+async function extractPatterns() {
+  for (const type of ['AI_PROCESSING', 'THINKING_PATTERNS']) {
+    await http('PUT', `/api/v1/me/consents/${type}`, { body: { documentVersion: 'v1', granted: true } });
+  }
+  const total = { read: 0, signals: 0, skipped: 0, failed: 0 };
+  for (let round = 0; round < 10; round++) {
+    const { data } = await http('POST', '/api/v1/dev/pattern-signals:extract');
+    if (data.status !== 'OK') fail(`Bộ trích trả về ${data.status}.`);
+    for (const k of Object.keys(total)) total[k] += data[k];
+    process.stdout.write(`\r  Đọc nhật ký: ${total.read} bài, ${total.signals} tín hiệu, ${total.failed} lỗi   `);
+    if (!data.more) break;
+  }
+  console.log('');
+  console.log(`Xong: đọc ${total.read} bài, ${total.signals} tín hiệu, bỏ qua ${total.skipped}, lỗi ${total.failed}.`);
+  if (total.read === 0 && total.skipped === 0) {
+    console.log('  Không có bài nào để đọc: các bài đã được đọc, hoặc chưa được safety cho phép (cần MYLOG_SAFETY_DEV_ALLOW=true khi tạo/sửa bài).');
+  }
+  await refreshPatternCards();
+}
+
+// Refreshes the thinking-pattern cards and, when an answer key from --plant-patterns exists, checks them
+// against it: every card must be a code planted as ELIGIBLE, and codes planted as NOT_ELIGIBLE must not appear.
+async function refreshPatternCards() {
+  const { data } = await http('POST', '/api/v1/patterns:refresh');
+  console.log(`Thẻ kiểu suy nghĩ: ${data.items.length}`);
+  for (const card of data.items) {
+    console.log(`  [${card.code}] ${card.entryCount} bài / ${card.weekCount} tuần — ${card.narrative}`);
+    for (const q of card.quotes) console.log(`      “${q.text}” (${q.date})`);
+  }
+  const keyPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'scratch', 'planted-patterns.json');
+  let key;
+  try { key = JSON.parse(readFileSync(keyPath, 'utf8')); } catch { return; }
+  const eligible = new Set(key.patterns.filter((p) => p.expect === 'ELIGIBLE').map((p) => p.code));
+  const notEligible = new Set(key.patterns.filter((p) => p.expect !== 'ELIGIBLE').map((p) => p.code));
+  const codes = data.items.map((c) => c.code);
+  const wrong = codes.filter((c) => notEligible.has(c));
+  const unplanted = codes.filter((c) => !eligible.has(c) && !notEligible.has(c));
+  console.log('So với đáp án (backend/scratch/planted-patterns.json):');
+  console.log(`  Được phép thành thẻ: ${[...eligible].join(', ')}. Mỗi tuần chỉ thêm 1 thẻ mới, nên lần đầu chỉ thấy 1.`);
+  console.log(wrong.length ? `  SAI: hiện thẻ cho mã không đủ điều kiện: ${wrong.join(', ')}` : '  Không có thẻ nào cho mã không đủ điều kiện.');
+  if (unplanted.length) console.log(`  Thẻ cho mã không được cài (bộ đọc tự nhận ra trong nội dung seed): ${unplanted.join(', ')}`);
+}
+
 // Option 1a + pattern insights: synthetic emotions/topics for the last 30 days, then a refresh.
 async function analyzeAndRefresh() {
   // Synthetic test account only: allow AI wording of insight sentences (facts only, never journal text).
@@ -586,6 +792,8 @@ async function main() {
   await login(creds.email, creds.password);
 
   if (args['analyze-only']) { await analyzeAndRefresh(); return; }
+  if (args['plant-patterns']) { await plantPatterns(); if (!args['extract-patterns']) return; }
+  if (args['extract-patterns']) { await extractPatterns(); return; }
 
   const plan = buildPlan();
   const from = plan[plan.length - 1].iso;

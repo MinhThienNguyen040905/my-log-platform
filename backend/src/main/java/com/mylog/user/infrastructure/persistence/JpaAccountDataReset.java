@@ -11,7 +11,8 @@ import java.util.UUID;
 
 /**
  * Native deletes in foreign-key order. Child rows (entry tags, analyses with their emotions/topics, check-in
- * activities, insight/report evidence, habit completions) go with their parents through ON DELETE CASCADE;
+ * activities, insight/report evidence, thinking-pattern signals and card evidence, habit completions) go with
+ * their parents through ON DELETE CASCADE;
  * rows whose links are SET NULL (safety events, AI usage records) are deleted first. Draft images not yet
  * attached to an entry are deleted by owner.
  */
@@ -26,6 +27,9 @@ class JpaAccountDataReset implements AccountDataReset {
             "DELETE FROM safety_events WHERE user_id=:user OR journal_entry_id IN (" + ENTRIES + ")",
             "DELETE FROM reports WHERE user_id=:user",
             "DELETE FROM insights WHERE user_id=:user",
+            // Cards first (their evidence cascades), then extractions with their signals.
+            "DELETE FROM pattern_recognitions WHERE user_id=:user",
+            "DELETE FROM entry_pattern_extractions WHERE user_id=:user",
             "DELETE FROM ai_jobs WHERE user_id=:user OR (aggregate_type='JOURNAL_ENTRY' AND aggregate_id IN (" + ENTRIES + "))",
             "DELETE FROM journal_assets WHERE user_id=:user",
             "DELETE FROM journal_entries WHERE user_id=:user",

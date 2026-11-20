@@ -10,6 +10,7 @@ import { listInsights } from '../api/insights';
 import { isPatternInsight } from '../utils/pattern-insights';
 import { INSIGHT_HISTORY_RANGE, INSIGHT_MIN_JOURNAL_DAYS } from '../utils/insight-unlock';
 import { PatternInsightsPanel } from './PatternInsightsPanel';
+import { ThinkingPatternsPanel } from './ThinkingPatternsPanel';
 import { createReport, getReport, lastFinishedPeriodStart, latestPerPeriod, listReports, ReportDetailContent, type ReportType } from '@/features/reporting';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { formatDateRange } from '@/lib/date/format-date';
@@ -304,6 +305,7 @@ export function InsightView() {
           <div className="lg:col-span-7 flex flex-col gap-6">
             <PatternInsightsPanel insights={patternInsights} loading={insightsLoading} error={insightsError}
               onRetry={() => void insightsQuery.refetch()} />
+            <ThinkingPatternsPanel userId={userId} />
           </div>
 
           {/* RIGHT COLUMN: Micro-Action & Wellness Habit Checklist (5 cols) */}

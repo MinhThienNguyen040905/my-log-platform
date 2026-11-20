@@ -14,6 +14,7 @@ const CONSENTS: Record<string, { title: string; description: string; optional: b
   AI_PROCESSING: { title: 'Phân tích bài viết', description: 'Cho phép MyLog nhận ra cảm xúc và chủ đề trong bài viết để tạo gợi ý và bản nhìn lại.', optional: true },
   ANALYTICS: { title: 'Thống kê sử dụng', description: 'Gửi số liệu sử dụng ẩn danh để cải thiện ứng dụng. Không gồm nội dung nhật ký.', optional: true },
   MODEL_TRAINING: { title: 'Cải thiện mô hình', description: 'Cho phép dùng dữ liệu đã ẩn danh để huấn luyện mô hình.', optional: true },
+  THINKING_PATTERNS: { title: 'Nhận diện kiểu suy nghĩ', description: 'Cho phép MyLog đọc nhật ký để nhận ra những kiểu suy nghĩ lặp lại và hiện chúng trong Góc thấu hiểu. Không phải chẩn đoán.', optional: true },
   PRIVACY: { title: 'Chính sách quyền riêng tư', description: 'Bạn đã đồng ý khi tạo tài khoản.', optional: false },
   TERMS: { title: 'Điều khoản sử dụng', description: 'Bạn đã đồng ý khi tạo tài khoản.', optional: false },
 };

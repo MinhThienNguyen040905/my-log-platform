@@ -163,12 +163,38 @@ Phân tích một **bài** nhật ký và insight từ **nhiều ngày** là hai
 ```text
 POST /insights:refresh
   → PatternDetectors (SQL + Java, 30 ngày): điểm số, check-in activity, thẻ, mã cảm xúc/chủ đề đã lưu
+  → ContrastDetectors: ngày ngoại lệ + so sánh với 30 ngày trước đó (chỉ đọc để so sánh)
+  → ExpectedPatterns bỏ các liên hệ hiển nhiên
   → tối đa 5 finding có sample size + evidence
   → InsightTemplates: câu mẫu đã duyệt (STATISTICAL)
   → [tùy chọn] LlmInsightNarrator: chỉ gửi facts + câu mẫu, không gửi nhật ký/ID/tên thẻ
   → InsightNarrativeValidator + safety screening đầu ra → AI_ASSISTED, lỗi thì giữ câu mẫu
   → lưu insight (narrative mã hóa) + evidence
 ```
+
+Từ `pattern-30d-v2`, insight tránh lặp lại điều người dùng đã biết:
+
+- [`ExpectedPatterns`](../src/main/java/com/mylog/insight/domain/ExpectedPatterns.java) bỏ liên hệ hiển nhiên:
+  ngày họp nhiều/làm thêm giờ có tâm trạng thấp hơn, ngủ nhiều đi cùng tâm trạng tốt, bài về công việc mang sắc
+  thái lo âu/bực bội/buồn/sợ, cuối tuần nhẹ hơn và thứ Hai nặng hơn. Chiều ngược lại (ví dụ ngày họp lại vui hơn)
+  vẫn được giữ. Hoạt động tích cực như đi bộ vẫn hiện vì đó là nguồn lực riêng của người dùng.
+- [`ContrastDetectors`](../src/main/java/com/mylog/insight/domain/ContrastDetectors.java) thêm bốn loại:
+  `EXCEPTION_DAYS` (những ngày thường nặng mà vẫn ổn, và điều chúng có chung: hoạt động, chủ đề, thẻ hoặc ngủ đủ),
+  `CONDITION_SHIFT` (một điều kiện nặng hơn/nhẹ hơn so với 30 ngày trước), `TOPIC_SHIFT` (tỉ lệ bài về một chủ đề
+  thay đổi) và `RECOVERY_SHIFT` (số ngày từ ngày tâm trạng ≤ 4 trở lại ≥ 6). Cửa sổ 30 ngày trước đó chỉ dùng để so
+  sánh; insight vẫn gắn với 30 ngày gần nhất. Khi `EXCEPTION_DAYS` đã nói về một hoạt động/thẻ, liên hệ trơn của
+  chính hoạt động/thẻ đó bị bỏ để không lặp.
+- Mọi câu mẫu kết thúc bằng câu hỏi gợi mở hoặc một thử nghiệm nhỏ. Khi ngày ngoại lệ có chung một điều, câu mẫu
+  gợi một khả năng từ các nhu cầu cơ bản đã được nghiên cứu (kết nối, cơ thể vận động/nghỉ ngơi, thời gian tự chọn)
+  dưới dạng câu hỏi để người dùng tự kiểm chứng, không gán loại tính cách.
+- `CONDITION_SHIFT`/`RECOVERY_SHIFT` chiều xấu đi luôn giữ câu mẫu, như xu hướng mood đi xuống.
+- Các bước này vẫn chỉ dùng dữ liệu có cấu trúc; chưa đọc nội dung nhật ký. Khung tâm lý dựa trên chữ người dùng viết
+  cần analyzer đọc nội dung (dự kiến model local) và consent/provider policy riêng. Kế hoạch:
+  [THINKING_PATTERN_RECOGNITION_PLAN.md](THINKING_PATTERN_RECOGNITION_PLAN.md). Hiện mới có prototype chỉ chạy
+  local: bảng V22, consent `THINKING_PATTERNS`, bộ trích `fake`/`openai` (`MYLOG_PATTERNS_*`, từ chối khởi động
+  ngoài profile `local`), endpoint dev `POST /api/v1/dev/pattern-signals:extract`, và thẻ 30 ngày qua
+  `/api/v1/patterns` (luật xác định trong `ThinkingPatternRules`, không gọi LLM, câu chữ thẻ là bản nháp chưa
+  được người chuyên môn duyệt). Chưa có giao diện.
 
 Report tuần/tháng dùng cùng cơ chế: `ReportNarratives` dựng câu mẫu từ snapshot, `NarrativeRewriter` (dùng chung với
 pattern insight) chỉ viết lại khi đủ điều kiện dưới đây, và kỳ có tâm trạng giảm hoặc căng thẳng tăng rõ luôn giữ câu
