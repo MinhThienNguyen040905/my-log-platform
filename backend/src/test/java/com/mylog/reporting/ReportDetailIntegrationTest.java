@@ -132,8 +132,8 @@ class ReportDetailIntegrationTest {
 
     @Test void nightlyRefreshRunsOncePerLocalDayAndOnlyWithNewData() {
         UUID owner = user();
-        // Sleep and mood move together, so the sleep–mood pattern is found and stored.
-        for (int i = 0; i < 10; i++) entry(owner, LocalDate.of(2026, 11, 11).minusDays(i), 5 + i % 3, "Synthetic " + i, 300 + (i % 3) * 90);
+        // Sleep and mood move in opposite directions (unusual, so not filtered as expected): the pattern is stored.
+        for (int i = 0; i < 10; i++) entry(owner, LocalDate.of(2026, 11, 11).minusDays(i), 5 + i % 3, "Synthetic " + i, 480 - (i % 3) * 90);
         int localHour = NOW.atZone(ZoneId.of("Asia/Ho_Chi_Minh")).getHour();
         assertTrue(insights.refreshDueUsers(localHour, false) >= 1);
         String firstRun = lastRefresh(owner);

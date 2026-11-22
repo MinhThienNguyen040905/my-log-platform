@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { JournalEmotion } from '@/types';
 import { ApiError } from '@/lib/api/client';
-import { dismissCompanionHabitSuggestion, grantCompanionConsent, postCompanionTurn } from '../api/companion';
+import { grantCompanionConsent, postCompanionTurn } from '../api/companion';
 import { buildCompanionDraft } from '../utils/companion-draft';
 import type {
   CompanionActionCode,
@@ -68,7 +68,8 @@ export function useCompanionConversation(options: UseCompanionConversationOption
   const historyRef = useRef<CompanionHistoryTurn[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const prevMessageCountRef = useRef(0);
-  const habitShownTodayRef = useRef(false);
+  /** "Không, cảm ơn" chỉ ẩn gợi ý thói quen trong cuộc trò chuyện này; backend không giới hạn số lần. */
+  const habitDismissedRef = useRef(false);
 
   useEffect(() => {
     if (messages.length > prevMessageCountRef.current && !isOpen) setUnread(true);
@@ -91,6 +92,7 @@ export function useCompanionConversation(options: UseCompanionConversationOption
     setClosingRating(null);
     setToolsOnlyReason(null);
     setHabitSuggestion(null);
+    habitDismissedRef.current = false;
     setInsertedQuestions(new Set());
   }, []);
 
@@ -134,8 +136,7 @@ export function useCompanionConversation(options: UseCompanionConversationOption
           ]);
           setChips(response.chips);
           const currentMood = optionsRef.current.getMood().selectedEmotion;
-          if (response.habitSuggestion && !habitShownTodayRef.current && currentMood !== 'very_bad') {
-            habitShownTodayRef.current = true;
+          if (response.habitSuggestion && !habitDismissedRef.current && currentMood !== 'very_bad') {
             setHabitSuggestion(response.habitSuggestion);
           }
           setPanelState(response.nextState === 'CLOSING' ? 'CLOSING' : 'LISTENING');
@@ -290,7 +291,7 @@ export function useCompanionConversation(options: UseCompanionConversationOption
 
   const dismissHabitSuggestion = useCallback(() => {
     setHabitSuggestion(null);
-    void dismissCompanionHabitSuggestion().catch(() => {});
+    habitDismissedRef.current = true;
   }, []);
 
   return {

@@ -1,6 +1,5 @@
 package com.mylog.journal;
 
-import com.mylog.journal.application.CompanionHabitPreferenceStore;
 import com.mylog.journal.application.CompanionHabitSuggestionService;
 import com.mylog.journal.application.command.CompanionTurnCommand;
 import com.mylog.selfcare.application.SelfCareCompanionQuery;
@@ -12,10 +11,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,16 +22,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CompanionHabitSuggestionServiceTest {
     private final UUID userId = UUID.randomUUID();
-    private final Clock clock = Clock.fixed(Instant.parse("2026-11-08T10:00:00Z"), ZoneId.of("UTC"));
 
     private Optional<CompanionHabitCandidate> tier1Result = Optional.empty();
     private Optional<CompanionHabitCandidate> tier2Result = Optional.empty();
     private final AtomicInteger tier1Calls = new AtomicInteger();
     private final AtomicInteger tier2Calls = new AtomicInteger();
-
-    private Optional<CompanionHabitPreferenceStore.Preference> currentPref = Optional.empty();
-    private LocalDate lastRecordedSuggestedDate;
-    private Instant lastRecordedDismissedUntil;
+    private String lastToolCode;
 
     private CompanionHabitSuggestionService service;
 
@@ -44,6 +37,7 @@ class CompanionHabitSuggestionServiceTest {
             @Override
             public Optional<CompanionHabitCandidate> findUncompletedActiveHabitByToolCode(UUID uid, String toolCode) {
                 tier1Calls.incrementAndGet();
+                lastToolCode = toolCode;
                 return tier1Result;
             }
 
@@ -53,36 +47,53 @@ class CompanionHabitSuggestionServiceTest {
                 return tier2Result;
             }
         };
-
-        CompanionHabitPreferenceStore preferenceStore = new CompanionHabitPreferenceStore() {
-            @Override
-            public Optional<Preference> find(UUID uid) {
-                return currentPref;
-            }
-
-            @Override
-            public void recordSuggestedOn(UUID uid, LocalDate localDate, Instant now) {
-                lastRecordedSuggestedDate = localDate;
-            }
-
-            @Override
-            public void dismissUntil(UUID uid, Instant dismissedUntil, Instant now) {
-                lastRecordedDismissedUntil = dismissedUntil;
-            }
-        };
-
-        UserProfileUseCase userProfiles = new StubUserProfileUseCase();
-        service = new CompanionHabitSuggestionService(selfCareQuery, preferenceStore, userProfiles, clock);
+        service = new CompanionHabitSuggestionService(selfCareQuery);
     }
 
     @Test
-    void neverSuggestsOnOpenOrFreeTextOrVeryBadMood() {
-        assertTrue(service.suggestForTurn(userId, turn("OPEN", "sad", "BREATHING_2MIN")).isEmpty());
-        assertTrue(service.suggestForTurn(userId, turn("FREE_TEXT", "sad", "BREATHING_2MIN")).isEmpty());
-        assertTrue(service.suggestForTurn(userId, turn("TOOL_COMPLETED", "very_bad", "BREATHING_2MIN")).isEmpty());
-        assertTrue(service.suggestForTurn(userId, turn("CLOSING", "very_bad", null)).isEmpty());
+    void neverSuggestsForVeryBadMoodEvenWhenTheAiAsks() {
+        assertTrue(service.suggestForTurn(userId, turn("FREE_TEXT", "very_bad", null), "EVENING_BREATHING").isEmpty());
+        assertTrue(service.suggestForTurn(userId, turn("TOOL_COMPLETED", "very_bad", "BREATHING_2MIN"), null).isEmpty());
+        assertTrue(service.suggestForTurn(userId, turn("CLOSING", "very_bad", null), null).isEmpty());
         assertEquals(0, tier1Calls.get());
         assertEquals(0, tier2Calls.get());
+    }
+
+    @Test
+    void chatTurnsSuggestOnlyWhatTheAiChoseFromTheCatalogue() {
+        assertTrue(service.suggestForTurn(userId, turn("OPEN", "sad", null), null).isEmpty());
+        assertTrue(service.suggestForTurn(userId, turn("FREE_TEXT", "sad", null), "MADE_UP_HABIT").isEmpty());
+
+        var result = service.suggestForTurn(userId, turn("FREE_TEXT", "happy", null), "GENTLE_WALK");
+        assertTrue(result.isPresent());
+        assertEquals("CREATE_FROM_TEMPLATE", result.get().type());
+        assertEquals("GENTLE_WALK", result.get().templateCode());
+        // GENTLE_WALK has no linked tool, so there is nothing to look up for an existing habit.
+        assertEquals(0, tier1Calls.get());
+        assertEquals(0, tier2Calls.get());
+    }
+
+    @Test
+    void chatTurnOffersToLogAnExistingHabitInsteadOfADuplicate() {
+        UUID habitId = UUID.randomUUID();
+        LocalDate habitToday = LocalDate.of(2026, 11, 8);
+        tier1Result = Optional.of(new CompanionHabitCandidate(
+                habitId, "Thở sâu mỗi tối", BigDecimal.valueOf(2), "minutes",
+                "BREATHING_2MIN", habitToday, null));
+
+        var result = service.suggestForTurn(userId, turn("FREE_TEXT", "angry", null), "EVENING_BREATHING");
+        assertTrue(result.isPresent());
+        assertEquals("LOG_EXISTING", result.get().type());
+        assertEquals(habitId, result.get().habitId());
+        assertEquals("BREATHING_2MIN", lastToolCode);
+    }
+
+    @Test
+    void noDailyCapOrDismissalWindow() {
+        for (int i = 0; i < 3; i++) {
+            assertTrue(service.suggestForTurn(userId, turn("CLOSING", "sad", null), null).isPresent());
+            assertTrue(service.suggestForTurn(userId, turn("FREE_TEXT", "sad", null), "SLEEP_BEFORE_23H").isPresent());
+        }
     }
 
     @Test
@@ -93,29 +104,27 @@ class CompanionHabitSuggestionServiceTest {
                 habitId, "Thở sâu mỗi tối", BigDecimal.valueOf(2), "minutes",
                 "BREATHING_2MIN", habitToday, null));
 
-        var result = service.suggestForTurn(userId, turn("TOOL_COMPLETED", "sad", "BREATHING_2MIN"));
+        var result = service.suggestForTurn(userId, turn("TOOL_COMPLETED", "sad", "BREATHING_2MIN"), null);
         assertTrue(result.isPresent());
         assertEquals("LOG_EXISTING", result.get().type());
         assertEquals(habitId, result.get().habitId());
         assertEquals(habitToday, result.get().localDate());
         assertTrue(result.get().text().contains("Thở sâu mỗi tối"));
 
-        // Point 9: Priority 2 (mood correlation) must NOT be called when Priority 1 matches
+        // Priority 2 (mood correlation) must NOT be called when Priority 1 matches
         assertEquals(1, tier1Calls.get());
         assertEquals(0, tier2Calls.get());
-        assertEquals(habitToday, lastRecordedSuggestedDate);
     }
 
     @Test
     void priority2UsesNonCausalCorrelationCopyWhenToolCodeMisses() {
         UUID habitId = UUID.randomUUID();
         LocalDate habitToday = LocalDate.of(2026, 11, 8);
-        tier1Result = Optional.empty();
         tier2Result = Optional.of(new CompanionHabitCandidate(
                 habitId, "Đi bộ chiều", BigDecimal.valueOf(15), "minutes",
                 null, habitToday, new BigDecimal("0.85")));
 
-        var result = service.suggestForTurn(userId, turn("TOOL_COMPLETED", "sad", "BREATHING_2MIN"));
+        var result = service.suggestForTurn(userId, turn("TOOL_COMPLETED", "sad", "BREATHING_2MIN"), null);
         assertTrue(result.isPresent());
         assertEquals("LOG_EXISTING", result.get().type());
         assertEquals(habitId, result.get().habitId());
@@ -125,30 +134,14 @@ class CompanionHabitSuggestionServiceTest {
 
     @Test
     void priority3FallsBackToReviewedTemplate() {
-        tier1Result = Optional.empty();
-        tier2Result = Optional.empty();
-
-        var result = service.suggestForTurn(userId, turn("TOOL_COMPLETED", "angry", "BREATHING_2MIN"));
+        var result = service.suggestForTurn(userId, turn("TOOL_COMPLETED", "angry", "BREATHING_2MIN"), null);
         assertTrue(result.isPresent());
         assertEquals("CREATE_FROM_TEMPLATE", result.get().type());
         assertEquals("EVENING_BREATHING", result.get().templateCode());
         assertEquals("BREATHING_2MIN", result.get().presetToolCode());
-    }
 
-    @Test
-    void enforcesOncePerDayAndSevenDayDismissal() {
-        LocalDate today = LocalDate.of(2026, 11, 8);
-        currentPref = Optional.of(
-                new CompanionHabitPreferenceStore.Preference(userId, today, null, clock.instant()));
-        assertTrue(service.suggestForTurn(userId, turn("CLOSING", "sad", null)).isEmpty());
-
-        currentPref = Optional.of(
-                new CompanionHabitPreferenceStore.Preference(userId, null,
-                        clock.instant().plusSeconds(3600), clock.instant()));
-        assertTrue(service.suggestForTurn(userId, turn("CLOSING", "sad", null)).isEmpty());
-
-        service.dismissForSevenDays(userId);
-        assertEquals(Instant.parse("2026-11-15T10:00:00Z"), lastRecordedDismissedUntil);
+        var afterMusic = service.suggestForTurn(userId, turn("TOOL_COMPLETED", "sad", "AMBIENT"), null);
+        assertEquals("CALM_AUDIO_PAUSE", afterMusic.orElseThrow().templateCode());
     }
 
     private static CompanionTurnCommand turn(String intent, String moodCode, String completedTool) {

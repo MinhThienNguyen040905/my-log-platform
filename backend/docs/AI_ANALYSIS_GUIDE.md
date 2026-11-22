@@ -38,7 +38,7 @@ AI không chẩn đoán hoặc điều trị. Risk classifier phục vụ quyế
 
 Safety và nội dung gợi ý theo bản nháp đều thuộc backend. Editor hiện **không tự sinh gợi ý sau khi ngừng gõ và không tự kết luận safety**. FE đăng nhập/journal vẫn dùng `JournalContext`/`localStorage` mock, chưa cấp JWT thật để gọi API bản nháp; bản nháp/bài viết local chưa được mã hóa theo backend và không phù hợp production. Editor đã bỏ đường tạo reflection giả trước khi lưu. Khi tích hợp auth thật, FE chỉ debounce 3–5 giây, gửi plain text qua API có xác thực và hiển thị `status`/`suggestion` backend trả về; nếu người dùng gõ tiếp thì hủy hoặc bỏ kết quả cũ. Gợi ý không được dùng thay cho safety trên request lưu bài.
 
-Backend có `POST /api/v1/journal-writing-suggestions`, dùng cho trợ lý trong journal editor (xem [COMPANION_CHATBOT_PLAN.md](COMPANION_CHATBOT_PLAN.md)). Request chấp nhận cả dạng cũ `{ "text": "..." }` (tương thích ngược) và dạng mới `{ intent, message, draft, context, completedTool, history }`, trong đó `draft.text` tối đa 4.000 ký tự và `history` tối đa 8 lượt. Response gồm `status`, `reply`, `questions`, `suggestedTitle`, `immediateActions`, `habitSuggestion`, `chips`, `nextState`, `source`, `promptVersion`. Endpoint yêu cầu JWT, giới hạn quota `companion-turn` 40 lần/15 phút/user, kiểm tra consent `AI_PROCESSING` trước khi screen toàn bộ cửa sổ (bản nháp + các lượt user trong `history` + tin nhắn mới), không lưu hội thoại. Chỉ `ALLOW` mới gọi `CompanionResponder` để trả nội dung **do backend sở hữu**; `SAFETY_FLOW` không trả nội dung; `CONSTRAIN` trả `BLOCKED` kèm một câu trung tính dựng sẵn, không có câu hỏi; `FAIL_SAFE` trả `UNAVAILABLE`. Cờ `MYLOG_WRITING_SUGGESTIONS_ENABLED` mặc định `false` vì nội dung câu hỏi, classifier và policy chưa được duyệt. Khi bật, hệ thống mặc định dùng `TemplateCompanionResponder` (kịch bản cố định theo cảm xúc, **không gọi LLM**); khi bật thêm `MYLOG_COMPANION_GENERATION_ENABLED=true` (hiện ở Giai đoạn 4a chỉ dùng nội bộ với dữ liệu giả), `LlmCompanionResponder` gọi OpenAI Chat Completions 1 lần/lượt, kiểm tra đầu ra qua `CompanionOutputValidator` và safety screening chiều ra, rồi tự động quay về `TemplateCompanionResponder` nếu lỗi, quá giờ hoặc không đạt chuẩn. Ở lượt `TOOL_COMPLETED`/`CLOSING`, `CompanionHabitSuggestionService` đính kèm tối đa 1 `habitSuggestion`/ngày (không gửi danh sách thói quen cho LLM) và nút từ chối gọi endpoint riêng `POST /api/v1/companion/habit-suggestions/dismiss`.
+Backend có `POST /api/v1/journal-writing-suggestions`, dùng cho trợ lý trong journal editor (xem [COMPANION_CHATBOT_PLAN.md](COMPANION_CHATBOT_PLAN.md)). Request chấp nhận cả dạng cũ `{ "text": "..." }` (tương thích ngược) và dạng mới `{ intent, message, draft, context, completedTool, history }`, trong đó `draft.text` tối đa 4.000 ký tự và `history` tối đa 8 lượt. Response gồm `status`, `reply`, `questions`, `suggestedTitle`, `immediateActions`, `habitSuggestion`, `chips`, `nextState`, `source`, `promptVersion`. Endpoint yêu cầu JWT, giới hạn quota `companion-turn` 40 lần/15 phút/user, kiểm tra consent `AI_PROCESSING` trước khi screen toàn bộ cửa sổ (bản nháp + các lượt user trong `history` + tin nhắn mới), không lưu hội thoại. Chỉ `ALLOW` mới gọi `CompanionResponder` để trả nội dung **do backend sở hữu**; `SAFETY_FLOW` không trả nội dung; `CONSTRAIN` trả `BLOCKED` kèm một câu trung tính dựng sẵn, không có câu hỏi; `FAIL_SAFE` trả `UNAVAILABLE`. Cờ `MYLOG_WRITING_SUGGESTIONS_ENABLED` mặc định `false` vì nội dung câu hỏi, classifier và policy chưa được duyệt. Khi bật, hệ thống mặc định dùng `TemplateCompanionResponder` (kịch bản cố định theo cảm xúc, **không gọi LLM**); khi bật thêm `MYLOG_COMPANION_GENERATION_ENABLED=true` (hiện ở Giai đoạn 4a chỉ dùng nội bộ với dữ liệu giả), `LlmCompanionResponder` gọi OpenAI Chat Completions 1 lần/lượt, kiểm tra đầu ra qua `CompanionOutputValidator` và safety screening chiều ra, rồi tự động quay về `TemplateCompanionResponder` nếu lỗi, quá giờ hoặc không đạt chuẩn. Model chọn 0–2 nút công cụ dịu (`BREATHING_2MIN`, `AMBIENT`) và có thể chọn một mã mẫu thói quen trong `HabitTemplateCatalog`; backend lọc lại mọi mã. `CompanionHabitSuggestionService` đính kèm `habitSuggestion` khi model chọn mẫu, hoặc ở lượt `TOOL_COMPLETED`/`CLOSING`, không bao giờ khi `moodCode = very_bad` (không gửi danh sách thói quen của người dùng cho LLM). Không còn giới hạn theo ngày; nút từ chối chỉ ẩn thẻ trong cuộc trò chuyện ở frontend.
 
 Sau khi FE được nối với journal API, thao tác lưu vẫn đi qua safety đồng bộ ở `JournalService` rồi mới tạo outbox/job phân tích bất đồng bộ. Kết quả `sentiment`/`emotions`/`topics`/reflection chỉ thuộc **phiên bản bài đã lưu**, không thuộc bản nháp. Mỗi lần sửa và lưu lại tăng `contentVersion`; kết quả cũ không được kích hoạt cho phiên bản mới.
 
@@ -163,12 +163,38 @@ Phân tích một **bài** nhật ký và insight từ **nhiều ngày** là hai
 ```text
 POST /insights:refresh
   → PatternDetectors (SQL + Java, 30 ngày): điểm số, check-in activity, thẻ, mã cảm xúc/chủ đề đã lưu
+  → ContrastDetectors: ngày ngoại lệ + so sánh với 30 ngày trước đó (chỉ đọc để so sánh)
+  → ExpectedPatterns bỏ các liên hệ hiển nhiên
   → tối đa 5 finding có sample size + evidence
   → InsightTemplates: câu mẫu đã duyệt (STATISTICAL)
   → [tùy chọn] LlmInsightNarrator: chỉ gửi facts + câu mẫu, không gửi nhật ký/ID/tên thẻ
   → InsightNarrativeValidator + safety screening đầu ra → AI_ASSISTED, lỗi thì giữ câu mẫu
   → lưu insight (narrative mã hóa) + evidence
 ```
+
+Từ `pattern-30d-v2`, insight tránh lặp lại điều người dùng đã biết:
+
+- [`ExpectedPatterns`](../src/main/java/com/mylog/insight/domain/ExpectedPatterns.java) bỏ liên hệ hiển nhiên:
+  ngày họp nhiều/làm thêm giờ có tâm trạng thấp hơn, ngủ nhiều đi cùng tâm trạng tốt, bài về công việc mang sắc
+  thái lo âu/bực bội/buồn/sợ, cuối tuần nhẹ hơn và thứ Hai nặng hơn. Chiều ngược lại (ví dụ ngày họp lại vui hơn)
+  vẫn được giữ. Hoạt động tích cực như đi bộ vẫn hiện vì đó là nguồn lực riêng của người dùng.
+- [`ContrastDetectors`](../src/main/java/com/mylog/insight/domain/ContrastDetectors.java) thêm bốn loại:
+  `EXCEPTION_DAYS` (những ngày thường nặng mà vẫn ổn, và điều chúng có chung: hoạt động, chủ đề, thẻ hoặc ngủ đủ),
+  `CONDITION_SHIFT` (một điều kiện nặng hơn/nhẹ hơn so với 30 ngày trước), `TOPIC_SHIFT` (tỉ lệ bài về một chủ đề
+  thay đổi) và `RECOVERY_SHIFT` (số ngày từ ngày tâm trạng ≤ 4 trở lại ≥ 6). Cửa sổ 30 ngày trước đó chỉ dùng để so
+  sánh; insight vẫn gắn với 30 ngày gần nhất. Khi `EXCEPTION_DAYS` đã nói về một hoạt động/thẻ, liên hệ trơn của
+  chính hoạt động/thẻ đó bị bỏ để không lặp.
+- Mọi câu mẫu kết thúc bằng câu hỏi gợi mở hoặc một thử nghiệm nhỏ. Khi ngày ngoại lệ có chung một điều, câu mẫu
+  gợi một khả năng từ các nhu cầu cơ bản đã được nghiên cứu (kết nối, cơ thể vận động/nghỉ ngơi, thời gian tự chọn)
+  dưới dạng câu hỏi để người dùng tự kiểm chứng, không gán loại tính cách.
+- `CONDITION_SHIFT`/`RECOVERY_SHIFT` chiều xấu đi luôn giữ câu mẫu, như xu hướng mood đi xuống.
+- Các bước này vẫn chỉ dùng dữ liệu có cấu trúc; chưa đọc nội dung nhật ký. Khung tâm lý dựa trên chữ người dùng viết
+  cần analyzer đọc nội dung (dự kiến model local) và consent/provider policy riêng. Kế hoạch:
+  [THINKING_PATTERN_RECOGNITION_PLAN.md](THINKING_PATTERN_RECOGNITION_PLAN.md). Hiện mới có prototype chỉ chạy
+  local: bảng V22, consent `THINKING_PATTERNS`, bộ trích `fake`/`openai` (`MYLOG_PATTERNS_*`, từ chối khởi động
+  ngoài profile `local`), endpoint dev `POST /api/v1/dev/pattern-signals:extract`, và thẻ 30 ngày qua
+  `/api/v1/patterns` (luật xác định trong `ThinkingPatternRules`, không gọi LLM, câu chữ thẻ là bản nháp chưa
+  được người chuyên môn duyệt). Chưa có giao diện.
 
 Report tuần/tháng dùng cùng cơ chế: `ReportNarratives` dựng câu mẫu từ snapshot, `NarrativeRewriter` (dùng chung với
 pattern insight) chỉ viết lại khi đủ điều kiện dưới đây, và kỳ có tâm trạng giảm hoặc căng thẳng tăng rõ luôn giữ câu

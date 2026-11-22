@@ -6,6 +6,7 @@ import com.mylog.journal.application.JournalService;
 import com.mylog.journal.application.JournalTagService;
 import com.mylog.analysis.application.AnalysisQueries;
 import com.mylog.insight.application.InsightService;
+import com.mylog.insight.application.ThinkingPatternService;
 import com.mylog.reporting.application.ReportService;
 import com.mylog.feedback.application.FeedbackService;
 import com.mylog.selfcare.application.SelfCareService;
@@ -29,14 +30,15 @@ class ExportSnapshot {
     private final FeedbackService feedback;
     private final CheckinService checkins;
     private final SelfCareService selfcare;
+    private final ThinkingPatternService patterns;
     ExportSnapshot(IdentityService identity, UserProfileUseCase profiles, JournalService journals,
                    JournalTagService tags,AnalysisQueries analyses,InsightService insights,ReportService reports,
                    FeedbackService feedback,
-                   CheckinService checkins, SelfCareService selfcare) {
+                   CheckinService checkins, SelfCareService selfcare, ThinkingPatternService patterns) {
         this.identity=identity; this.profiles=profiles; this.journals=journals;
         this.tags=tags;this.analyses=analyses;this.insights=insights;this.reports=reports;
         this.feedback=feedback;
-        this.checkins=checkins; this.selfcare=selfcare;
+        this.checkins=checkins; this.selfcare=selfcare; this.patterns=patterns;
     }
     record Row(String section, String id, Object value) {}
     List<Row> capture(UUID userId) {
@@ -57,6 +59,8 @@ class ExportSnapshot {
         selfcare.goals(userId).forEach(g -> rows.add(new Row("goal",g.id().toString(),g)));
         selfcare.exportCompletions(userId).forEach(c -> rows.add(new Row("habit_completion",c.id().toString(),c)));
         feedback.exportOwn(userId).forEach(f -> rows.add(new Row("feedback",f.id().toString(),f)));
+        // Code, period and feedback only; quotes of the user's own words are not exported.
+        patterns.exportAll(userId).forEach(p -> rows.add(new Row("thinking_pattern",String.valueOf(p.get("id")),p)));
         String cursor=null;
         do {
             var page=insights.list(userId,null,null,cursor,50);

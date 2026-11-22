@@ -649,6 +649,8 @@ Audit lưu `actorId`, `action`, `targetType`, `targetId`, `reason`, `timestamp`,
 
 ## 11. Safety pipeline
 
+Luồng sàng lọc đang chạy trong code (luật từ khóa, classifier, policy gate, cảnh báo trên web, sơ đồ hoạt động và tuần tự) được mô tả chi tiết ở [SAFETY_SCREENING_FLOW.md](SAFETY_SCREENING_FLOW.md).
+
 Gợi ý khi đang viết (trợ lý trang viết) là use case riêng với phân tích bài đã lưu. API `POST /api/v1/journal-writing-suggestions` (JWT, quota `companion-turn` 40 lần/15 phút/user) kiểm tra consent `AI_PROCESSING` rồi dùng `SafetyScreeningUseCase` trên toàn bộ cửa sổ (bản nháp, các lượt user trong lịch sử hội thoại và tin nhắn mới), sau đó gọi `CompanionResponder` (hiện là `TemplateCompanionResponder`, kịch bản cố định theo cảm xúc). Nó không lưu draft/hội thoại, không tạo outbox/job và mặc định tắt bằng `MYLOG_WRITING_SUGGESTIONS_ENABLED=false`. Frontend editor hiện lưu bài thật qua journal API nhưng khung chat trợ lý vẫn đang chạy kịch bản viết cứng ở client, chưa gọi endpoint này; xem [COMPANION_CHATBOT_PLAN.md](COMPANION_CHATBOT_PLAN.md) cho lộ trình nối frontend. FE không tự quyết định safety hoặc nội dung gợi ý. Xem [AI_ANALYSIS_GUIDE.md](AI_ANALYSIS_GUIDE.md) cho trạng thái triển khai.
 
 ```text

@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { BatteryCharging, CheckCircle2, Moon, Pencil, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER } from '@/features/journal';
+import { JOURNAL_EMOTIONS, MoodBattery } from '@/features/journal';
 import type { JournalEmotion } from '@/types';
 import type { Checkin } from '../api/checkin';
 import { useDailyCheckin } from '../hooks/useDailyCheckin';
@@ -105,23 +105,12 @@ export function DailyCheckinCard({ userId, timezone }: { userId: string; timezon
         >
           <fieldset className="flex flex-col gap-2">
             <legend className="font-space text-xs font-bold uppercase mb-2">{t('checkin.mood')}</legend>
-            <div className="flex flex-wrap gap-2">
-              {JOURNAL_EMOTION_ORDER.map((id) => {
-                const selected = draft.emotion === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setDraft((current) => ({ ...current, emotion: id }))}
-                    className={`rounded-xl border-2 border-black px-3 py-1.5 font-space text-sm font-bold cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${
-                      selected ? 'bg-primary-container shadow-neo-sm' : 'bg-white'
-                    }`}
-                  >
-                    {JOURNAL_EMOTIONS[id].label}
-                  </button>
-                );
-              })}
+            <div className="w-[254px] max-w-full">
+              <MoodBattery
+                value={draft.emotion}
+                onChange={(emotion) => setDraft((current) => ({ ...current, emotion }))}
+                label={t('checkin.mood')}
+              />
             </div>
           </fieldset>
 

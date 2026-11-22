@@ -1,5 +1,7 @@
 # Phòng thử nghiệm câu hỏi tự suy ngẫm
 
+> **Cập nhật 2026-11-19:** kho kiến thức được làm lại trong [`knowledge/`](knowledge/README.md) và nhập qua admin API có bước duyệt. Corpus `RECOMMEND_MODEL_DOCS` bên dưới sẽ được archive; không chạy lại `tools/EmbedAllDocsToPgvector.java`.
+
 Thư mục này chứa các kịch bản **giả định** và knowledge card đang chờ kiểm duyệt. Đây là công cụ biên tập và thử nghiệm, chưa dùng nhật ký thật hoặc làm nguồn knowledge production.
 
 ## Dữ liệu hiện có

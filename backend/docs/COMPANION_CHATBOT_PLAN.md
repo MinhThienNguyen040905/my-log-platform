@@ -1,6 +1,8 @@
 # Kế hoạch Trợ lý đồng hành trong Journal Editor (Companion)
 
 > **Trạng thái tài liệu:** **Giai đoạn 1–5 (code backend + frontend Bước 1–5 của `COMPANION_UI_PLAN.md`) đã triển khai; ở Giai đoạn 4 mới hoàn thành bước 4a (adapter OpenAI + validator + bộ đánh giá dữ liệu giả), các bước 4b–4e (sinh dữ liệu mẫu, fine-tune model nhỏ và duyệt chính sách provider cho dữ liệu thật) chưa triển khai.**
+> **Cập nhật 2026-11-18 (AI chọn công cụ và thói quen):** `LlmCompanionResponder` (`companion-openai-v2`) cho model tự chọn ở mọi lượt `OPEN`/`FREE_TEXT`: `actions` là 0–2 mã trong `BREATHING_2MIN`, `AMBIENT` (cờ `CompanionActionCode.aiSelectable`), `habitTemplate` là một mã trong `HabitTemplateCatalog` hoặc null. Backend lọc lại: bỏ mã lạ, mã trùng, mã chỉ dành cho mẫu (`VENT_PROMPT`, `TITLE`), giữ tối đa 2; bỏ `habitTemplate` lạ hoặc khi `moodCode = very_bad`. Khi AI lỗi, `TemplateCompanionResponder` trả nút theo cảm xúc ở cả lượt mở đầu lẫn tin nhắn tự do. `CompanionHabitSuggestionService` không còn giới hạn 1 gợi ý/ngày và ẩn 7 ngày; "Không, cảm ơn" chỉ ẩn thẻ trong cuộc trò chuyện hiện tại ở frontend. Endpoint `POST /api/v1/companion/habit-suggestions/dismiss` và `CompanionHabitPreferenceStore` đã bị gỡ; bảng `companion_habit_preferences` (V21) vẫn còn và được xóa theo tài khoản nhưng không còn được đọc/ghi. Nhạc bật từ chat báo `TOOL_COMPLETED` với `completedTool = AMBIENT` khi người dùng tắt nhạc hoặc sau 3 phút phát. Các mục bên dưới mô tả thiết kế trước thay đổi này ở những chỗ có ghi chú.
+>
 > Hiện trạng (tháng 11/2026):
 > - **Giai đoạn 1 & 2–3:** [`WritingSuggestionService`](../src/main/java/com/mylog/journal/application/WritingSuggestionService.java) nhận contract mở rộng (`intent`/`message`/`draft`/`context`/`completedTool`/`history`, tương thích ngược với `{ "text": "..." }`), chạy đúng thứ tự cổng (flag → consent → safety trên toàn cửa sổ hội thoại → `CompanionResponder` → `CompanionHabitSuggestionService`). Quota dùng key `companion-turn` (40 lần/15 phút). Frontend đã xóa `CompanionPopover.tsx`, thay bằng khung chat thật ở `front-end/my-app-web/features/journal/components/companion/` + `calming-tools/`.
 > - **Giai đoạn 4a (LLM + Validator + Đánh giá dữ liệu giả):** [`LlmCompanionResponder`](../src/main/java/com/mylog/journal/infrastructure/LlmCompanionResponder.java) gom toàn bộ chuỗi *gọi OpenAI Chat Completions (JSON mode, 1 lần/lượt, timeout 6s) → [`CompanionOutputValidator`](../src/main/java/com/mylog/journal/application/CompanionOutputValidator.java) → safety screening chiều ra + đếm false-positive (`outboundSafetyBlocks`) → tự quay về [`TemplateCompanionResponder`](../src/main/java/com/mylog/journal/infrastructure/TemplateCompanionResponder.java)* vào một chỗ duy nhất; cấu hình qua [`CompanionResponderConfiguration`](../src/main/java/com/mylog/journal/infrastructure/CompanionResponderConfiguration.java) với cờ `MYLOG_COMPANION_GENERATION_ENABLED=false` mặc định. Bộ đánh giá tự động [`CompanionStage4aEvaluationTest`](../src/test/java/com/mylog/journal/CompanionStage4aEvaluationTest.java) kiểm chứng trên dữ liệu giả (synthetic). **Lưu ý:** các bước 4b–4e và phê duyệt provider dữ liệu thật chưa hoàn tất nên `MYLOG_COMPANION_GENERATION_ENABLED` mặc định tắt trên production.
@@ -20,7 +22,7 @@ Người dùng đang viết, khi thấy cần thì bấm icon trợ lý. Trợ l
 | Backend quyết định | Backend sở hữu nội dung trả lời, quyết định safety và chọn hành động. Frontend chỉ hiển thị theo `status`. |
 | Không phải nhà trị liệu | Không chẩn đoán, không khuyên dùng thuốc, không tự tạo hotline. Câu hỏi mở và cho người dùng lựa chọn, không tra vấn. |
 | Không lưu hội thoại | Hội thoại chỉ nằm trong bộ nhớ trình duyệt suốt phiên viết. Backend không lưu, không log `message`/`draft`/`history`. Chỉ nội dung người dùng chủ động chèn vào bài mới đi vào nhật ký. |
-| AI chỉ viết câu chữ | Quy tắc trong code quyết định *loại* hành động. LLM chỉ viết câu an ủi và câu hỏi, trong **đúng 1 lần gọi** mỗi lượt. |
+| AI chọn trong danh sách cố định | LLM viết câu an ủi, câu hỏi và chọn nút công cụ dịu (`BREATHING_2MIN`, `AMBIENT`) cùng mẫu thói quen trong danh mục, trong **đúng 1 lần gọi** mỗi lượt. Backend lọc lại mọi mã; khi AI lỗi, quy tắc trong code quyết định. *(Trước 2026-11-18: quy tắc trong code quyết định loại hành động, LLM chỉ viết câu chữ.)* |
 | Không tự ghi dữ liệu | Trợ lý không tự tạo thói quen hay đánh dấu hoàn thành. Mọi thao tác ghi đều do người dùng bấm. |
 
 ---
@@ -58,13 +60,14 @@ flowchart TD
 | Ví dụ | Thở 2 phút, âm thanh dịu, xả ra trang viết | Thở sâu mỗi tối, ngủ trước 23h, đi bộ 15 phút |
 | Nguồn | Danh mục tool cố định trong code (enum) | Thói quen người dùng đã có trong `habits`, hoặc mẫu thói quen do backend quản lý |
 | Ghi dữ liệu | Không, chạy trên máy | Có, chỉ khi người dùng đồng ý, qua API selfcare với `source = USER` |
-| Thời điểm hiện | Ngay ở câu mở đầu | Sau khi chạy xong tool tức thời hoặc khi khép phiên |
-| Vai trò của AI | Viết câu mời | Không dùng AI: câu dựng sẵn, backend chèn tên thói quen |
+| Thời điểm hiện | Bất kỳ lượt nào AI thấy phù hợp (mẫu dự phòng: theo cảm xúc) | Lượt AI chọn mẫu thói quen, sau khi chạy xong tool tức thời, hoặc khi khép phiên |
+| Vai trò của AI | Chọn nút và viết câu mời | Chọn mã mẫu trong danh mục; câu chữ vẫn dựng sẵn, backend chèn tên thói quen |
 
 **Quy tắc cho gợi ý thói quen**
-- Không hiện ở câu mở đầu. Không hiện khi tâm trạng `very_bad` hoặc safety ở mức `CONSTRAIN`/`SAFETY_FLOW`.
-- Tối đa 1 gợi ý thói quen mỗi ngày. Người dùng bấm "Không, cảm ơn" thì tạm ẩn 7 ngày.
-- Thứ tự ưu tiên, do quy tắc ở backend chọn:
+- Không hiện khi tâm trạng `very_bad` hoặc safety ở mức `CONSTRAIN`/`SAFETY_FLOW`.
+- Ở lượt `OPEN`/`FREE_TEXT` chỉ hiện khi AI chọn một mẫu trong danh mục; nếu đã có thói quen `ACTIVE` cùng `tool_code` chưa làm hôm nay thì đề nghị ghi nhận thay vì tạo trùng.
+- Không giới hạn số lần mỗi ngày. "Không, cảm ơn" chỉ ẩn thẻ trong cuộc trò chuyện hiện tại. *(Trước 2026-11-18: tối đa 1 lần/ngày, ẩn 7 ngày.)*
+- Thứ tự ưu tiên dưới đây áp dụng cho lượt `TOOL_COMPLETED`/`CLOSING`:
   1. Thói quen `ACTIVE` có `tool_code` khớp với tool vừa chạy: đề nghị **ghi nhận hôm nay**.
   2. Thói quen `ACTIVE` mà [`HabitMoodAssociation`](../src/main/java/com/mylog/selfcare/domain/HabitMoodAssociation.java) cho thấy chênh lệch tâm trạng dương (cần ≥ 7 ngày làm và ≥ 7 ngày không làm). Câu chữ phải nói đúng bản chất tương quan, ví dụ "những ngày bạn đi bộ, tâm trạng thường nhẹ hơn", không nói đi bộ là nguyên nhân.
   3. Mẫu thói quen đã duyệt (ánh xạ vào category `SLEEP`/`MINDFULNESS`/`EXERCISE`/`SOCIAL`): mở **màn hình tạo thói quen đã điền sẵn** để người dùng xem và sửa trước khi lưu.
@@ -117,7 +120,7 @@ Mỗi cảm xúc có vài biến thể câu chữ để không lặp lại. Mọ
   "questions": ["...", "..."],            // 0–3 câu; bấm vào thì chèn vào bài
   "suggestedTitle": null,
   "immediateActions": [ { "code": "BREATHING_2MIN", "label": "Thở chậm 2 phút" } ],
-  "habitSuggestion": null,                // chỉ có ở lượt TOOL_COMPLETED / CLOSING
+  "habitSuggestion": null,                // khi AI chọn mẫu, hoặc ở lượt TOOL_COMPLETED / CLOSING
   "chips": [ { "label": "Mình chỉ muốn viết tiếp", "intent": "EXIT" } ],
   "nextState": "LISTENING",               // LISTENING | OFFERED | CLOSING
   "source": "TEMPLATE",                   // TEMPLATE | GENERATED
@@ -148,7 +151,7 @@ Mỗi cảm xúc có vài biến thể câu chữ để không lặp lại. Mọ
 }
 ```
 - Với `LOG_EXISTING`, `localDate` do backend tính sẵn theo `habit.timezone` để frontend gọi thẳng `completeHabit(habitId, localDate, targetValue)`, tránh lệch ngày theo đồng hồ trình duyệt.
-- Khi người dùng bấm *"Không, cảm ơn"*, frontend gọi endpoint riêng `POST /api/v1/companion/habit-suggestions/dismiss` (không đi qua `POST /api/v1/journal-writing-suggestions` để không tốn quota `companion-turn` và không chạy lại cổng consent/safety).
+- Khi người dùng bấm *"Không, cảm ơn"*, frontend chỉ ẩn thẻ và không hiện gợi ý thói quen nữa trong cuộc trò chuyện hiện tại; không gọi backend. *(Endpoint dismiss cũ đã gỡ ngày 2026-11-18.)*
 
 **Danh mục tool tức thời (enum)**
 
@@ -219,7 +222,7 @@ Danh mục chỉ mở rộng khi tool mới đã có widget và được duyệt
 - Không RAG: input chỉ gồm bản nháp, lịch sử hội thoại và cảm xúc — không truy xuất từ `knowledge_items`/embedding. Nếu sau này muốn thêm RAG cho companion, đây là một quyết định thiết kế riêng, chưa nằm trong kế hoạch này.
 - Prompt: vai trò bạn đồng hành, bám nội dung bài viết, mỗi câu hỏi mở và cho người dùng lựa chọn. Bản nháp được bọc làm dữ liệu, kèm chỉ dẫn bỏ qua mọi "lệnh" nằm trong bài (chống prompt injection). Có `promptVersion`; không lưu prompt hay response.
 - `CompanionOutputValidator`:
-  - Kiểm tra schema và độ dài (`reply` ≤ 2 câu, `questions` ≤ 3). Không cần lọc mã hành động vì LLM không sinh hành động (quy tắc trong code quyết định `immediateActions`, `chips`, `nextState`).
+  - Kiểm tra schema và độ dài (`reply` ≤ 2 câu, `questions` ≤ 3). Lọc `actions` về các mã `aiSelectable` (tối đa 2, bỏ trùng) và `habitTemplate` về danh mục mẫu; `chips`, `nextState` vẫn do quy tắc trong code quyết định.
   - Không có từ ngữ chẩn đoán, không có hotline hay URL.
   - Đoạn trích bài viết (nếu có) phải có thật trong bản nháp.
   - Sau validator thì chạy safety screening chiều ra. **Lưu ý về chặn nhầm (false positive):** classifier hiện tại được huấn luyện để nhận diện rủi ro trong lời người dùng nên có thể đánh dấu nhầm câu an ủi của trợ lý (ví dụ *"nghe bạn buồn thật"*). Ở bước **4a**, phải đo tỷ lệ chặn nhầm của cổng chiều ra trên bộ đánh giá synthetic trước khi coi đây là cổng chặn cứng.

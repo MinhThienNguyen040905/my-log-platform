@@ -70,7 +70,7 @@ class InsightPatternIntegrationTest {
             return requests -> {
                 Map<String, String> out = new HashMap<>();
                 if (AI_ON.get()) for (var r : requests) out.put(r.key(), r.type().equals(PatternDetectors.WEEKDAY)
-                        ? "Thứ Hai có vẻ là ngày nặng nhất tuần của bạn. Nhẹ nhàng với bản thân vào đầu tuần nhé."
+                        ? "Thứ Tư có vẻ là ngày nặng nhất tuần của bạn. Nhẹ nhàng với bản thân vào giữa tuần nhé."
                         : "Điều này xảy ra vì bạn có dấu hiệu trầm cảm.");
                 return new InsightNarrator.Result(out, "openai", "fake-model", "test-v1", 10, 5, BigDecimal.ZERO, 3, true);
             };
@@ -95,8 +95,8 @@ class InsightPatternIntegrationTest {
         UUID owner = user();
         UUID stranger = user();
         seedThirtyDays(owner);
-        // Data older than the window must not influence anything.
-        insertEntry(owner, TODAY.minusDays(45), 1, 10, 600, null);
+        // Data older than the window and the comparison window before it must not influence anything.
+        insertEntry(owner, TODAY.minusDays(75), 1, 10, 600, null);
 
         var page = insights.refreshRecent(owner);
         Set<String> types = page.items().stream().map(i -> i.type()).collect(Collectors.toSet());
@@ -111,11 +111,11 @@ class InsightPatternIntegrationTest {
             assertFalse(i.evidence().isEmpty());
         });
         var weekday = page.items().stream().filter(i -> i.type().equals(PatternDetectors.WEEKDAY)).findFirst().orElseThrow();
-        assertTrue(weekday.narrative().contains("thứ Hai"), weekday.narrative());
+        assertTrue(weekday.narrative().contains("thứ Tư"), weekday.narrative());
         assertTrue(insights.list(stranger, null, null, null, 20).items().isEmpty());
 
         byte[] stored = jdbc.queryForObject("select encrypted_narrative from insights where id=?", byte[].class, weekday.id());
-        assertFalse(new String(stored, StandardCharsets.UTF_8).contains("thứ Hai"), "narrative is encrypted");
+        assertFalse(new String(stored, StandardCharsets.UTF_8).contains("thứ Tư"), "narrative is encrypted");
 
         // Refreshing again replaces rather than duplicates.
         int active = page.items().size();
@@ -137,7 +137,7 @@ class InsightPatternIntegrationTest {
         var page = insights.refreshRecent(owner);
         var weekday = page.items().stream().filter(i -> i.type().equals(PatternDetectors.WEEKDAY)).findFirst().orElseThrow();
         assertEquals("AI_ASSISTED", weekday.generatedBy());
-        assertTrue(weekday.narrative().startsWith("Thứ Hai có vẻ"));
+        assertTrue(weekday.narrative().startsWith("Thứ Tư có vẻ"));
         page.items().stream().filter(i -> !i.type().equals(PatternDetectors.WEEKDAY)).forEach(i -> {
             assertEquals("STATISTICAL", i.generatedBy());
             assertFalse(i.narrative().contains("trầm cảm"));
@@ -233,14 +233,14 @@ class InsightPatternIntegrationTest {
         assertTrue(page.items().stream().noneMatch(i -> i.type().equals(PatternDetectors.WEEKDAY)));
     }
 
-    /** 30 days: Mondays are stressful; work entries carry ANXIETY, others CALM. */
+    /** 30 days: Wednesdays are stressful; relationship entries carry ANXIETY, others CALM (neither is an expected pattern). */
     private void seedThirtyDays(UUID userId) {
         for (int i = 0; i < 30; i++) {
             LocalDate day = TODAY.minusDays(i);
-            boolean monday = day.getDayOfWeek() == DayOfWeek.MONDAY;
-            boolean work = i % 3 == 0 || monday;
-            UUID entry = insertEntry(userId, day, monday ? 5 : 7, monday ? 8 : 4, 420, null);
-            attachAnalysis(userId, entry, work ? List.of("ANXIETY") : List.of("CALM"), work ? "WORK" : "SELF_CARE");
+            boolean wednesday = day.getDayOfWeek() == DayOfWeek.WEDNESDAY;
+            boolean work = i % 3 == 0 || wednesday;
+            UUID entry = insertEntry(userId, day, wednesday ? 5 : 7, wednesday ? 8 : 4, 420, null);
+            attachAnalysis(userId, entry, work ? List.of("ANXIETY") : List.of("CALM"), work ? "RELATIONSHIPS" : "SELF_CARE");
         }
     }
 

@@ -3,8 +3,11 @@ package com.mylog.insight;
 import com.mylog.insight.application.query.ActivitySignal;
 import com.mylog.insight.application.query.DailyMetric;
 import com.mylog.insight.application.query.EntrySignal;
+import com.mylog.insight.domain.ContrastDetectors;
+import com.mylog.insight.domain.ExpectedPatterns;
 import com.mylog.insight.domain.PatternDetectors;
 import com.mylog.insight.domain.PatternFinding;
+import com.mylog.insight.domain.PatternWindow;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -12,6 +15,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -106,12 +110,145 @@ class PatternDetectorsTest {
             LocalDate date = FROM.plusDays(i);
             int sleep = i % 3 == 0 ? 300 : 450;
             double mood = (sleep < 360 ? 4.5 : 7.0) + (i < 15 ? 0.8 : -0.8);
-            double stress = date.getDayOfWeek() == DayOfWeek.MONDAY ? 8.0 : 4.0;
+            double stress = date.getDayOfWeek() == DayOfWeek.WEDNESDAY ? 8.0 : 4.0;
             days.add(day(date, mood, stress, sleep));
         }
-        List<PatternFinding> findings = PatternDetectors.findAll(days, List.of(), List.of(), FROM, TO, 7, 2);
+        List<PatternFinding> findings = PatternDetectors.findAll(window(days, List.of(), List.of()),
+                PatternWindow.empty(FROM.minusDays(30), FROM.minusDays(1)), 7, 2);
         assertEquals(2, findings.size());
         assertTrue(findings.get(0).strength().compareTo(findings.get(1).strength()) >= 0);
+    }
+
+    @Test void findAllDropsAssociationsEveryoneExpects() {
+        // Short nights go with lower mood and Mondays are stressful: both true, both obvious.
+        List<DailyMetric> days = new ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            LocalDate date = FROM.plusDays(i);
+            int sleep = i % 3 == 0 ? 300 : 450;
+            double stress = date.getDayOfWeek() == DayOfWeek.MONDAY ? 8.0 : 4.0;
+            days.add(day(date, sleep < 360 ? 4.5 : 7.0, stress, sleep));
+        }
+        assertNotNull(PatternDetectors.sleepMood(days, 7));
+        assertNotNull(PatternDetectors.weekday(days));
+        List<PatternFinding> findings = PatternDetectors.findAll(window(days, List.of(), List.of()),
+                PatternWindow.empty(FROM.minusDays(30), FROM.minusDays(1)), 7, 5);
+        assertTrue(findings.stream().noneMatch(f -> f.type().equals(PatternDetectors.SLEEP_MOOD)
+                || f.type().equals(PatternDetectors.WEEKDAY)), findings.toString());
+    }
+
+    @Test void expectedPatternsKeepTheUnusualDirection() {
+        assertTrue(ExpectedPatterns.isExpected(activity("meeting", "DOWN")));
+        assertFalse(ExpectedPatterns.isExpected(activity("meeting", "UP")), "meetings going well is unusual");
+        assertFalse(ExpectedPatterns.isExpected(activity("walking", "UP")), "personal resources stay visible");
+        assertFalse(ExpectedPatterns.isExpected(new PatternFinding(PatternDetectors.WEEKDAY, "UP", BigDecimal.ONE, 20,
+                Map.of("metric", "STRESS", "weekday", "WEDNESDAY"), List.of())));
+        assertTrue(ExpectedPatterns.isExpected(new PatternFinding(PatternDetectors.WEEKDAY, "UP", BigDecimal.ONE, 20,
+                Map.of("metric", "MOOD", "weekday", "SATURDAY"), List.of())));
+    }
+
+    @Test void exceptionDaysFindWhatHeavyDaysThatWentWellShared() {
+        List<DailyMetric> days = new ArrayList<>();
+        List<ActivitySignal> activities = new ArrayList<>();
+        for (int i = 0; i < 24; i++) {
+            LocalDate date = FROM.plusDays(i);
+            boolean meeting = i % 3 == 0;               // 8 meeting days
+            boolean walked = meeting && i % 2 == 0;     // 4 of them also had a walk
+            if (meeting) activities.add(new ActivitySignal(date, "meeting"));
+            if (walked) activities.add(new ActivitySignal(date, "walking"));
+            days.add(day(date, meeting ? (walked ? 7.2 : 3.5) : 6.8, 5.0, 420));
+        }
+        PatternFinding finding = ContrastDetectors.exceptionDays(window(days, List.of(), activities));
+        assertNotNull(finding);
+        assertEquals("ACTIVITY", finding.facts().get("conditionKind"));
+        assertEquals("meeting", finding.facts().get("conditionCode"));
+        assertEquals(4, finding.facts().get("exceptionDays"));
+        assertEquals("walking", finding.facts().get("featureCode"));
+        assertEquals(4, finding.facts().get("featureDays"));
+        assertEquals(8, finding.evidence().size());
+
+        List<PatternFinding> all = PatternDetectors.findAll(window(days, List.of(), activities),
+                PatternWindow.empty(FROM.minusDays(30), FROM.minusDays(1)), 7, 5);
+        assertTrue(all.stream().anyMatch(f -> f.type().equals(ContrastDetectors.EXCEPTION)));
+        assertTrue(all.stream().noneMatch(f -> f.type().equals(PatternDetectors.ACTIVITY_MOOD)
+                && "meeting".equals(f.facts().get("activity"))), "the plain meeting association is covered");
+    }
+
+    @Test void exceptionDaysNeedLowDaysAndExceptionsBoth() {
+        List<DailyMetric> days = new ArrayList<>();
+        List<ActivitySignal> activities = new ArrayList<>();
+        for (int i = 0; i < 24; i++) {
+            boolean meeting = i % 3 == 0;
+            if (meeting) activities.add(new ActivitySignal(FROM.plusDays(i), "meeting"));
+            days.add(day(FROM.plusDays(i), meeting ? 3.5 : 6.8, 5.0, 420));
+        }
+        assertNull(ContrastDetectors.exceptionDays(window(days, List.of(), activities)), "no day went well");
+    }
+
+    @Test void conditionShiftComparesWithThePreviousWindow() {
+        LocalDate prevFrom = FROM.minusDays(30);
+        List<DailyMetric> before = new ArrayList<>(), now = new ArrayList<>();
+        List<ActivitySignal> beforeActs = new ArrayList<>(), nowActs = new ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            boolean overtime = i % 4 == 0;
+            if (overtime) {
+                beforeActs.add(new ActivitySignal(prevFrom.plusDays(i), "work-overtime"));
+                nowActs.add(new ActivitySignal(FROM.plusDays(i), "work-overtime"));
+            }
+            before.add(day(prevFrom.plusDays(i), overtime ? 4.0 : 6.8, 5.0, 420));
+            now.add(day(FROM.plusDays(i), overtime ? 6.3 : 6.8, 5.0, 420));
+        }
+        PatternFinding finding = ContrastDetectors.conditionShift(window(now, List.of(), nowActs),
+                new PatternWindow(prevFrom, FROM.minusDays(1), before, List.of(), beforeActs));
+        assertNotNull(finding);
+        assertEquals("UP", finding.direction(), "overtime days are no longer much lower");
+        assertEquals("work-overtime", finding.facts().get("conditionCode"));
+        assertEquals(new BigDecimal("6.3"), finding.facts().get("nowWith"));
+        assertEquals(new BigDecimal("4.0"), finding.facts().get("prevWith"));
+        assertNull(ContrastDetectors.conditionShift(window(now, List.of(), nowActs),
+                PatternWindow.empty(prevFrom, FROM.minusDays(1))), "nothing to compare with");
+    }
+
+    @Test void topicShiftComparesShareOfEntries() {
+        LocalDate prevFrom = FROM.minusDays(30);
+        List<EntrySignal> before = new ArrayList<>(), now = new ArrayList<>();
+        for (int i = 0; i < 18; i++) before.add(new EntrySignal(UUID.randomUUID(), prevFrom.plusDays(i), BigDecimal.valueOf(6),
+                BigDecimal.valueOf(5), List.of("CALM"), List.of(i < 3 ? "RELATIONSHIPS" : i < 10 ? "WORK" : "HEALTH"), List.of()));
+        for (int i = 0; i < 20; i++) now.add(entry(i, 6.0, List.of("CALM"),
+                List.of(i < 9 ? "RELATIONSHIPS" : i < 16 ? "WORK" : "HEALTH"), List.of()));
+        PatternFinding finding = ContrastDetectors.topicShift(window(List.of(), now, List.of()),
+                new PatternWindow(prevFrom, FROM.minusDays(1), List.of(), before, List.of()));
+        assertNotNull(finding);
+        assertEquals("RELATIONSHIPS", finding.facts().get("topic"));
+        assertEquals("UP", finding.direction());
+        assertEquals(9L, finding.facts().get("nowCount"));
+        assertEquals(3L, finding.facts().get("prevCount"));
+        assertTrue(finding.evidence().stream().allMatch(p -> p.metric().equals("TOPIC_RELATIONSHIPS")));
+    }
+
+    @Test void recoveryShiftMeasuresDaysBackToAnOkayMood() {
+        LocalDate prevFrom = FROM.minusDays(30);
+        List<DailyMetric> before = new ArrayList<>(), now = new ArrayList<>();
+        // Before: low days on 2 and 12, back to 6+ after 4 days. Now: back after 1 day.
+        for (int i = 0; i < 30; i++) {
+            int sinceLow = Math.min(i % 10 < 2 ? 99 : (i % 10) - 2, 99);
+            before.add(day(prevFrom.plusDays(i), sinceLow == 0 ? 3.0 : sinceLow < 4 ? 5.0 : 6.8, 5.0, 420));
+            now.add(day(FROM.plusDays(i), sinceLow == 0 ? 3.0 : 6.8, 5.0, 420));
+        }
+        PatternFinding finding = ContrastDetectors.recoveryShift(window(now, List.of(), List.of()),
+                new PatternWindow(prevFrom, FROM.minusDays(1), before, List.of(), List.of()));
+        assertNotNull(finding);
+        assertEquals("UP", finding.direction(), "faster recovery");
+        assertEquals(new BigDecimal("1.0"), finding.facts().get("nowDays"));
+        assertEquals(new BigDecimal("4.0"), finding.facts().get("prevDays"));
+    }
+
+    static PatternWindow window(List<DailyMetric> days, List<EntrySignal> entries, List<ActivitySignal> activities) {
+        return new PatternWindow(FROM, TO, days, entries, activities);
+    }
+
+    static PatternFinding activity(String code, String direction) {
+        return new PatternFinding(PatternDetectors.ACTIVITY_MOOD, direction, BigDecimal.ONE, 20,
+                Map.of("activity", code), List.of());
     }
 
     static DailyMetric day(LocalDate date, double mood, double stress, int sleep) {

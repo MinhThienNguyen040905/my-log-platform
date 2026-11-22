@@ -4,12 +4,12 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { DayPicker, type DayButtonProps } from 'react-day-picker';
-import { getDetailedJournalPage, getJournalDailyCounts, getSearchJournalPage, JOURNAL_PAGE_SIZE, useJournal, LegacyJournalImport, journalEmotionLabel, JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, normalizeJournalEmotion, EntryAnalysisPanel } from '@/features/journal';
+import { getDetailedJournalPage, getJournalDailyCounts, getSearchJournalPage, JOURNAL_PAGE_SIZE, useJournal, LegacyJournalImport, journalEmotionLabel, JOURNAL_EMOTIONS, JOURNAL_EMOTION_ORDER, EntryAnalysisPanel } from '@/features/journal';
 import { useToast } from '@/providers/ToastProvider';
 import { useAppLanguage } from '@/providers/AppLanguageProvider';
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/date/format-date';
-import { JournalEntry, JournalEmotion, MoodType } from '@/types';
+import { JournalEntry, JournalEmotion } from '@/types';
 import { WashiTape, PolaroidCard } from '@/components/ui/ScrapbookDecorations';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { NotificationModal } from '@/components/ui/NotificationModal';
@@ -28,6 +28,14 @@ import {
   RotateCcw,
   SlidersHorizontal,
 } from 'lucide-react';
+
+const SEARCH_DEBOUNCE_MS = 350;
+const MIN_SEARCH_LENGTH = 2;
+/** Từ khóa gửi lên backend: rỗng khi chưa đủ độ dài tối thiểu. */
+const searchQueryFor = (text: string) => {
+  const trimmed = text.trim();
+  return trimmed.length >= MIN_SEARCH_LENGTH ? trimmed : '';
+};
 
 export function CalendarView() {
   const { userId, entries, deleteEntry, toggleFavorite, loadEntry, entriesLoading, entriesError, reloadEntries, hasMoreEntries, entriesLoadingMore, loadMoreEntries } = useJournal();
@@ -50,16 +58,16 @@ export function CalendarView() {
   const [appliedFilters, setAppliedFilters] = useState<HistoryFilters>(EMPTY_FILTERS);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const hasActiveFilters = !!appliedFilters.date || appliedFilters.favorites || appliedFilters.emotion !== 'all' || !!appliedFilters.search;
-  const hasPendingFilters = (filterByDate ? selectedDate : null) !== appliedFilters.date
-    || onlyFavorites !== appliedFilters.favorites
-    || selectedMood !== appliedFilters.emotion
-    || searchTerm.trim() !== appliedFilters.search;
-  const applyFilters = () => setAppliedFilters({
-    date: filterByDate ? selectedDate : null,
-    emotion: selectedMood,
-    favorites: onlyFavorites,
-    search: searchTerm.trim(),
-  });
+  const showReset = hasActiveFilters || searchTerm !== '';
+  // Gõ xong ~350 ms mới gọi backend; dưới 2 ký tự thì không tìm. Enter tìm ngay.
+  useEffect(() => {
+    const id = window.setTimeout(() => setAppliedFilters((prev) => {
+      const search = searchQueryFor(searchTerm);
+      return prev.search === search ? prev : { ...prev, search };
+    }), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(id);
+  }, [searchTerm]);
+  const applySearchNow = () => setAppliedFilters((prev) => ({ ...prev, search: searchQueryFor(searchTerm) }));
   const clearFilters = () => {
     setFilterByDate(false);
     setOnlyFavorites(false);
@@ -187,6 +195,12 @@ export function CalendarView() {
       : await loadMoreEntries();
     if (loaded) setPageIndex((current) => current + 1);
   };
+  /** Tải thêm một trang dữ liệu gốc khi các trang đã tải không có bài nào khớp bộ lọc. */
+  const loadMoreMatches = async () => {
+    if (isSearchActive) { await searchQuery.fetchNextPage(); return; }
+    if (showingFilteredDate) { await selectedDayQuery.fetchNextPage(); return; }
+    await loadMoreEntries();
+  };
   const retryList = () => {
     if (isSearchActive) return searchQuery.refetch();
     return showingFilteredDate ? selectedDayQuery.refetch() : reloadEntries();
@@ -197,17 +211,6 @@ export function CalendarView() {
     'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
   ];
   const formattedMonthYear = `${monthNames[currentMonth.getMonth()]}, ${currentMonth.getFullYear()}`;
-
-  const renderMoodIcon = (mood: MoodType | string | null, className: string = 'w-4 h-4', emotion?: JournalEntry['emotion']) => {
-    const resolved = normalizeJournalEmotion(emotion) ?? (
-      mood === 'calm-joy' || mood === 'hope-energy' ? 'happy'
-        : mood === 'anxiety-stress' ? 'angry'
-          : mood === 'sadness-reflect' ? 'sad'
-            : 'neutral'
-    );
-    const Icon = JOURNAL_EMOTIONS[resolved].icon;
-    return <Icon className={`${className} stroke-[2.2]`} aria-hidden="true" />;
-  };
 
   const handleDeleteConfirm = async () => {
     if (entryToDelete) {
@@ -318,35 +321,35 @@ export function CalendarView() {
 
       {/* Search and filters appear before both the calendar and the history list. */}
       <LegacyJournalImport />
-      <div className="bg-surface-card border border-border-soft rounded-2xl p-4 shadow-sm flex flex-col gap-3" role="search" aria-label="Tìm và lọc nhật ký">
-            {(hasActiveFilters || hasPendingFilters) && <div className="flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="min-h-11 px-2 text-xs font-space font-bold text-gray-700 hover:text-black flex items-center gap-1 cursor-pointer underline"
-                >
-                  <RotateCcw className="w-3 h-3" /> Đặt lại
-                </button>
-            </div>}
-
-            <form onSubmit={(event) => { event.preventDefault(); applyFilters(); }} className="flex items-stretch gap-2">
+      <div className="bg-surface-card border border-border-soft rounded-2xl p-3 shadow-sm flex flex-col gap-3" role="search" aria-label="Tìm và lọc nhật ký">
+            <form onSubmit={(event) => { event.preventDefault(); applySearchNow(); }} className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
               <input
                 type="text"
-                aria-label="Tìm trong nhật ký"
+                aria-label="Tìm theo tựa đề nhật ký"
                 value={searchTerm}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSearchTerm(val);
-                  setAppliedFilters((prev) => ({ ...prev, search: val.trim() }));
-                }}
-                placeholder="Tìm kiếm theo tiêu đề nhật ký..."
-
-                className="min-w-0 flex-1 min-h-11 font-space text-sm p-2.5 rounded-xl border border-border-soft bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm theo tựa đề nhật ký..."
+                enterKeyHint="search"
+                className="w-full min-h-11 font-space text-sm py-2.5 pl-9 pr-11 rounded-xl border border-border-soft bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
               />
-              <button type="submit" aria-label="Tìm và lọc" title="Tìm và lọc" className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl border border-black bg-primary-container text-black cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black">
-                <Search className="w-5 h-5" />
-              </button>
+              {searchTerm && (
+                <button
+                  type="button"
+                  aria-label="Xóa từ khóa tìm kiếm"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setAppliedFilters((prev) => ({ ...prev, search: '' }));
+                  }}
+                  className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-xl text-gray-600 hover:text-black cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </form>
+            {searchTerm.trim().length > 0 && searchTerm.trim().length < MIN_SEARCH_LENGTH && (
+              <p className="text-xs font-space text-gray-600">Gõ ít nhất {MIN_SEARCH_LENGTH} ký tự để tìm.</p>
+            )}
 
 
             {/* Date filter active chip */}
@@ -393,7 +396,6 @@ export function CalendarView() {
               </button>
 
               {(['all', ...JOURNAL_EMOTION_ORDER] as const).map((emotion) => {
-                const Icon = emotion === 'all' ? null : JOURNAL_EMOTIONS[emotion].icon;
                 return (
                 <button
                   key={emotion}
@@ -409,12 +411,19 @@ export function CalendarView() {
                       : 'bg-surface-container-low text-on-surface border-border-soft hover:border-black'
                   }`}
                 >
-                  {Icon && <Icon className="w-4 h-4" aria-hidden="true" />}
                   <span>{emotion === 'all' ? 'Tất cả' : JOURNAL_EMOTIONS[emotion].label}</span>
                 </button>
               ); })}
+              {showReset && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="min-h-11 px-2 text-xs font-space font-bold text-gray-700 hover:text-black flex items-center gap-1 cursor-pointer underline"
+                >
+                  <RotateCcw className="w-3 h-3" /> Đặt lại
+                </button>
+              )}
             </div>
-            {hasPendingFilters && <p className="text-xs font-space text-gray-600">Bấm kính lúp hoặc Enter để áp dụng lựa chọn.</p>}
           </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -536,11 +545,11 @@ export function CalendarView() {
         {/* RIGHT COLUMN: Timeline Stream & Polaroid Cards (8 cols)    */}
         {/* ========================================================== */}
         <div className="lg:col-span-8 flex flex-col gap-3">
-          {hasActiveFilters && <div className="flex justify-end">
-            <button type="button" onClick={clearFilters} className="min-h-11 px-2 text-xs font-space font-bold underline text-gray-700 hover:text-black cursor-pointer">
-              Bỏ lọc
-            </button>
-          </div>}
+          <p className="font-space text-xs font-bold text-gray-700" aria-live="polite">
+            {hasActiveFilters && !listLoading && !listError && (allFilteredEntries.length > 0 || !listHasMore)
+              ? `${allFilteredEntries.length}${listHasMore ? '+' : ''} bài viết khớp${appliedFilters.search ? ` “${appliedFilters.search}”` : ''}`
+              : ''}
+          </p>
 
 
           {!listLoading && !listError && filteredEntries.length === 0 ? (
@@ -548,9 +557,15 @@ export function CalendarView() {
               <Calendar className="w-10 h-10 text-gray-400 stroke-[1.5]" />
               <p className="font-space text-base font-extrabold text-black">{entries.length === 0 && entriesForFilters.length === 0 && !listHasMore ? 'Bạn chưa có trang nhật ký nào' : 'Không tìm thấy bài viết phù hợp'}</p>
               <p className="text-xs text-gray-600 max-w-sm">
-                {entries.length === 0 ? 'Viết trang đầu tiên để bắt đầu lưu lại những ngày của bạn.' : 'Thử đổi từ khóa hoặc bỏ các điều kiện lọc hiện tại.'}
+                {entries.length === 0 ? 'Viết trang đầu tiên để bắt đầu lưu lại những ngày của bạn.'
+                  : listHasMore ? 'Các bài đã tải chưa có bài nào khớp; còn bài cũ hơn chưa tải.'
+                    : 'Thử đổi từ khóa hoặc bỏ các điều kiện lọc hiện tại.'}
               </p>
-              {entries.length === 0 && entriesForFilters.length === 0 && !listHasMore ? <Link href="/journal-editor" className="mt-2"><NeoButton size="sm">Viết trang đầu tiên</NeoButton></Link> : <button type="button" onClick={clearFilters} className="mt-2 min-h-11 px-4 border border-black rounded-lg bg-primary-container font-space text-sm font-bold shadow-neo-sm">Bỏ bộ lọc</button>}
+              {allFilteredEntries.length === 0 && listHasMore ? (
+                <button type="button" disabled={listLoadingNextPage} onClick={() => void loadMoreMatches()} className="mt-2 min-h-11 px-4 border border-black rounded-lg bg-primary-container font-space text-sm font-bold shadow-neo-sm disabled:opacity-50">
+                  {listLoadingNextPage ? 'Đang tải...' : 'Tải thêm kết quả'}
+                </button>
+              ) : entries.length === 0 && entriesForFilters.length === 0 && !listHasMore ? <Link href="/journal-editor" className="mt-2"><NeoButton size="sm">Viết trang đầu tiên</NeoButton></Link> : <button type="button" onClick={clearFilters} className="mt-2 min-h-11 px-4 border border-black rounded-lg bg-primary-container font-space text-sm font-bold shadow-neo-sm">Bỏ bộ lọc</button>}
             </div>
           ) : (
             <div className="flex flex-col gap-6">
@@ -563,9 +578,6 @@ export function CalendarView() {
                   {/* Entry Header */}
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-border-soft pb-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <span className="w-10 h-10 rounded-2xl bg-paper-warm border-neo-sm flex items-center justify-center shadow-neo-sm shrink-0">
-                        {renderMoodIcon(entry.mood, 'w-5 h-5', entry.emotion)}
-                      </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <h2 className="font-space text-lg sm:text-xl font-extrabold text-on-surface group-hover:text-primary transition-colors break-words leading-snug">

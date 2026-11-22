@@ -58,7 +58,8 @@ public class WritingSuggestionService {
             case "ALLOW" -> {
                 CompanionReply reply = responder.respond(command);
                 if (habitSuggestions != null) {
-                    reply = reply.withHabitSuggestion(habitSuggestions.suggestForTurn(userId, command).orElse(null));
+                    reply = reply.withHabitSuggestion(habitSuggestions
+                            .suggestForTurn(userId, command, reply.requestedHabitTemplate()).orElse(null));
                 }
                 yield CompanionTurnResult.of("REPLY", reply);
             }

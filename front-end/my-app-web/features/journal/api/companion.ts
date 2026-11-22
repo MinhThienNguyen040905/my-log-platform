@@ -1,4 +1,4 @@
-import { apiJson, apiJsonBody, apiQuery, apiResponse } from '@/lib/api/client';
+import { apiJson, apiJsonBody, apiQuery } from '@/lib/api/client';
 import { getConsents, setConsent } from '@/features/user';
 import type { CompanionTurnRequest, CompanionTurnResponse } from '../types/companion.types';
 
@@ -34,19 +34,6 @@ export async function grantCompanionConsent(): Promise<void> {
   const current = consents.find((consent) => consent.type === 'AI_PROCESSING');
   if (!current) throw new Error('Không tìm thấy điều khoản AI_PROCESSING để đồng ý.');
   await setConsent('AI_PROCESSING', current.documentVersion, true);
-}
-
-/**
- * Dismisses companion habit suggestions for 7 days via dedicated endpoint
- * `POST /api/v1/companion/habit-suggestions/dismiss` (does not consume companion-turn quota).
- */
-export async function dismissCompanionHabitSuggestion(): Promise<void> {
-  if (process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_COMPANION_MOCK === '1') {
-    const { dismissMockHabitSuggestion } = await import('./companion.mock');
-    dismissMockHabitSuggestion();
-    return;
-  }
-  await apiResponse('companion/habit-suggestions/dismiss', { method: 'POST' });
 }
 
 /**

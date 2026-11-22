@@ -74,7 +74,6 @@ class SecurityConfiguration {
                         authorize.requestMatchers("/api/v1/auth/logout", "/api/v1/me", "/api/v1/me/**",
                                         "/api/v1/journal-entries", "/api/v1/journal-entries/**",
                                         "/api/v1/journal-writing-suggestions",
-                                        "/api/v1/companion/habit-suggestions/dismiss",
                                         "/api/v1/journal-tags", "/api/v1/journal-tags/**",
                                         "/api/v1/journal-assets", "/api/v1/journal-assets/**",
                                         "/api/v1/check-ins", "/api/v1/check-ins/**")
@@ -83,9 +82,11 @@ class SecurityConfiguration {
                         authorize.requestMatchers("/api/v1/exports", "/api/v1/exports/**",
                                 "/api/v1/account-deletion-requests", "/api/v1/account-deletion-requests/**",
                                 "/api/v1/feedback", "/api/v1/feedback/**").authenticated();
-                        if (localDevUsers) authorize.requestMatchers(HttpMethod.POST, "/api/v1/dev/analyses:seed").authenticated();
+                        if (localDevUsers) authorize.requestMatchers(HttpMethod.POST, "/api/v1/dev/analyses:seed",
+                                "/api/v1/dev/pattern-signals:extract").authenticated();
                         authorize.requestMatchers("/api/v1/dashboard", "/api/v1/insights",
                                         "/api/v1/insights:refresh", "/api/v1/insights/*",
+                                        "/api/v1/patterns", "/api/v1/patterns:refresh", "/api/v1/patterns/*",
                                         "/api/v1/reports", "/api/v1/reports/**",
                                         "/api/v1/self-care/goals", "/api/v1/self-care/goals/**",
                                         "/api/v1/self-care/habits/**")

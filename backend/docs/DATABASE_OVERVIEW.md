@@ -160,7 +160,7 @@ Một user có nhiều quyết định consent theo loại và version.
 |---|---|---|
 | `id` | UUID | PK |
 | `user_id` | UUID | FK users CASCADE |
-| `consent_type` | VARCHAR(40) | `TERMS`, `PRIVACY`, `AI_PROCESSING`, `ANALYTICS`, `MODEL_TRAINING` |
+| `consent_type` | VARCHAR(40) | `TERMS`, `PRIVACY`, `AI_PROCESSING`, `ANALYTICS`, `MODEL_TRAINING`, `THINKING_PATTERNS` (V22) |
 | `document_version` | VARCHAR(40) | version văn bản user đã xem |
 | `granted` | BOOLEAN | quyết định |
 | `decided_at` | TIMESTAMPTZ | thời điểm quyết định |
@@ -519,6 +519,18 @@ Không copy journal text vào evidence.
 `reports` gồm user, `report_type` (`WEEKLY`, `MONTHLY`), period, timezone, version, status (`PENDING`, `PROCESSING`, `READY`, `FAILED`, `DEAD`), sample size, metrics snapshot, encrypted narrative với IV/wrapped key, model/prompt/policy version, lease/attempt và timestamps. Unique `(user_id, report_type, period_start, version)`. V9 dùng narrative `RULE` từ structured metric; AI narrative chưa bật khi output safety và provider M3 chưa được duyệt.
 
 `report_evidence` liên kết report với `insight_id` hoặc structured metric. Không nhúng raw journal. Scheduler theo timezone user tạo version 1 của tuần/tháng đã khép; worker claim bằng lease và version cũ không bị sửa khi regenerate.
+
+### 8.4 Nhận diện kiểu suy nghĩ (V22)
+
+```text
+entry_pattern_extractions   -- analysis: đã đọc (entry, content_version, taxonomy_version), unique; signal_count 0..10
+  └─ entry_pattern_signals  -- analysis: pattern_code, confidence 0..1, encrypted_quote; unique (extraction_id, pattern_code)
+pattern_recognitions        -- insight: thẻ 30 ngày; ACTIVE duy nhất mỗi (user_id, pattern_code); feedback; narrative mã hóa;
+                            --          knowledge_version_id, plan_goal_id SET NULL
+  └─ pattern_recognition_evidence (recognition_id, signal_id) PK ghép, shown_as_quote
+```
+
+Câu trích là chữ người dùng viết nên luôn mã hóa; `pattern_code` chỉ kiểm tra định dạng `^[A-Z][A-Z0-9_]{0,47}$`, danh mục hợp lệ theo `taxonomy_version` do application kiểm tra. Consent riêng `THINKING_PATTERNS` (mặc định không có dòng = tắt). Xem [THINKING_PATTERN_RECOGNITION_PLAN.md](THINKING_PATTERN_RECOGNITION_PLAN.md).
 
 ## 9. Self-care
 

@@ -111,6 +111,18 @@ mylog:
       local-hour: ${MYLOG_INSIGHTS_REFRESH_LOCAL_HOUR:3}
       poll-delay-ms: ${MYLOG_INSIGHTS_REFRESH_POLL_DELAY_MS:900000}
       ai-narrative: ${MYLOG_INSIGHTS_REFRESH_AI_NARRATIVE:false}
+  # Thinking-pattern extraction (THINKING_PATTERN_RECOGNITION_PLAN.md §10.1). none | fake (local/test only) |
+  # openai (local prototype with synthetic data only; refuses to start in any other profile). Separate settings
+  # from mylog.ai.* on purpose: enabling this is not a provider approval for journal analysis.
+  patterns:
+    extractor: ${MYLOG_PATTERNS_EXTRACTOR:none}
+    ai:
+      endpoint: ${MYLOG_PATTERNS_AI_ENDPOINT:https://api.openai.com/v1/chat/completions}
+      model: ${MYLOG_PATTERNS_AI_MODEL:}
+      api-key: ${MYLOG_PATTERNS_AI_API_KEY:}
+      timeout-ms: ${MYLOG_PATTERNS_AI_TIMEOUT_MS:15000}
+      input-usd-per-million: ${MYLOG_PATTERNS_AI_INPUT_USD_PER_MILLION:0}
+      output-usd-per-million: ${MYLOG_PATTERNS_AI_OUTPUT_USD_PER_MILLION:0}
   reports:
     enabled: ${MYLOG_REPORTS_ENABLED:false}
     poll-delay-ms: ${MYLOG_REPORTS_POLL_DELAY_MS:5000}

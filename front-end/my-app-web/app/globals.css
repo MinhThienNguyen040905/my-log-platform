@@ -39,6 +39,13 @@
   --color-mood-sadness-reflect: #4D96FF;
   --color-mood-purple: #9D4EDD;
 
+  /* Thanh pin cảm xúc: rất tệ → vui. */
+  --color-battery-1: #D93A2F;
+  --color-battery-2: #F28C28;
+  --color-battery-3: #F7D23C;
+  --color-battery-4: #A6D94F;
+  --color-battery-5: #2E8B3E;
+
   --font-space: var(--font-space-grotesk), sans-serif;
   --font-sans: var(--font-plus-jakarta), sans-serif;
   --font-serif: var(--font-playfair), serif;
@@ -223,6 +230,7 @@
 }
 /* Câu hỏi gợi ý chèn từ trợ lý (khối promptQuestion) — thẻ gợi ý, khác hẳn trích dẫn thường. */
 .tiptap .prompt-question {
+  position: relative;
   margin: 1.25rem 0 0.5rem;
   padding: 0.75rem 1rem;
   border: 1.5px solid #111111;
@@ -254,7 +262,37 @@
   border-radius: 1rem;
 }
 
-/* Ambient player equalizer bars (features/journal/components/ambient-player/Equalizer.tsx). */
+/* Breathing bubble (features/journal/components/calming-tools/BreathingExercise.tsx): one 4-second
+   animation per phase. Changing the phase class restarts the animation; `forwards` holds the end size. */
+@keyframes mylog-breath-in {
+  0% { transform: scale(0.62); }
+  70% { transform: scale(0.97, 1.01); }
+  85% { transform: scale(1.01, 0.98); }
+  100% { transform: scale(1); }
+}
+@keyframes mylog-breath-hold {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+/* Deflating: shrinks while wobbling between wide and tall, settling with a small jiggle at the end. */
+@keyframes mylog-breath-out {
+  0% { transform: scale(1); }
+  15% { transform: scale(0.95, 0.98); }
+  30% { transform: scale(0.88, 0.91); }
+  45% { transform: scale(0.84, 0.8); }
+  60% { transform: scale(0.74, 0.78); }
+  72% { transform: scale(0.71, 0.65); }
+  80% { transform: scale(0.6, 0.67); }
+  87% { transform: scale(0.66, 0.59); }
+  93% { transform: scale(0.6, 0.64); }
+  97% { transform: scale(0.63, 0.61); }
+  100% { transform: scale(0.62); }
+}
+.mylog-breath-in { animation: mylog-breath-in 4s ease-in-out forwards; }
+.mylog-breath-hold { animation: mylog-breath-hold 4s ease-in-out forwards; }
+.mylog-breath-out { animation: mylog-breath-out 4s ease-out forwards; }
+
+/* Ambient player equalizer bars (Equalizer in features/journal/components/ambient-player/PlayerVisuals.tsx). */
 @keyframes mylog-equalizer {
   0%, 100% { transform: scaleY(0.3); }
   50% { transform: scaleY(1); }

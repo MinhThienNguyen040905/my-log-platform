@@ -23,7 +23,9 @@ import java.util.UUID;
 @Service
 @ConditionalOnProperty(prefix = "mylog.identity", name = "enabled", havingValue = "true")
 public class UserProfileService implements UserProfileUseCase {
-    private static final Set<String> CONSENT_TYPES = Set.of("TERMS", "PRIVACY", "AI_PROCESSING", "ANALYTICS", "MODEL_TRAINING");
+    /** {@code THINKING_PATTERNS}: opt-in to reading journal text for thinking patterns; no row means off. */
+    private static final Set<String> CONSENT_TYPES = Set.of("TERMS", "PRIVACY", "AI_PROCESSING", "ANALYTICS", "MODEL_TRAINING",
+            "THINKING_PATTERNS");
     private static final Set<String> WELLNESS_GOALS = Set.of("REFLECTION", "SLEEP", "MINDFULNESS", "EXERCISE", "SOCIAL");
     private final UserStore store;
     private final SensitiveDataCipher cipher;

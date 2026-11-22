@@ -1,9 +1,11 @@
 package com.mylog.insight.application;
 
 import com.mylog.insight.application.query.InsightPage;
+import com.mylog.insight.domain.ContrastDetectors;
 import com.mylog.insight.domain.MoodSleepAssociation;
 import com.mylog.insight.domain.PatternDetectors;
 import com.mylog.insight.domain.PatternFinding;
+import com.mylog.insight.domain.PatternWindow;
 import com.mylog.journal.application.JournalTagService;
 import com.mylog.journal.application.query.JournalTagView;
 import com.mylog.platform.web.InvalidRequestException;
@@ -20,14 +22,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @ConditionalOnProperty(prefix = "mylog.identity", name = "enabled", havingValue = "true")
 public class InsightService {
-    /** Pattern insights look at the last 30 local days only. */
+    /** Pattern insights describe the last 30 local days; the 30 days before are read only for comparison. */
     public static final int PATTERN_WINDOW_DAYS = 30;
-    public static final String PATTERN_VERSION = "pattern-30d-v1";
+    public static final String PATTERN_VERSION = "pattern-30d-v2";
     static final int MAX_PATTERNS = 5;
 
     private final DailyAggregateSource source;
@@ -94,9 +97,10 @@ public class InsightService {
         String timezone = source.timezone(userId);
         LocalDate to = LocalDate.now(clock.withZone(ZoneId.of(timezone)));
         LocalDate from = to.minusDays(PATTERN_WINDOW_DAYS - 1L);
-        List<PatternFinding> findings = PatternDetectors.findAll(source.daily(userId, from, to),
-                source.entrySignals(userId, from, to), source.activities(userId, from, to),
-                from, to, minimumSamples, MAX_PATTERNS);
+        LocalDate previousTo = from.minusDays(1);
+        LocalDate previousFrom = previousTo.minusDays(PATTERN_WINDOW_DAYS - 1L);
+        List<PatternFinding> findings = PatternDetectors.findAll(window(userId, from, to),
+                window(userId, previousFrom, previousTo), minimumSamples, MAX_PATTERNS);
 
         Map<String, String> tagNames = new HashMap<>();
         if (findings.stream().anyMatch(f -> f.facts().containsKey("tagId")))
@@ -105,8 +109,8 @@ public class InsightService {
         List<NarrativeRewriter.Draft> drafts = new ArrayList<>();
         for (int i = 0; i < findings.size(); i++) {
             PatternFinding finding = findings.get(i);
-            // A falling mood trend keeps the reviewed template wording.
-            if (PatternDetectors.TREND.equals(finding.type()) && "DOWN".equals(finding.direction())) continue;
+            // Findings about things getting harder keep the reviewed template wording.
+            if (keepsTemplate(finding)) continue;
             String tagName = finding.facts().containsKey("tagId")
                     ? tagNames.getOrDefault(String.valueOf(finding.facts().get("tagId")), "") : null;
             drafts.add(new NarrativeRewriter.Draft("i" + (i + 1), finding.type(), finding.direction(),
@@ -128,6 +132,16 @@ public class InsightService {
         }
         store.replacePatterns(userId, from, to, timezone, PATTERN_VERSION, insights, clock.instant());
         return store.list(userId, from, to, null, 20);
+    }
+
+    private PatternWindow window(UUID userId, LocalDate from, LocalDate to) {
+        return new PatternWindow(from, to, source.daily(userId, from, to), source.entrySignals(userId, from, to),
+                source.activities(userId, from, to));
+    }
+
+    static boolean keepsTemplate(PatternFinding finding) {
+        return "DOWN".equals(finding.direction()) && Set.of(PatternDetectors.TREND, ContrastDetectors.CONDITION_SHIFT,
+                ContrastDetectors.RECOVERY_SHIFT).contains(finding.type());
     }
 
     @Transactional

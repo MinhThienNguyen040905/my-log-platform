@@ -11,14 +11,14 @@ export type EvidenceSummary =
   | { kind: 'share'; metric: string; present: number; total: number };
 
 /**
- * Turns stored evidence into something small to draw: the share of entries with an emotion, or the
+ * Turns stored evidence into something small to draw: the share of entries with an emotion or topic, or the
  * latest daily values of the main metric (scores on a 10-point scale, sleep in hours).
  */
 export function summarizeEvidence(evidence: InsightEvidence[], limit = 14): EvidenceSummary | null {
   if (evidence.length === 0) return null;
-  const emotion = evidence.filter((e) => e.metric.startsWith('EMOTION_'));
-  if (emotion.length > 0) {
-    return { kind: 'share', metric: emotion[0].metric, present: emotion.filter((e) => e.value > 0).length, total: emotion.length };
+  const shared = evidence.filter((e) => e.metric.startsWith('EMOTION_') || e.metric.startsWith('TOPIC_'));
+  if (shared.length > 0) {
+    return { kind: 'share', metric: shared[0].metric, present: shared.filter((e) => e.value > 0).length, total: shared.length };
   }
   const metric = evidence.some((e) => e.metric === 'STRESS_SCORE') ? 'STRESS_SCORE'
     : evidence.some((e) => e.metric === 'MOOD_SCORE') ? 'MOOD_SCORE' : evidence[0].metric;
