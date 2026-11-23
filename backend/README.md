@@ -7,7 +7,7 @@ Tài liệu thiết kế:
 - [Backend architecture](docs/BACKEND_ARCHITECTURE.md)
 - [AI analysis, safety và RAG](docs/AI_ANALYSIS_GUIDE.md)
 - [Database design](docs/DATABASE_OVERVIEW.md)
-- [Database DBML](docs/database/mylog.dbml)
+- [Giải thích các bảng và phạm vi schema hiện tại](docs/DATABASE_TABLES_EXPLAINED.md)
 - [Backend development plan](docs/BACKEND_DEVELOPMENT_PLAN.md)
 - [Architecture decisions](docs/adr/README.md)
 
@@ -60,6 +60,10 @@ MYLOG_REPORTS_ENABLED
 ```
 
 Database local có thể dùng Docker Compose; môi trường được triển khai dùng PostgreSQL do Supabase quản lý qua `MYLOG_DB_URL`, `MYLOG_DB_USERNAME` và `MYLOG_DB_PASSWORD`. Ảnh nhật ký dùng Cloudinary; bật adapter bằng `MYLOG_CLOUDINARY_ENABLED=true` sau khi điền credential server-side.
+
+Kết nối PostgreSQL ngoài máy local cần TLS theo cấu hình của nhà cung cấp; không tắt SSL để vượt lỗi kết nối. Với pooler/proxy, `pg_stat_ssl` mô tả phiên ở phía PostgreSQL, không đủ để xác nhận đoạn JDBC → pooler có TLS hay không. Kiểm tra cả cấu hình SSL của JDBC và kết nối thực tế; không in URL hoặc credential khi chẩn đoán.
+
+Schema hiện có Flyway V1–V22, tạo 50 bảng nghiệp vụ (không tính `flyway_schema_history`). JPA dùng `spring.jpa.hibernate.ddl-auto=validate` để kiểm tra mapping khi khởi động, không tự sửa schema; timezone JDBC là UTC. Thay đổi schema tiếp theo dùng migration V23 trở lên sau khi kiểm tra version hiện có, không sửa migration đã áp dụng. Xem [phạm vi và kết quả đối chiếu schema](docs/DATABASE_TABLES_EXPLAINED.md#11-quyền-truy-cập-khác-biệt-tài-liệu-và-phạm-vi-chưa-có-bảng).
 
 Redis local trong Compose dùng `MYLOG_REDIS_URL=redis://localhost:6379` và `MYLOG_REDIS_SSL_ENABLED=false`. Với Upstash, sao chép URL từ **Connect → TCP** (bắt đầu bằng `rediss://`) vào `MYLOG_REDIS_URL` và đặt `MYLOG_REDIS_SSL_ENABLED=true`; giữ URL chứa token trong `.env` local hoặc secret manager, không commit. Hiện Redis chưa lưu nghiệp vụ của mylog.
 
