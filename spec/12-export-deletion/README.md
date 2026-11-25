@@ -2,7 +2,7 @@
 
 > Spec là nguồn sự thật duy nhất về feature này. Khi feature thay đổi, cập nhật file này trong cùng commit/PR. Xem [quy ước](../README.md).
 
-> **Trạng thái spec:** điền từ code và quyết định ngày 2026-11-25, **chờ xác nhận**. Backend đã làm theo spec này (2026-11-25); phần web của xóa tài khoản và tài khoản Google khi tải export còn chưa làm.
+> **Trạng thái spec:** điền từ code và quyết định ngày 2026-11-25, **chờ xác nhận**. Backend và web đã làm theo spec này (2026-11-25); mobile chưa làm.
 
 Quyền của người dùng đối với dữ liệu của mình: lấy bản sao, xóa toàn bộ dữ liệu nhưng giữ tài khoản ("bắt đầu lại"), và xóa hẳn tài khoản.
 
@@ -92,7 +92,7 @@ Bản ghi export `EXPIRED` bị xóa sau 30 ngày; `deletion_requests` đã `COM
 | Phần | Trạng thái | Ghi chú |
 |---|---|---|
 | Backend | đã kiểm chứng | `M7IntegrationTest`, `DataResetIntegrationTest`, `AccountDeletionDisabledTest`, `AssetDeletionQueueJobTest`, `GoogleAuthFlowTest`. Chưa thử với Cloudinary thật |
-| Web | đang làm | Xuất và bắt đầu lại xong; xóa tài khoản chưa có |
+| Web | xong | Xuất (gồm tài khoản Google), bắt đầu lại, xóa tài khoản (ẩn trừ khi `NEXT_PUBLIC_ACCOUNT_DELETION_ENABLED=true`), thông báo hủy xóa khi đăng nhập. Playwright `account-deletion.spec.ts` đã viết, chưa chạy |
 | Mobile | đang làm | Có xuất; bắt đầu lại và xóa tài khoản chờ quyết định phát hành mobile |
 
 ## 8. Câu hỏi mở

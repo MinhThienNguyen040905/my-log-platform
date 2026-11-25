@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Mail, Key, ShieldCheck } from 'lucide-react';
 import { WashiTape } from '@/components/ui/ScrapbookDecorations';
 import { useToast } from '@/providers/ToastProvider';
-import { authError, authPost } from '../api/client';
+import { authError, authPost, deletionWasCancelled } from '../api/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,6 +38,9 @@ export function LoginForm() {
       const response = await authPost('login', { email: email.trim(), password, rememberMe });
       if (!response.ok) throw new Error(await authError(response, locale));
       showToast({ title: t('auth.loginSuccess'), type: 'success' });
+      if (await deletionWasCancelled(response)) {
+        showToast({ title: t('auth.deletionCancelled'), message: t('auth.deletionCancelledMessage'), type: 'info', duration: 10000 });
+      }
       router.replace('/dashboard');
       router.refresh();
     } catch (error) {

@@ -2,7 +2,7 @@
 
 > Spec là nguồn sự thật duy nhất về feature này. Khi feature thay đổi, cập nhật file này trong cùng commit/PR. Xem [quy ước](../README.md).
 
-> **Trạng thái spec:** điền từ code ngày 2026-11-25, **chờ xác nhận**. Backend đã làm theo spec này (2026-11-25); web và mobile chưa xử lý tài khoản Google.
+> **Trạng thái spec:** điền từ code ngày 2026-11-25, **chờ xác nhận**. Backend và web đã làm theo spec này (2026-11-25); mobile chưa xử lý tài khoản Google.
 
 - **Feature:** [Xuất dữ liệu, bắt đầu lại và xóa tài khoản](README.md)
 - **Catalog:** UC-22 trong [`USE_CASE_CATALOG.md`](../../backend/docs/USE_CASE_CATALOG.md) (bổ trợ, spec này được ưu tiên)
@@ -75,14 +75,15 @@ Theo `ExportSnapshot.java:44-77`: email tài khoản, hồ sơ, consent, phiên 
 - [ ] Playwright cho luồng xuất trên web.
 - [ ] Kiểm tra tải và chia sẻ file trên Android/iOS thật.
 - [x] Tài khoản Google đăng nhập trong 10 phút tải được file; quá 10 phút → `403 RECENT_LOGIN_REQUIRED`; sai mật khẩu → `403`, quá số lần → `429`.
-- [ ] Web và mobile không hiện ô mật khẩu cho tài khoản Google và hiện thông báo khi gặp `RECENT_LOGIN_REQUIRED`.
+- [x] Web không hiện ô mật khẩu cho tài khoản Google và hiện thông báo khi gặp `RECENT_LOGIN_REQUIRED` (chưa có test tự động).
+- [ ] Mobile: như trên.
 
 ## 9. Trạng thái triển khai
 
 | Phần | Trạng thái | Ghi chú |
 |---|---|---|
 | Backend | đã kiểm chứng | `M7IntegrationTest` (gồm `:authorize-download` qua HTTP cho mật khẩu, giới hạn số lần sai và tài khoản Google); tạo và xem yêu cầu chỉ test ở mức service |
-| Web | đang làm | Chưa xử lý tài khoản Google; chưa có Playwright |
+| Web | xong | Tài khoản Google không có ô mật khẩu, hiện hướng dẫn; lỗi `PASSWORD_INCORRECT`/`RECENT_LOGIN_REQUIRED` hiện thông báo riêng. Chưa có Playwright |
 | Mobile | đang làm | Chưa xử lý tài khoản Google; chưa chạy trên thiết bị thật |
 
 ## 10. Câu hỏi mở

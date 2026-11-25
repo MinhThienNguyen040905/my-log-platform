@@ -129,7 +129,8 @@ GĐ3 Phân tích AI bất đồng bộ
 **Spec:** [12-export-deletion](spec/12-export-deletion/README.md), [13-feedback](spec/13-feedback/README.md).
 
 - **Đã có:** export CSV/PDF mã hóa có hạn 24 giờ, "bắt đầu lại", yêu cầu xóa tài khoản có thể hủy và worker xóa dữ liệu, phản hồi mã hóa.
-- **Còn mở (cập nhật 2026-11-25, xem [spec 12](spec/12-export-deletion/README.md)):** hàng đợi xóa file ảnh dùng chung cho "bắt đầu lại" và xóa tài khoản (hiện "bắt đầu lại" có thể bỏ sót file khi Cloudinary lỗi); xóa tài khoản: cờ bật/tắt, hủy bằng đăng nhập lại, giao diện web; tài khoản Google tải export; dữ liệu phía provider AI xử lý qua tiêu chí duyệt provider. Backend không dùng Redis cho dữ liệu người dùng nên không có cache cần xóa. Feedback và admin đã có test HTTP; export và xóa tài khoản còn thiếu một phần.
+- **Đã làm thêm (2026-11-25, PR #40–#42, xem [spec 12](spec/12-export-deletion/README.md)):** hàng đợi xóa file ảnh dùng chung (V23) cho "bắt đầu lại" và xóa tài khoản; xóa tài khoản tắt mặc định bằng cờ, hủy bằng đăng nhập lại, có giao diện web; tài khoản Google tải được export; "bắt đầu lại" đưa hồ sơ về mặc định. Backend không dùng Redis cho dữ liệu người dùng nên không có cache cần xóa.
+- **Còn mở:** kiểm chứng xóa file với Cloudinary thật trên staging; chạy Playwright `account-deletion.spec.ts`; mobile (bắt đầu lại, xóa tài khoản) chờ quyết định phát hành trên store; dữ liệu phía provider AI xử lý qua tiêu chí duyệt provider; test HTTP cho `POST /exports` và `GET /exports/{id}`.
 
 ### GĐ8 — Hoàn thiện client 🟡
 

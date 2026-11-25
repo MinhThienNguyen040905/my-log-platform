@@ -66,6 +66,21 @@ export async function resetAccountData(password: string | null): Promise<void> {
   });
 }
 
+export type AccountDeletion = { id: string; status: string; requestedAt: string; scheduledFor: string; completedAt: string | null };
+
+/**
+ * UC-23: schedules deletion of the account in 7 days and signs the user out everywhere. Signing in again before
+ * `scheduledFor` cancels it. Refusals: 403 PASSWORD_INCORRECT / RECENT_LOGIN_REQUIRED, 409 already requested,
+ * 429 too many wrong passwords, 404 when the feature is switched off.
+ */
+export async function requestAccountDeletion(password: string | null): Promise<AccountDeletion> {
+  return (await accountRequest('/account-deletion', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(password ? { password } : {}),
+  })).json();
+}
+
 export async function setConsent(type: string, documentVersion: string, granted: boolean): Promise<void> {
   await accountRequest(`/consents/${encodeURIComponent(type)}`, {
     method: 'PUT',

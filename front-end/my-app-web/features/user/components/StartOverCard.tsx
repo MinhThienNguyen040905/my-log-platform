@@ -13,9 +13,10 @@ const DELETED = [
   'Phân tích cảm xúc, gợi ý, bản nhìn lại tuần/tháng',
   'Mục tiêu và thói quen tự chăm sóc',
   'Bản xuất dữ liệu đã tạo, góp ý đã gửi',
+  'Tên, bút danh, mục tiêu và linh vật (trở về mặc định)',
   'Bản nháp đang lưu trên trình duyệt này',
 ];
-const KEPT = ['Tài khoản, email và cách đăng nhập', 'Tên, bút danh, linh vật, ngôn ngữ, múi giờ', 'Các quyền bạn đã cho phép'];
+const KEPT = ['Tài khoản, email và cách đăng nhập', 'Ngôn ngữ và múi giờ', 'Các quyền bạn đã cho phép'];
 
 function errorMessage(error: unknown): string {
   if (error instanceof AccountApiError) {

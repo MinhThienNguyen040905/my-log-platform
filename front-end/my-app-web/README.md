@@ -37,7 +37,7 @@ Cài đặt → "Dữ liệu & quyền riêng tư" có thẻ "Bắt đầu hành
 
 ## Xóa tài khoản
 
-Web không có chức năng xóa tài khoản. User gửi email cho admin; API xóa vẫn còn ở backend (xem [backend/README.md](../../backend/README.md)). Đặt địa chỉ admin vào `NEXT_PUBLIC_SUPPORT_EMAIL` trong `.env.local` để tab "Dữ liệu & quyền riêng tư" ở Cài đặt hiện dòng liên hệ; không đặt thì dòng này ẩn. Không commit địa chỉ thật.
+Xóa tài khoản (UC-23) tắt mặc định. Đặt `NEXT_PUBLIC_ACCOUNT_DELETION_ENABLED=true` trong `.env.local` **chỉ khi** backend chạy với `MYLOG_ACCOUNT_DELETION_ENABLED=true`; khi đó tab "Dữ liệu & quyền riêng tư" ở Cài đặt hiện thẻ "Xóa tài khoản". Gửi yêu cầu sẽ đăng xuất; đăng nhập lại trong 7 ngày sẽ hủy yêu cầu và hiện thông báo. Xem [spec UC-23](../../spec/12-export-deletion/UC-23-delete-account.md).
 
 ## Chạy và kiểm tra
 
