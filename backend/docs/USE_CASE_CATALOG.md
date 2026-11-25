@@ -215,7 +215,15 @@ Trạng thái là ảnh chụp repository ngày 2026-10-07, không phải cam k�
 
 **Luồng:** Người dùng xác nhận yêu cầu → tài khoản chuyển sang quy trình xóa → hệ thống xóa/thu hồi dữ liệu liên quan theo chính sách, kể cả tài nguyên bên ngoài khi áp dụng.
 
-**Hiện trạng:** Có backend cho yêu cầu và job xóa; cần kiểm chứng vận hành trước khi coi toàn bộ vòng đời production đã sẵn sàng.
+**Hiện trạng:** Có backend cho yêu cầu và job xóa; cần kiểm chứng vận hành trước khi coi toàn bộ vòng đời production đã sẵn sàng. Thiết kế mới (2026-11-25): hủy bằng cách đăng nhập lại trong 7 ngày, bật/tắt bằng cấu hình. Xem `spec/12-export-deletion/UC-23-delete-account.md`.
+
+### UC-29 — Bắt đầu lại
+
+**Mục tiêu:** Xóa toàn bộ nhật ký và dữ liệu liên quan để bắt đầu từ đầu, nhưng giữ tài khoản.
+
+**Luồng:** Người dùng xác nhận (gõ cụm từ và nhập mật khẩu, hoặc đăng nhập lại gần đây với Google) → hệ thống xóa vĩnh viễn nhật ký, check-in, phân tích, insight, báo cáo, tự chăm sóc, phản hồi, ảnh; hồ sơ về mặc định → người dùng tiếp tục dùng tài khoản.
+
+**Hiện trạng:** Có backend và web. Xem `spec/12-export-deletion/UC-29-start-over.md`.
 
 ## F. Quản trị viên và nhóm nội dung
 

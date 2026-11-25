@@ -18,7 +18,7 @@
 Cho phép một người tạo tài khoản cá nhân, chứng minh sở hữu email và truy cập mylog an toàn trên nhiều thiết bị.
 
 - **Trong phạm vi:** đăng ký 2 bước (lượt chờ → xác minh), đăng nhập email/mật khẩu, đăng nhập Google, access/refresh token, đăng xuất, quên và đặt lại mật khẩu, đổi mật khẩu khi đã đăng nhập, xem và thu hồi phiên.
-- **Ngoài phạm vi:** MFA, đăng nhập bằng nhà cung cấp khác Google, đổi email. Xóa tài khoản thuộc [12-export-deletion](../12-export-deletion/README.md).
+- **Ngoài phạm vi:** MFA, đăng nhập bằng nhà cung cấp khác Google, đổi email. Xóa tài khoản và "bắt đầu lại" thuộc [12-export-deletion](../12-export-deletion/README.md); việc đăng nhập lại để hủy yêu cầu xóa mô tả ở [UC-23](../12-export-deletion/UC-23-delete-account.md).
 
 ## 2. Use case
 
