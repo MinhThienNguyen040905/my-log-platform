@@ -129,7 +129,7 @@ GĐ3 Phân tích AI bất đồng bộ
 **Spec:** [12-export-deletion](spec/12-export-deletion/README.md), [13-feedback](spec/13-feedback/README.md).
 
 - **Đã có:** export CSV/PDF mã hóa có hạn 24 giờ, "bắt đầu lại", yêu cầu xóa tài khoản có thể hủy và worker xóa dữ liệu, phản hồi mã hóa.
-- **Còn mở:** xóa cả ảnh trên Cloudinary, cache và dữ liệu phía provider AI; thiếu test HTTP cho export, feedback, admin.
+- **Còn mở (cập nhật 2026-11-25, xem [spec 12](spec/12-export-deletion/README.md)):** hàng đợi xóa file ảnh dùng chung cho "bắt đầu lại" và xóa tài khoản (hiện "bắt đầu lại" có thể bỏ sót file khi Cloudinary lỗi); xóa tài khoản: cờ bật/tắt, hủy bằng đăng nhập lại, giao diện web; tài khoản Google tải export; dữ liệu phía provider AI xử lý qua tiêu chí duyệt provider. Backend không dùng Redis cho dữ liệu người dùng nên không có cache cần xóa. Feedback và admin đã có test HTTP; export và xóa tài khoản còn thiếu một phần.
 
 ### GĐ8 — Hoàn thiện client 🟡
 

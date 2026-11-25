@@ -18,7 +18,7 @@ Thiết lập ban đầu (onboarding), hồ sơ cá nhân và các lựa chọn 
 Cho người dùng đặt cách được gọi, mục tiêu khi dùng mylog, múi giờ, ngôn ngữ, và quyết định rõ ràng dữ liệu của mình được xử lý thế nào.
 
 - **Trong phạm vi:** đọc/sửa hồ sơ, hoàn tất onboarding, đọc và thay đổi consent.
-- **Ngoài phạm vi:** đổi email, ảnh đại diện. Phiên và đổi mật khẩu thuộc [01-identity-auth](../01-identity-auth/README.md). "Bắt đầu lại" (`POST /me/data:reset`) và xóa tài khoản thuộc [12-export-deletion](../12-export-deletion/README.md).
+- **Ngoài phạm vi:** đổi email, ảnh đại diện. Phiên và đổi mật khẩu thuộc [01-identity-auth](../01-identity-auth/README.md). "Bắt đầu lại" (`POST /me/data:reset`, đưa hồ sơ về mặc định) và xóa tài khoản thuộc [12-export-deletion](../12-export-deletion/README.md).
 
 ## 2. Use case
 

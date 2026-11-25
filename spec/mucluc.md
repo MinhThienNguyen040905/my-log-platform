@@ -39,9 +39,10 @@
 | | | UC-16 | [`UC-16-goals-habits.md`](09-selfcare/UC-16-goals-habits.md) | Đặt mục tiêu và theo dõi thói quen tự chăm sóc |
 | | | UC-18 | [`UC-18-future-self-letter.md`](09-selfcare/UC-18-future-self-letter.md) | Viết lời nhắn cho chính mình trong tương lai |
 | 10 | **Companion** | — | [`10-companion.md`](10-companion.md) | Trợ lý đồng hành: gợi ý tiêu đề, gợi ý công cụ và thói quen. Chưa có UC trong catalog. |
-| 12 | **Xuất dữ liệu và xóa tài khoản** | — | [`12-export-deletion/`](12-export-deletion/README.md) | Quyền của người dùng đối với dữ liệu: xuất và xóa. |
+| 12 | **Xuất dữ liệu, bắt đầu lại và xóa tài khoản** | — | [`12-export-deletion/`](12-export-deletion/README.md) | Quyền của người dùng đối với dữ liệu: xuất, xóa dữ liệu nhưng giữ tài khoản, xóa tài khoản. |
 | | | UC-22 | [`UC-22-export-data.md`](12-export-deletion/UC-22-export-data.md) | Xuất dữ liệu cá nhân |
 | | | UC-23 | [`UC-23-delete-account.md`](12-export-deletion/UC-23-delete-account.md) | Xóa tài khoản |
+| | | UC-29 | [`UC-29-start-over.md`](12-export-deletion/UC-29-start-over.md) | Bắt đầu lại: xóa dữ liệu, giữ tài khoản |
 | 13 | **Phản hồi** | — | [`13-feedback/`](13-feedback/README.md) | Người dùng gửi phản hồi; quản trị xem và xử lý. |
 | | | UC-21 | [`UC-21-send-feedback.md`](13-feedback/UC-21-send-feedback.md) | Gửi phản hồi về nội dung hoặc gợi ý |
 | | | UC-26 | [`UC-26-review-feedback.md`](13-feedback/UC-26-review-feedback.md) | Xem và xử lý phản hồi người dùng |
@@ -77,6 +78,7 @@
 - [UC-26](13-feedback/UC-26-review-feedback.md) — Xem và xử lý phản hồi người dùng
 - [UC-27](11-knowledge.md) — Biên tập và duyệt nội dung hỗ trợ
 - [UC-28](14-admin/UC-28-safety-resources-rules.md) — Duyệt nguồn hỗ trợ và quy tắc phản hồi an toàn
+- [UC-29](12-export-deletion/UC-29-start-over.md) — Bắt đầu lại
 - [UC-01](01-identity-auth/UC-01-register-verify-email.md) — Đăng ký và xác minh email
 - [UC-02](01-identity-auth/UC-02-login-logout.md) — Đăng nhập và đăng xuất
 - [UC-03](01-identity-auth/UC-03-reset-password.md) — Lấy lại mật khẩu
