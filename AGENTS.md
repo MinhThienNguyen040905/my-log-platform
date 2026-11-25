@@ -6,6 +6,7 @@ File này áp dụng cho toàn bộ repository. Khi làm việc trong một thư
 
 | Thư mục | Vai trò | Hướng dẫn cần đọc |
 |---|---|---|
+| `spec/` | **Nguồn sự thật duy nhất** về feature: hành vi, business rule, API contract, dữ liệu, use case | [`spec/mucluc.md`](spec/mucluc.md), [`spec/README.md`](spec/README.md) |
 | `backend/` | API, nghiệp vụ, PostgreSQL, job và tích hợp AI; Java/Spring Boot | [`backend/AGENTS.md`](backend/AGENTS.md), [`backend/README.md`](backend/README.md) |
 | `front-end/my-app-web/` | Ứng dụng web Next.js | [`front-end/my-app-web/AGENTS.md`](front-end/my-app-web/AGENTS.md), README của web |
 | `front-end/my-app-mobile/` | Ứng dụng mobile Expo | [`front-end/my-app-mobile/AGENTS.md`](front-end/my-app-mobile/AGENTS.md), README của mobile |
@@ -21,10 +22,19 @@ Không áp quy ước package Java của backend cho frontend hoặc Python; kh�
 - Kiểm tra `git status` trước khi sửa và giữ nguyên thay đổi không thuộc yêu cầu của người dùng. Không sửa migration đã áp dụng; các quy tắc schema chi tiết nằm trong `backend/AGENTS.md`.
 - Chạy kiểm tra phù hợp với phạm vi thay đổi; báo rõ kiểm tra nào đã chạy và phần nào chưa kiểm chứng. Cập nhật tài liệu khi hành vi hoặc contract thay đổi.
 
+## Đặc tả feature (nguồn sự thật duy nhất)
+
+- `spec/` là nguồn uy tín duy nhất về hành vi, business rule, phân quyền, API contract và dữ liệu của mọi feature. `backend/docs/`, README và kế hoạch chỉ là tài liệu bổ trợ; nếu khác spec thì theo spec.
+- **Trước khi thực thi** một feature hoặc UC: đọc [`spec/mucluc.md`](spec/mucluc.md), rồi đọc file hoặc thư mục spec tương ứng.
+- **Khi feature thay đổi** (thêm, sửa, bỏ hành vi hoặc contract): cập nhật spec trong cùng commit/PR, gồm mục "Trạng thái triển khai". Không merge thay đổi feature khi spec chưa cập nhật.
+- **Yêu cầu khác spec:** chỉ ra điểm khác, cập nhật spec theo quyết định của người dùng trước, rồi mới sửa code.
+- **Code lệch spec:** báo cho người dùng; không tự sửa bên nào khi chưa rõ bên nào đúng.
+- **Spec còn rỗng** (giai đoạn chuyển tiếp): điền spec từ code và test hiện tại, nhờ người dùng xác nhận trước khi dựa vào nó.
+
 ## Tài liệu và mức độ tin cậy
 
 - Đọc README và `AGENTS.md` của thư mục sở hữu trước khi triển khai. Với luồng xuyên suốt, đối chiếu cả backend và client thực tế.
-- Code, migration và test hiện tại quyết định trạng thái triển khai; ADR ghi lại quyết định kiến trúc; kế hoạch nêu mục tiêu và việc còn mở.
+- `spec/` là nguồn sự thật về feature; code, migration và test là hiện thực của spec và cho biết đã làm đến đâu; ADR ghi lại quyết định kiến trúc; kế hoạch nêu việc còn mở.
 - Phân biệt rõ bản demo/mock ở frontend, adapter chưa bật và tính năng hoạt động với backend. Không coi model đã train hoặc provider đã cấu hình là được duyệt để xử lý dữ liệu người dùng.
 
 ## Tài khoản test local
