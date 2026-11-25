@@ -47,7 +47,7 @@ Người dùng đã có tài khoản (email/mật khẩu hoặc Google).
 ## 4. Luồng phụ và ngoại lệ
 
 - Sai email/mật khẩu, tài khoản không tồn tại, bị khóa, chưa `ACTIVE`, hoặc tài khoản chỉ có Google mà đăng nhập bằng mật khẩu: cùng một lỗi `401`.
-- Tài khoản `DELETION_PENDING` với yêu cầu xóa còn trong thời gian chờ: xác thực đúng (mật khẩu hoặc Google) thì **hủy yêu cầu xóa**, tài khoản về `ACTIVE`, đăng nhập thành công và response có `deletionCancelled: true` *(thay đổi, xem [UC-23](../12-export-deletion/UC-23-delete-account.md))*. Mọi response đăng nhập khác có `deletionCancelled: false`.
+- Tài khoản `DELETION_PENDING` với yêu cầu xóa còn trong thời gian chờ: xác thực đúng (mật khẩu hoặc Google) thì **hủy yêu cầu xóa**, tài khoản về `ACTIVE`, đăng nhập thành công và response có `deletionCancelled: true` (xem [UC-23](../12-export-deletion/UC-23-delete-account.md)). Mọi response đăng nhập khác có `deletionCancelled: false`.
 - Sai mật khẩu lần thứ 5 → khóa 15 phút; trong thời gian khóa, cả mật khẩu đúng cũng trả `401`. Đặt lại mật khẩu (UC-03) xóa khóa.
 - Google OAuth tắt (`mylog.identity.oauth.google.enabled=false`) → `404`.
 - Refresh token đã dùng → thu hồi toàn bộ họ phiên, `401`.

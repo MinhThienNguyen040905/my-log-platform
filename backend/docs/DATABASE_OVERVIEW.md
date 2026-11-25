@@ -793,8 +793,24 @@ checkpoint VARCHAR(32)
 last_error_code VARCHAR(60) NULL
 ```
 
-Unique partial: tối đa một request active/user. Checkpoint chỉ chứa tên bước và ID kỹ thuật, không chứa dữ liệu đã xóa.
-Request hoàn tất/hủy được giữ tối đa 365 ngày dưới dạng audit tối thiểu rồi được dọn.
+Unique partial: tối đa một request active/user. Checkpoint chỉ chứa tên bước và ID kỹ thuật, không chứa dữ liệu đã xóa; từ V23 worker không còn dựa vào checkpoint vì file ảnh được xếp vào `asset_deletion_queue` trong cùng transaction với purge.
+Request hoàn tất/hủy được giữ tối đa 365 ngày dưới dạng audit tối thiểu rồi được dọn. Chức năng chỉ chạy khi `MYLOG_ACCOUNT_DELETION_ENABLED=true`; đăng nhập lại trong grace period đặt request về `CANCELLED`.
+
+### 13.4 `asset_deletion_queue` (V23)
+
+```text
+id UUID PK
+public_id VARCHAR(512)
+asset_type VARCHAR(24) CHECK IMAGE/ATTACHMENT
+delivery_type VARCHAR(32) CHECK AUTHENTICATED/PRIVATE
+attempt INTEGER
+available_at TIMESTAMPTZ
+lease_expires_at TIMESTAMPTZ NULL
+last_error_code VARCHAR(60) NULL
+created_at TIMESTAMPTZ
+```
+
+Không có FK tới `users` để dòng tồn tại sau khi xóa tài khoản. "Bắt đầu lại" và xóa tài khoản ghi dòng trong cùng transaction với việc xóa `journal_assets`; `AssetDeletionQueueJob` xóa file ngoài transaction và retry với backoff. Bật RLS, thu hồi grant `anon`/`authenticated`.
 
 ### 13.3 `feedback`
 
@@ -930,6 +946,7 @@ V19__oauth_google_support.sql
 V20__allow_pending_journal_assets.sql
 V21__companion_habit_linking.sql
 V22__thinking_pattern_recognition.sql
+V23__asset_deletion_queue.sql
 ```
 
 Quy tắc Flyway:
@@ -937,8 +954,8 @@ Quy tắc Flyway:
 - Migration đã merge/deploy không được sửa.
 - DDL mới có migration mới, kể cả sửa constraint/index.
 - V2 seed role `USER` tối thiểu để registration hoạt động; V12 bổ sung các admin role/permission. V13 cho phép null attribution FK khi xóa user; V14 thêm export/deletion/feedback; V15 khóa truy cập Data API trực tiếp.
-- V16 thêm mã xác minh; V17 tách đăng ký tạm; V18 thêm index embedding; V19 thêm Google OAuth; V20 mở rộng ảnh nháp; V21 nối công cụ với thói quen; V22 thêm bốn bảng nhận diện kiểu suy nghĩ và consent riêng.
-- Với cây migration hiện tại, thay đổi tiếp theo dùng V23 trở lên; kiểm tra lịch sử Flyway của đúng môi trường trước khi triển khai.
+- V16 thêm mã xác minh; V17 tách đăng ký tạm; V18 thêm index embedding; V19 thêm Google OAuth; V20 mở rộng ảnh nháp; V21 nối công cụ với thói quen; V22 thêm bốn bảng nhận diện kiểu suy nghĩ và consent riêng; V23 thêm hàng đợi xóa file ảnh.
+- Với cây migration hiện tại, thay đổi tiếp theo dùng V24 trở lên; kiểm tra lịch sử Flyway của đúng môi trường trước khi triển khai.
 - Seed chỉ dành cho stable system codes/roles, không seed journal/user thật.
 - Index lớn production dùng kế hoạch online/concurrent riêng; `CREATE INDEX CONCURRENTLY` không chạy trong transaction Flyway mặc định.
 - Mỗi migration phải chạy được trên database rỗng và database có dữ liệu representative.

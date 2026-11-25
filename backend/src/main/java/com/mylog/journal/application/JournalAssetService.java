@@ -32,6 +32,7 @@ public class JournalAssetService {
     private final IdGenerator ids;
     private final Clock clock;
     private final long maxQuotaBytes;
+    private final AssetDeletionQueue deletionQueue;
 
     // Rate limiting: max 30 uploads per hour per user in memory
     private final Map<UUID, UploadWindow> userRateLimits = new ConcurrentHashMap<>();
@@ -42,7 +43,8 @@ public class JournalAssetService {
             ImageInspectionService inspection,
             IdGenerator ids,
             Clock clock,
-            @Value("${mylog.assets.max-user-quota-bytes:209715200}") long maxQuotaBytes
+            @Value("${mylog.assets.max-user-quota-bytes:209715200}") long maxQuotaBytes,
+            AssetDeletionQueue deletionQueue
     ) {
         this.store = store;
         this.storage = storage;
@@ -50,6 +52,7 @@ public class JournalAssetService {
         this.ids = ids;
         this.clock = clock;
         this.maxQuotaBytes = maxQuotaBytes;
+        this.deletionQueue = deletionQueue;
     }
 
     @Transactional
@@ -165,23 +168,18 @@ public class JournalAssetService {
     /** A file kept in asset storage, enough to delete it after its database rows are gone. */
     public record StoredFile(String publicId, String assetType, String deliveryType) {}
 
-    /** Files the user still has in storage; read before a data reset deletes the asset rows. */
-    @Transactional(readOnly = true)
-    public List<StoredFile> storedFiles(UUID userId) {
-        return store.findStoredFilesByUser(userId);
-    }
-
     /**
-     * Removes files from storage once their rows are deleted. Best effort per file: a failure is logged without
-     * the file id and the remaining files are still attempted.
+     * Queues every file the user still has in storage for deletion. Call in the same transaction that deletes the
+     * user's asset rows ("start over", account deletion): the queue then outlives a storage outage, and
+     * {@code AssetDeletionQueueJob} removes the files with retries.
+     *
+     * @return the number of files queued
      */
-    public void deleteStoredFiles(List<StoredFile> files) {
-        int failed = 0;
-        for (StoredFile file : files) {
-            try { storage.delete(file.publicId(), file.assetType(), file.deliveryType()); }
-            catch (RuntimeException e) { failed++; }
-        }
-        if (failed > 0) log.warn("Asset storage cleanup left {} of {} files", failed, files.size());
+    @Transactional
+    public int enqueueAllForDeletion(UUID userId) {
+        List<StoredFile> files = store.findStoredFilesByUser(userId);
+        deletionQueue.enqueue(files, clock.instant());
+        return files.size();
     }
 
     private record UploadWindow(Instant windowStart, int count) {}

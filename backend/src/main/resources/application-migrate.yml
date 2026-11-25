@@ -18,5 +18,5 @@ mylog:
     enabled: false
   exports:
     enabled: false
-  deletion:
+  account-deletion:
     enabled: false

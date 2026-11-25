@@ -2,7 +2,7 @@
 
 > Spec là nguồn sự thật duy nhất về feature này. Khi feature thay đổi, cập nhật file này trong cùng commit/PR. Xem [quy ước](../README.md).
 
-> **Trạng thái spec:** điền từ code và quyết định ngày 2026-11-25, **chờ xác nhận**. Phần đánh dấu *(thay đổi)* khác với code hiện tại và sẽ được sửa trong PR backend/web.
+> **Trạng thái spec:** điền từ code và quyết định ngày 2026-11-25, **chờ xác nhận**. Backend đã làm theo spec này (2026-11-25).
 
 - **Feature:** [Xuất dữ liệu, bắt đầu lại và xóa tài khoản](README.md)
 - **Catalog:** UC-29 trong [`USE_CASE_CATALOG.md`](../../backend/docs/USE_CASE_CATALOG.md) (bổ trợ, spec này được ưu tiên)
@@ -14,7 +14,7 @@ Người dùng đã đăng nhập, tài khoản `ACTIVE`.
 ## 2. Tiền điều kiện và hậu điều kiện
 
 - **Tiền điều kiện:** có access token hợp lệ; xác nhận lại danh tính.
-- **Hậu điều kiện:** nhật ký và mọi dữ liệu dẫn xuất bị xóa vĩnh viễn; hồ sơ trở về mặc định *(thay đổi)*; tài khoản, email, consent và phiên đăng nhập còn nguyên; người dùng tiếp tục dùng app như tài khoản mới.
+- **Hậu điều kiện:** nhật ký và mọi dữ liệu dẫn xuất bị xóa vĩnh viễn; hồ sơ trở về mặc định; tài khoản, email, consent và phiên đăng nhập còn nguyên; người dùng tiếp tục dùng app như tài khoản mới.
 
 ## 3. Luồng chính
 
@@ -25,9 +25,9 @@ Người dùng đã đăng nhập, tài khoản `ACTIVE`.
 3. `POST /me/data:reset` với `{password?, confirm: true}`.
 4. Trong **một** transaction (`DataResetService.java`, `JpaAccountDataReset.java`):
    1. khóa dòng `users` để chặn ghi dữ liệu mới trong lúc xóa;
-   2. đưa mọi ảnh của người dùng vào hàng đợi xóa file `asset_deletion_queue` *(thay đổi; hiện xóa file sau commit, lỗi thì bỏ qua)*;
+   2. đưa mọi ảnh của người dùng vào hàng đợi xóa file `asset_deletion_queue`;
    3. xóa dữ liệu (xem mục 5);
-   4. đưa hồ sơ về mặc định *(thay đổi)*;
+   4. đưa hồ sơ về mặc định;
    5. ghi audit `DATA_RESET` (chỉ ghi là đã reset, không ghi nội dung).
 5. Trả `204`. Web hiện thông báo thành công và tải lại dữ liệu.
 6. Job hàng đợi xóa file trên Cloudinary/local và thử lại cho tới khi thành công.
@@ -38,12 +38,12 @@ Người dùng đã đăng nhập, tài khoản `ACTIVE`.
 - Sai mật khẩu: `403 PASSWORD_INCORRECT`; quá 5 lần sai trong 15 phút: `429`.
 - Tài khoản Google, phiên tạo quá 10 phút trước: `403 RECENT_LOGIN_REQUIRED`; web hướng dẫn đăng xuất, đăng nhập lại rồi thử trong 10 phút.
 - Lỗi DB: rollback toàn bộ, không xóa gì.
-- Xóa file lỗi *(thay đổi)*: file còn trong hàng đợi, thử lại với backoff; không mất dấu file.
+- Xóa file lỗi: file còn trong hàng đợi, thử lại với backoff; không mất dấu file.
 
 ## 5. Business rule
 
 - **Xóa vĩnh viễn:** nhật ký (kể cả bài đã xóa mềm), ảnh, nhãn, check-in, kết quả phân tích, job AI, outbox, bản ghi chi phí AI, sự kiện safety, insight, báo cáo, kiểu suy nghĩ, mục tiêu, thói quen, lần hoàn thành, tùy chọn companion, yêu cầu export, phản hồi, idempotency key.
-- **Đưa về mặc định** *(thay đổi)*: hồ sơ — `displayName`, `penName`, `onboardingGoals`, `mascot` về rỗng/mặc định. Giữ `timezone`, `locale`, `onboardingCompletedAt` để người dùng không phải làm lại onboarding.
+- **Đưa về mặc định**: hồ sơ — `displayName`, `penName`, `onboardingGoals`, `mascot` về rỗng/mặc định. Giữ `timezone`, `locale`, `onboardingCompletedAt` để người dùng không phải làm lại onboarding.
 - **Giữ nguyên:** tài khoản (email, mật khẩu, trạng thái), consent, phiên đăng nhập, vai trò, audit log.
 - Không có quota riêng ngoài giới hạn nhập sai mật khẩu.
 
@@ -62,14 +62,14 @@ Người dùng đã đăng nhập, tài khoản `ACTIVE`.
 
 - [x] Xóa đúng dữ liệu của người dùng, không chạm dữ liệu người khác (`DataResetIntegrationTest`).
 - [x] Luồng web có xác nhận, cụm từ và mật khẩu (Playwright `data-reset.spec.ts`).
-- [ ] Ảnh vào hàng đợi trong cùng transaction; kho lưu trữ lỗi thì file vẫn được xóa ở lần thử sau.
-- [ ] Hồ sơ về mặc định, giữ `timezone`, `locale`, `onboardingCompletedAt`.
+- [x] Ảnh vào hàng đợi trong cùng transaction; kho lưu trữ lỗi thì file vẫn được xóa ở lần thử sau.
+- [x] Hồ sơ về mặc định, giữ `timezone`, `locale`, `onboardingCompletedAt`.
 
 ## 9. Trạng thái triển khai
 
 | Phần | Trạng thái | Ghi chú |
 |---|---|---|
-| Backend | đang làm | Luồng chính đã kiểm chứng; hàng đợi xóa file và xóa hồ sơ chưa làm |
+| Backend | đã kiểm chứng | `DataResetIntegrationTest`, `AssetDeletionQueueJobTest` |
 | Web | đã kiểm chứng | `data-reset.spec.ts` |
 | Mobile | chưa làm | Chờ quyết định phát hành mobile |
 

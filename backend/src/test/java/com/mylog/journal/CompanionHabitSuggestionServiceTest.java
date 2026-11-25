@@ -157,6 +157,7 @@ class CompanionHabitSuggestionServiceTest {
         }
         @Override public ProfileView update(UUID userId, String displayName, String penName, List<String> onboardingGoals, String timezone, String locale, String mascot, long expectedVersion) { return null; }
         @Override public ProfileView completeOnboarding(UUID userId, long expectedVersion) { return null; }
+        @Override public void resetPersonalDetails(UUID userId) {}
         @Override public void decideConsent(UUID userId, String type, String documentVersion, boolean granted) {}
         @Override public List<ConsentView> consents(UUID userId) { return List.of(); }
         @Override public boolean isConsentGranted(UUID userId, String type) { return true; }

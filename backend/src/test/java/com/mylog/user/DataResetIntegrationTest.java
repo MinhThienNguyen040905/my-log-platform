@@ -39,6 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** "Start a new journey": POST /api/v1/me/data:reset deletes the user's data and keeps the account. Synthetic data only. */
 @Import({TestcontainersConfiguration.class, DataResetIntegrationTest.FixedClock.class})
 @SpringBootTest(properties = {"mylog.identity.enabled=true", "spring.mail.host=localhost",
+        "mylog.assets.deletion-queue-delay-ms=3600000",
         "MYLOG_MAIL_FROM=noreply@mylog.local", "logging.level.root=WARN"})
 @ActiveProfiles("test") @AutoConfigureMockMvc @Testcontainers(disabledWithoutDocker = true)
 class DataResetIntegrationTest {
@@ -62,6 +63,11 @@ class DataResetIntegrationTest {
         UUID entry = seed(owner);
         UUID otherEntry = seed(other);
         UUID session = session(owner, NOW);
+        String publicId = "mylog/" + owner + "/" + UUID.randomUUID();
+        asset(owner, entry, publicId);
+        var before = profiles.get(owner);
+        profiles.update(owner, "Synthetic Name", "Synthetic Pen", java.util.List.of(), "Asia/Bangkok", "en", "cat",
+                before.version());
 
         mvc.perform(reset(owner, session, "WrongPassword123!"))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.detail").value("PASSWORD_INCORRECT"));
@@ -78,6 +84,15 @@ class DataResetIntegrationTest {
         assertEquals(1, count("auth_sessions where id=?", session), "sign-in kept");
         assertEquals(5, count("user_consents where user_id=?", owner), "consents kept");
         assertEquals(1, count("audit_logs where action='DATA_RESET' and target_id=?", owner));
+        assertEquals(0, count("journal_assets where user_id=?", owner));
+        assertEquals(1, jdbc.queryForObject("select count(*) from asset_deletion_queue where public_id=?", Integer.class, publicId),
+                "the stored file is queued for deletion in the same transaction");
+        var after = profiles.get(owner);
+        assertEquals("", after.displayName(), "profile details return to defaults");
+        assertEquals("", after.penName());
+        assertEquals(java.util.List.of(), after.onboardingGoals());
+        assertEquals("Asia/Bangkok", after.timezone(), "timezone kept");
+        assertEquals("en", after.locale(), "locale kept");
 
         assertEquals(1, count("journal_entries where id=?", otherEntry), "another user's data is untouched");
         assertEquals(1, count("daily_checkins where user_id=?", other));
@@ -151,6 +166,14 @@ class DataResetIntegrationTest {
                 Timestamp.from(NOW), Timestamp.from(NOW));
         jdbc.update("insert into pattern_recognition_evidence(recognition_id,signal_id) values (?,?)", card, signal);
         return entry;
+    }
+
+    private void asset(UUID user, UUID entry, String publicId) {
+        jdbc.update("""
+                insert into journal_assets(id,journal_entry_id,user_id,provider_asset_id,public_id,provider_version,format,
+                    delivery_type,asset_type,mime_type,size_bytes,sha256,status,created_at)
+                values (?,?,?,?,?,1,'webp','AUTHENTICATED','IMAGE','image/webp',10,?,'READY',?)
+                """, UUID.randomUUID(), entry, user, "provider-" + UUID.randomUUID(), publicId, new byte[32], Timestamp.from(NOW));
     }
 
     private UUID session(UUID user, Instant createdAt) {

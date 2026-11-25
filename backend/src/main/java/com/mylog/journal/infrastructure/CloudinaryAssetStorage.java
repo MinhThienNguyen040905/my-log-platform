@@ -79,19 +79,27 @@ public class CloudinaryAssetStorage implements JournalAssetStorage {
                 .generate(publicId);
     }
 
+    /**
+     * Deletes the file; "not found" counts as deleted. Throws when Cloudinary is unavailable or refuses, so callers
+     * (the deletion queue, the orphan cleanup) can retry instead of losing track of the file.
+     */
     @Override
     public void delete(String publicId, String assetType, String deliveryType) {
-        Cloudinary cloudinary = cloudinaryProvider.getIfAvailable();
-        if (cloudinary == null) return;
+        Cloudinary cloudinary = requireCloudinary();
         String type = (deliveryType == null ? "authenticated" : deliveryType).toLowerCase(Locale.ROOT);
+        Map<?, ?> response;
         try {
-            cloudinary.uploader().destroy(publicId, ObjectUtils.asMap(
+            response = cloudinary.uploader().destroy(publicId, ObjectUtils.asMap(
                     "resource_type", "IMAGE".equalsIgnoreCase(assetType) ? "image" : "raw",
                     "type", type,
                     "invalidate", true
             ));
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            throw new IllegalStateException("Cloudinary deletion failed", e);
         }
+        Object result = response == null ? null : response.get("result");
+        if (!"ok".equals(result) && !"not found".equals(result))
+            throw new IllegalStateException("Cloudinary deletion incomplete");
     }
 
     private Cloudinary requireCloudinary() {

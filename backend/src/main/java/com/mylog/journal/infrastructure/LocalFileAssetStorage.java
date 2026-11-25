@@ -69,8 +69,7 @@ public class LocalFileAssetStorage implements JournalAssetStorage, LocalAssetFil
             File[] files = dir.listFiles((d, name) -> name.startsWith(parts[1] + "."));
             if (files != null) {
                 for (File f : files) {
-                    //noinspection ResultOfMethodCallIgnored
-                    f.delete();
+                    if (!f.delete() && f.exists()) throw new IllegalStateException("Local asset deletion failed");
                 }
             }
         }

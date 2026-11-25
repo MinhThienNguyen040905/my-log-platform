@@ -44,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
         "mylog.identity.enabled=true",
         "mylog.exports.enabled=true",
-        "mylog.deletion.enabled=true",
+        "mylog.account-deletion.enabled=true",
         "spring.mail.host=localhost",
         "MYLOG_MAIL_FROM=noreply@mylog.local",
         "logging.level.root=WARN"

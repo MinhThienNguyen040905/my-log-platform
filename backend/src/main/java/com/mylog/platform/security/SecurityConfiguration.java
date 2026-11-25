@@ -67,9 +67,7 @@ class SecurityConfiguration {
                                 "/api/v1/auth/email-verifications", "/api/v1/auth/email-verifications:confirm",
                                 "/api/v1/auth/email-verifications:confirm-code",
                                 "/api/v1/auth/password-resets", "/api/v1/auth/password-resets:confirm",
-                                "/api/v1/auth/password-resets:confirm-code",
-                                "/api/v1/account-deletion-requests/*:cancel",
-                                "/api/v1/account-deletion-requests/*:status")
+                                "/api/v1/auth/password-resets:confirm-code")
                                 .permitAll();
                         authorize.requestMatchers("/api/v1/auth/logout", "/api/v1/me", "/api/v1/me/**",
                                         "/api/v1/journal-entries", "/api/v1/journal-entries/**",

@@ -22,15 +22,11 @@ class JpaDeletionStore implements DeletionStore {
         request.requestedAt=now;request.scheduledFor=scheduled;request.checkpoint="REQUESTED";
         em.persist(request);em.flush();return view(request);
     }
-    @Override public Optional<DeletionView> find(UUID userId, UUID id) {
-        return em.createQuery("select r from DeletionRequest r where r.id=:id and r.userId=:user",DeletionRequest.class)
-                .setParameter("id",id).setParameter("user",userId).getResultStream().findFirst().map(this::view);
-    }
-    @Override public boolean cancel(UUID userId, UUID id, Instant now) {
+    @Override public boolean cancelInGracePeriod(UUID userId, Instant now) {
         int updated=em.createNativeQuery("""
                 UPDATE deletion_requests SET status='CANCELLED', cancelled_at=:now
-                WHERE id=:id AND user_id=:user AND status='GRACE_PERIOD' AND scheduled_for>:now
-                """).setParameter("id",id).setParameter("user",userId).setParameter("now",now).executeUpdate();
+                WHERE user_id=:user AND status='GRACE_PERIOD' AND scheduled_for>:now
+                """).setParameter("user",userId).setParameter("now",now).executeUpdate();
         return updated==1;
     }
     @Override public Optional<Work> claim(Instant now) {
@@ -45,21 +41,17 @@ class JpaDeletionStore implements DeletionStore {
         DeletionRequest request=em.find(DeletionRequest.class,ids.getFirst());
         if (request.userId==null) return Optional.empty();
         request.status="PROCESSING";request.attempt++;request.leaseExpiresAt=now.plusSeconds(300);
-        return Optional.of(new Work(request.id,request.userId,request.checkpoint,request.attempt));
-    }
-    @Override public void checkpoint(UUID id,String checkpoint) {
-        DeletionRequest request=em.find(DeletionRequest.class,id);
-        if (request!=null) request.checkpoint=checkpoint;
+        return Optional.of(new Work(request.id,request.userId,request.attempt));
     }
     @Override public void complete(UUID id,Instant now) {
         DeletionRequest request=em.find(DeletionRequest.class,id);
         request.userId=null;request.status="COMPLETED";request.checkpoint="COMPLETED";
         request.completedAt=now;request.leaseExpiresAt=null;request.lastErrorCode=null;
     }
-    @Override public void fail(UUID id,Instant retryAt) {
+    @Override public void fail(UUID id,Instant retryAt,String errorCode) {
         DeletionRequest request=em.find(DeletionRequest.class,id);
         if (request==null || !"PROCESSING".equals(request.status)) return;
-        request.status="FAILED";request.lastErrorCode="CLEANUP_RETRY";
+        request.status="FAILED";request.lastErrorCode=errorCode;
         request.scheduledFor=retryAt;request.leaseExpiresAt=null;
     }
     @Override public void purgeAudit(Instant cutoff) {

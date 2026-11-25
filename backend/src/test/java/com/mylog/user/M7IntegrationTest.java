@@ -6,7 +6,6 @@ import com.mylog.feedback.application.FeedbackService;
 import com.mylog.identity.application.IdentityStore;
 import com.mylog.identity.application.IdentityService;
 import com.mylog.identity.application.VerificationDelivery;
-import com.mylog.journal.application.JournalAssetDeletion;
 import com.mylog.journal.application.JournalService;
 import com.mylog.journal.application.command.CreateJournalEntryCommand;
 import com.mylog.platform.crypto.SensitiveDataCipher;
@@ -39,7 +38,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.mockito.Mockito.*;
 
 @Import({TestcontainersConfiguration.class,M7IntegrationTest.FixedClock.class})
-@SpringBootTest(properties={"mylog.identity.enabled=true","mylog.exports.enabled=true","mylog.deletion.enabled=true",
+@SpringBootTest(properties={"mylog.identity.enabled=true","mylog.exports.enabled=true","mylog.account-deletion.enabled=true",
+        // Tests drive the workers by hand; keep the schedulers from racing them.
+        "mylog.account-deletion.poll-delay-ms=3600000","mylog.assets.deletion-queue-delay-ms=3600000",
+        "mylog.exports.poll-delay-ms=3600000",
         "spring.mail.host=localhost","MYLOG_MAIL_FROM=noreply@mylog.local","logging.level.root=WARN"})
 @ActiveProfiles("test") @AutoConfigureMockMvc @Testcontainers(disabledWithoutDocker=true)
 class M7IntegrationTest {
@@ -61,7 +63,6 @@ class M7IntegrationTest {
     @Autowired JournalService journal;
     @Autowired ObjectMapper mapper;
     @MockitoBean VerificationDelivery delivery;
-    @MockitoBean JournalAssetDeletion assets;
 
     @Test void writeQuotaPersistsAfterRejectionAndIsScopedByActionAndUser() {
         UUID owner=user(), other=user();
@@ -96,7 +97,7 @@ class M7IntegrationTest {
         assertEquals("READY",exports.get(owner,request.id()).status());
         assertFalse(new String(jdbc.queryForObject("select encrypted_file from export_requests where id=?",byte[].class,request.id()))
                 .contains("@example.test"));
-        var grant=exports.authorizeDownload(owner,request.id(),PASSWORD);
+        var grant=exports.authorizeDownload(owner,null,request.id(),PASSWORD);
         String query=grant.url().substring(grant.url().indexOf('?')+1);
         String[] parts=query.split("&");
         long expires=Long.parseLong(parts[0].substring("expires=".length()));
@@ -117,13 +118,13 @@ class M7IntegrationTest {
                 .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"));
         assertThrows(Exception.class,()->exports.download(stranger,request.id(),expires,signature));
         assertThrows(Exception.class,()->exports.download(owner,request.id(),NOW.getEpochSecond()-1,signature));
-        assertThrows(Exception.class,()->exports.authorizeDownload(owner,request.id(),"wrong"));
+        assertThrows(Exception.class,()->exports.authorizeDownload(owner,null,request.id(),"wrong"));
         jdbc.update("update export_requests set expires_at=? where id=?",Timestamp.from(NOW.minusSeconds(1)),request.id());
         assertThrows(Exception.class,()->exports.download(owner,request.id(),expires,signature));
         var pdf=exports.request(owner,"PDF"); // expired artifact no longer blocks another request
         exports.poll();
         assertEquals("READY",exports.get(owner,pdf.id()).status());
-        var pdfGrant=exports.authorizeDownload(owner,pdf.id(),PASSWORD);
+        var pdfGrant=exports.authorizeDownload(owner,null,pdf.id(),PASSWORD);
         String pdfQuery=pdfGrant.url().substring(pdfGrant.url().indexOf('?')+1);
         String[] pdfParts=pdfQuery.split("&");
         byte[] pdfBytes=exports.download(owner,pdf.id(),Long.parseLong(pdfParts[0].substring(8)),
@@ -131,43 +132,115 @@ class M7IntegrationTest {
         assertTrue(new String(pdfBytes,0,4,java.nio.charset.StandardCharsets.US_ASCII).startsWith("%PDF"));
     }
 
-    @Test void deletionCanBeCancelledAndWorkerPurgesOwnedRows() throws Exception {
+    @Test void exportDownloadConfirmsIdentityForPasswordAndGoogleAccounts() throws Exception {
+        UUID local=user(), google=googleUser();
+        var localExport=exports.request(local,"CSV");
+        var googleExport=exports.request(google,"CSV");
+        exports.poll(); exports.poll();
+        UUID localSession=session(local,NOW);
+        for (int i=0;i<5;i++)
+            mvc.perform(authorize(local,localSession,localExport.id(),"WrongPassword123!"))
+                    .andExpect(status().isForbidden()).andExpect(jsonPath("$.detail").value("PASSWORD_INCORRECT"));
+        mvc.perform(authorize(local,localSession,localExport.id(),PASSWORD)).andExpect(status().isTooManyRequests());
+
+        UUID stale=session(google,NOW.minusSeconds(3600));
+        mvc.perform(authorize(google,stale,googleExport.id(),null))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.detail").value("RECENT_LOGIN_REQUIRED"));
+        UUID fresh=session(google,NOW.minusSeconds(120));
+        mvc.perform(authorize(google,fresh,googleExport.id(),null))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.url").exists());
+    }
+
+    @Test void deletionRequestNeedsPasswordSignsOutAndSigningInAgainCancels() throws Exception {
         UUID owner=user(); String email="m7-"+owner+"@example.test";
+        UUID session=session(owner,NOW);
+        mvc.perform(requestDeletion(owner,session,"WrongPassword123!"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.detail").value("PASSWORD_INCORRECT"));
+        assertEquals("ACTIVE",jdbc.queryForObject("select status from users where id=?",String.class,owner));
+
+        mvc.perform(requestDeletion(owner,session,PASSWORD)).andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("GRACE_PERIOD"))
+                .andExpect(jsonPath("$.scheduledFor").value(NOW.plusSeconds(7*86400).toString()));
+        assertEquals("DELETION_PENDING",jdbc.queryForObject("select status from users where id=?",String.class,owner));
+        assertNotNull(jdbc.queryForObject("select revoked_at from auth_sessions where id=?",Timestamp.class,session));
+        verify(delivery).sendAccountDeletionScheduled(email,NOW.plusSeconds(7*86400));
+
+        mvc.perform(post("/api/v1/auth/login").contentType("application/json")
+                        .content("{\"email\":\""+email+"\",\"password\":\""+PASSWORD+"\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.deletionCancelled").value(true));
+        assertEquals("ACTIVE",jdbc.queryForObject("select status from users where id=?",String.class,owner));
+        assertEquals("CANCELLED",jdbc.queryForObject("select status from deletion_requests where user_id=?",String.class,owner));
+        assertEquals(1,jdbc.queryForObject("select count(*) from audit_logs where action='ACCOUNT_DELETION_CANCELLED' and target_id=?",
+                Integer.class,owner));
+        // A later sign-in is an ordinary one.
+        mvc.perform(post("/api/v1/auth/login").contentType("application/json")
+                        .content("{\"email\":\""+email+"\",\"password\":\""+PASSWORD+"\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.deletionCancelled").value(false));
+    }
+
+    @Test void signingInAfterTheGracePeriodDoesNotCancel() throws Exception {
+        UUID owner=user(); String email="m7-"+owner+"@example.test";
+        var request=deletion.request(owner,null,PASSWORD);
+        jdbc.update("update deletion_requests set scheduled_for=? where id=?",Timestamp.from(NOW.minusSeconds(1)),request.id());
+        mvc.perform(post("/api/v1/auth/login").contentType("application/json")
+                        .content("{\"email\":\""+email+"\",\"password\":\""+PASSWORD+"\"}"))
+                .andExpect(status().isUnauthorized());
+        assertEquals("DELETION_PENDING",jdbc.queryForObject("select status from users where id=?",String.class,owner));
+        assertEquals("GRACE_PERIOD",jdbc.queryForObject("select status from deletion_requests where id=?",String.class,request.id()));
+    }
+
+    @Test void workerPurgesUserQueuesFilesKeepsAdminAuditAndEmails() throws Exception {
+        UUID owner=user(), admin=user(); String email="m7-"+owner+"@example.test";
         UUID entry=journal.create(owner,new CreateJournalEntryCommand("Synthetic diary",
                 mapper.readTree("{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"A calm day\"}]}]}"),
                 null,NOW,"Asia/Ho_Chi_Minh",null,null,null,null,null),
                 "m7-entry-"+UUID.randomUUID()).id();
-        UUID session=UUID.randomUUID();
-        jdbc.update("""
-                insert into auth_sessions(id,user_id,token_family_id,current_token_hash,last_used_at,expires_at,created_at)
-                values (?,?,?,?,?,?,?)
-                """,session,owner,UUID.randomUUID(),cipher.tokenHash("m7-session-"+session),
-                Timestamp.from(NOW),Timestamp.from(NOW.plusSeconds(3600)),Timestamp.from(NOW));
-        var first=deletion.request(owner,PASSWORD);
-        assertEquals("DELETION_PENDING",jdbc.queryForObject("select status from users where id=?",String.class,owner));
-        assertNotNull(jdbc.queryForObject("select revoked_at from auth_sessions where id=?",Timestamp.class,session));
-        mvc.perform(post("/api/v1/account-deletion-requests/{id}:status",first.id())
-                .contentType("application/json").content("{\"email\":\""+email+"\",\"password\":\""+PASSWORD+"\"}"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("GRACE_PERIOD"));
-        mvc.perform(post("/api/v1/account-deletion-requests/{id}:cancel",first.id())
-                .contentType("application/json").content("{\"email\":\""+email+"\",\"password\":\""+PASSWORD+"\"}"))
-                .andExpect(status().isNoContent());
-        assertEquals("ACTIVE",jdbc.queryForObject("select status from users where id=?",String.class,owner));
-        var second=deletion.request(owner,PASSWORD);
-        jdbc.update("update deletion_requests set scheduled_for=? where id=?",Timestamp.from(NOW.minusSeconds(1)),second.id());
-        doThrow(new IllegalStateException("synthetic provider outage")).doNothing().when(assets).deleteAll(owner);
+        String publicId="mylog/"+owner+"/"+UUID.randomUUID();
+        asset(owner,entry,publicId);
+        jdbc.update("insert into audit_logs(id,actor_user_id,actor_type,action,target_type,target_id,reason_code,occurred_at)"
+                + " values (?,?,'ADMIN','USER_SUSPENDED','USER',?,'SECURITY_VIOLATION',?)",UUID.randomUUID(),admin,owner,Timestamp.from(NOW));
+        var request=deletion.request(owner,null,PASSWORD);
+        jdbc.update("update deletion_requests set scheduled_for=? where id=?",Timestamp.from(NOW.minusSeconds(1)),request.id());
+
         deletion.poll();
-        assertEquals("FAILED",jdbc.queryForObject("select status from deletion_requests where id=?",String.class,second.id()));
-        assertEquals(1,jdbc.queryForObject("select count(*) from users where id=?",Integer.class,owner));
-        jdbc.update("update deletion_requests set scheduled_for=? where id=?",Timestamp.from(NOW.minusSeconds(1)),second.id());
-        deletion.poll();
+
+        assertEquals("COMPLETED",jdbc.queryForObject("select status from deletion_requests where id=?",String.class,request.id()));
         assertEquals(0,jdbc.queryForObject("select count(*) from users where id=?",Integer.class,owner));
         assertEquals(0,jdbc.queryForObject("select count(*) from auth_sessions where user_id=?",Integer.class,owner));
         assertEquals(0,jdbc.queryForObject("select count(*) from user_profiles where user_id=?",Integer.class,owner));
         assertEquals(0,jdbc.queryForObject("select count(*) from journal_entries where id=?",Integer.class,entry));
-        assertEquals(0,jdbc.queryForObject("select count(*) from safety_events where user_id=?",Integer.class,owner));
+        assertEquals(0,jdbc.queryForObject("select count(*) from journal_assets where user_id=?",Integer.class,owner));
         assertEquals(0,jdbc.queryForObject("select count(*) from outbox_events where aggregate_id=?",Integer.class,entry));
-        assertEquals("COMPLETED",jdbc.queryForObject("select status from deletion_requests where id=?",String.class,second.id()));
+        assertEquals(1,jdbc.queryForObject("select count(*) from asset_deletion_queue where public_id=?",Integer.class,publicId),
+                "the stored file is queued for deletion");
+        assertEquals(1,jdbc.queryForObject("select count(*) from audit_logs where action='USER_SUSPENDED' and target_id=?",
+                Integer.class,owner),"admin audit is kept");
+        assertEquals(0,jdbc.queryForObject("select count(*) from audit_logs where actor_user_id=? and actor_type='USER'",
+                Integer.class,owner),"the user's own audit is deleted");
+        verify(delivery).sendAccountDeleted(email);
+    }
+
+    @Test void failedPurgeRollsBackTheFileQueueAndRetries() throws Exception {
+        UUID owner=user();
+        UUID entry=journal.create(owner,new CreateJournalEntryCommand("Synthetic diary",
+                mapper.readTree("{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"A calm day\"}]}]}"),
+                null,NOW,"Asia/Ho_Chi_Minh",null,null,null,null,null),
+                "m7-entry-"+UUID.randomUUID()).id();
+        String publicId="mylog/"+owner+"/"+UUID.randomUUID();
+        asset(owner,entry,publicId);
+        var request=deletion.request(owner,null,PASSWORD);
+        jdbc.update("update deletion_requests set scheduled_for=? where id=?",Timestamp.from(NOW.minusSeconds(1)),request.id());
+        // Breaks the purge precondition so the transaction fails after the files were queued.
+        jdbc.update("update users set status='ACTIVE' where id=?",owner);
+
+        deletion.poll();
+
+        assertEquals("FAILED",jdbc.queryForObject("select status from deletion_requests where id=?",String.class,request.id()));
+        assertEquals("CLEANUP_RETRY",jdbc.queryForObject("select last_error_code from deletion_requests where id=?",String.class,request.id()));
+        assertEquals(1,jdbc.queryForObject("select count(*) from users where id=?",Integer.class,owner));
+        assertEquals(0,jdbc.queryForObject("select count(*) from asset_deletion_queue where public_id=?",Integer.class,publicId),
+                "queueing rolls back with the failed purge");
+        verify(delivery,never()).sendAccountDeleted(any());
     }
 
     @Test void feedbackEncryptedAndAdminReadRequiresPermission() throws Exception {
@@ -218,6 +291,51 @@ class M7IntegrationTest {
         jdbc.update("update feedback set expires_at=? where id=?",Timestamp.from(NOW.minusSeconds(1)),id);
         feedback.cleanup();
         assertEquals(0,jdbc.queryForObject("select count(*) from feedback where id=?",Integer.class,id));
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder requestDeletion(
+            UUID user,UUID session,String password) {
+        return post("/api/v1/account-deletion-requests")
+                .with(jwt().jwt(j->j.subject(user.toString()).claim("sid",session.toString())))
+                .contentType("application/json").content("{\"password\":\""+password+"\"}");
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder authorize(
+            UUID user,UUID session,UUID exportId,String password) {
+        return post("/api/v1/exports/{id}:authorize-download",exportId)
+                .with(jwt().jwt(j->j.subject(user.toString()).claim("sid",session.toString())))
+                .contentType("application/json").content(password==null ? "{}" : "{\"password\":\""+password+"\"}");
+    }
+
+    private UUID googleUser() {
+        UUID id=UUID.randomUUID();String email="m7-google-"+id+"@example.test";
+        var encrypted=cipher.encrypt("users.email",id,id,email);
+        jdbc.update("""
+                insert into users(id,email_lookup_hash,encrypted_email,email_iv,email_wrapped_key,email_key_version,
+                    password_hash,auth_provider,status,created_at,updated_at)
+                values (?,?,?,?,?,?,NULL,'GOOGLE','ACTIVE',?,?)
+                """,id,cipher.lookupHash(email),encrypted.ciphertext(),encrypted.iv(),encrypted.wrappedKey(),
+                encrypted.keyVersion(),Timestamp.from(NOW),Timestamp.from(NOW));
+        profiles.createDefault(id,"Asia/Ho_Chi_Minh","vi","v1","v1",NOW);
+        return id;
+    }
+
+    private UUID session(UUID user,Instant createdAt) {
+        UUID id=UUID.randomUUID();
+        jdbc.update("""
+                insert into auth_sessions(id,user_id,token_family_id,current_token_hash,last_used_at,expires_at,created_at)
+                values (?,?,?,?,?,?,?)
+                """,id,user,UUID.randomUUID(),cipher.tokenHash("m7-session-"+id),
+                Timestamp.from(createdAt),Timestamp.from(NOW.plusSeconds(3600)),Timestamp.from(createdAt));
+        return id;
+    }
+
+    private void asset(UUID user,UUID entry,String publicId) {
+        jdbc.update("""
+                insert into journal_assets(id,journal_entry_id,user_id,provider_asset_id,public_id,provider_version,format,
+                    delivery_type,asset_type,mime_type,size_bytes,sha256,status,created_at)
+                values (?,?,?,?,?,1,'webp','AUTHENTICATED','IMAGE','image/webp',10,?,'READY',?)
+                """,UUID.randomUUID(),entry,user,"provider-"+UUID.randomUUID(),publicId,new byte[32],Timestamp.from(NOW));
     }
 
     private UUID user() {

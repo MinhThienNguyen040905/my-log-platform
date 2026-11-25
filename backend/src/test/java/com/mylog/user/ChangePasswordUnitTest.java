@@ -132,7 +132,8 @@ class ChangePasswordUnitTest {
         service = new IdentityService(
                 store, cipher, (u, s) -> "jwt", null, null,
                 UUID::randomUUID, clock, new SecureRandom(), null, null, props,
-                rateLimitService, publishedEvents::add
+                rateLimitService, publishedEvents::add,
+                new com.mylog.identity.application.AccountReactivation(store, (u, n) -> false)
         );
 
         var encryptedEmail = cipher.encrypt("users.email", USER_ID, USER_ID, "user-test@example.com");
