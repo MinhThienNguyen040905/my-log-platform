@@ -23,15 +23,17 @@ public class GoogleAuthProvisioningService {
     private final IdGenerator ids;
     private final UserProfileUseCase profiles;
     private final AccessTokens accessTokens;
+    private final AccountReactivation reactivation;
 
     public GoogleAuthProvisioningService(IdentityStore store, SensitiveDataCipher cipher,
                                          IdGenerator ids, UserProfileUseCase profiles,
-                                         AccessTokens accessTokens) {
+                                         AccessTokens accessTokens, AccountReactivation reactivation) {
         this.store = store;
         this.cipher = cipher;
         this.ids = ids;
         this.profiles = profiles;
         this.accessTokens = accessTokens;
+        this.reactivation = reactivation;
     }
 
     @Transactional
@@ -44,6 +46,7 @@ public class GoogleAuthProvisioningService {
         byte[] emailHash = cipher.lookupHash(normalizedEmail);
 
         UUID userId;
+        boolean deletionCancelled = false;
         UUID linkedUserId = store.findUserIdByOAuth("GOOGLE", sub).orElse(null);
 
         if (linkedUserId != null) {
@@ -51,10 +54,11 @@ public class GoogleAuthProvisioningService {
             IdentityStore.Account account = store.accountById(linkedUserId)
                     .orElseThrow(IdentityService.InvalidCredentialsException::new);
 
-            // KIỂM TRA TRẠNG THÁI TRƯỚC KHI THAO TÁC GHI
-            if (!"ACTIVE".equals(account.status()) || (account.lockedUntil() != null && account.lockedUntil().isAfter(now))) {
+            // KIỂM TRA TRẠNG THÁI TRƯỚC KHI THAO TÁC GHI (đăng nhập trong thời gian chờ xóa sẽ hủy yêu cầu xóa)
+            if (account.lockedUntil() != null && account.lockedUntil().isAfter(now)) {
                 throw new IdentityService.InvalidCredentialsException();
             }
+            deletionCancelled = reactivation.admit(account, now);
             userId = account.id();
             store.setLoginSuccess(userId, now);
             store.audit(userId, "LOGIN_GOOGLE", userId, now);
@@ -75,10 +79,11 @@ public class GoogleAuthProvisioningService {
                 store.audit(userId, "REGISTER_GOOGLE", userId, now);
             } else {
                 // Nhánh 2B: Email đã tồn tại trong hệ thống (Account Linking)
-                // KIỂM TRA TRẠNG THÁI TRƯỚC KHI THAO TÁC GHI
-                if (!"ACTIVE".equals(existing.status()) || (existing.lockedUntil() != null && existing.lockedUntil().isAfter(now))) {
+                // KIỂM TRA TRẠNG THÁI TRƯỚC KHI THAO TÁC GHI (đăng nhập trong thời gian chờ xóa sẽ hủy yêu cầu xóa)
+                if (existing.lockedUntil() != null && existing.lockedUntil().isAfter(now)) {
                     throw new IdentityService.InvalidCredentialsException();
                 }
+                deletionCancelled = reactivation.admit(existing, now);
                 userId = existing.id();
 
                 if (existing.emailVerifiedAt() == null) {
@@ -105,6 +110,6 @@ public class GoogleAuthProvisioningService {
                 now.plus(30, ChronoUnit.DAYS), null, now, now, request.deviceName()
         ));
 
-        return new AuthResult(userId, accessTokens.issue(userId, sessionId), randomToken, 600);
+        return new AuthResult(userId, accessTokens.issue(userId, sessionId), randomToken, 600, deletionCancelled);
     }
 }

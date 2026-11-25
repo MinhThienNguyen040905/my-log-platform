@@ -7,12 +7,11 @@ import java.util.UUID;
 
 public interface DeletionStore {
     DeletionView create(UUID id, UUID userId, byte[] subjectHash, Instant now, Instant scheduledFor);
-    Optional<DeletionView> find(UUID userId, UUID id);
-    boolean cancel(UUID userId, UUID id, Instant now);
+    /** Cancels the user's request still in its grace period and not yet due. @return true when one was cancelled */
+    boolean cancelInGracePeriod(UUID userId, Instant now);
     Optional<Work> claim(Instant now);
-    void checkpoint(UUID id, String checkpoint);
     void complete(UUID id, Instant now);
-    void fail(UUID id, Instant retryAt);
+    void fail(UUID id, Instant retryAt, String errorCode);
     void purgeAudit(Instant cutoff);
-    record Work(UUID id, UUID userId, String checkpoint, int attempt) {}
+    record Work(UUID id, UUID userId, int attempt) {}
 }

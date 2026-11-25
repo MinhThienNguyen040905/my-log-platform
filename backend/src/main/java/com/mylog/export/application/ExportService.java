@@ -56,9 +56,10 @@ public class ExportService {
     }
     public record DownloadGrant(String url, Instant expiresAt) {}
     public record Download(byte[] bytes, String format) {}
+    /** Confirms identity (password, or a recent sign-in for Google accounts), then grants a 60-second URL. */
     @Transactional(readOnly = true)
-    public DownloadGrant authorizeDownload(UUID userId, UUID id, String password) {
-        identity.reauthenticate(userId,password);
+    public DownloadGrant authorizeDownload(UUID userId, UUID sessionId, UUID id, String password) {
+        identity.confirmIdentity(userId,sessionId,password,"export-download");
         var artifact = store.artifact(userId,id,clock.instant())
                 .orElseThrow(() -> new ResourceNotFoundException("Export not found."));
         Instant expires=clock.instant().plusSeconds(60);

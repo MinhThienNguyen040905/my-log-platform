@@ -64,15 +64,18 @@ public class IdentityService {
     private final MylogProperties properties;
     private final RateLimitService rateLimitService;
     private final ApplicationEventPublisher eventPublisher;
+    private final AccountReactivation reactivation;
+    /** A passwordless account confirms a sensitive action by having signed in this recently. */
+    static final java.time.Duration RECENT_LOGIN = java.time.Duration.ofMinutes(10);
     @Autowired
     public IdentityService(IdentityStore store, SensitiveDataCipher cipher, AccessTokens accessTokens,
             VerificationDelivery delivery, UserProfileUseCase profiles, IdGenerator ids, Clock clock, SecureRandom random,
             GoogleOAuthClient googleClient, GoogleAuthProvisioningService provisioningService, MylogProperties properties,
-            RateLimitService rateLimitService, ApplicationEventPublisher eventPublisher) {
+            RateLimitService rateLimitService, ApplicationEventPublisher eventPublisher, AccountReactivation reactivation) {
         this.store = store; this.cipher = cipher; this.accessTokens = accessTokens; this.delivery = delivery;
         this.profiles = profiles; this.ids = ids; this.clock = clock; this.random = random;
         this.googleClient = googleClient; this.provisioningService = provisioningService; this.properties = properties;
-        this.rateLimitService = rateLimitService; this.eventPublisher = eventPublisher;
+        this.rateLimitService = rateLimitService; this.eventPublisher = eventPublisher; this.reactivation = reactivation;
     }
 
     public static String normalizeEmail(String value) {
@@ -185,13 +188,13 @@ public class IdentityService {
             store.setLoginFailure(account.id(), failures, failures >= 5 ? now.plus(15, ChronoUnit.MINUTES) : null, now);
             throw new InvalidCredentialsException();
         }
-        if (!"ACTIVE".equals(account.status())) throw new InvalidCredentialsException();
+        boolean deletionCancelled = reactivation.admit(account, now);
         store.setLoginSuccess(account.id(), now);
         UUID sessionId = ids.next();
         String refresh = randomToken();
         store.createSession(new Session(sessionId, account.id(), ids.next(), cipher.tokenHash(refresh),
                 now.plus(30, ChronoUnit.DAYS), null, now, now, deviceName));
-        return new AuthResult(account.id(), accessTokens.issue(account.id(), sessionId), refresh, 600);
+        return new AuthResult(account.id(), accessTokens.issue(account.id(), sessionId), refresh, 600, deletionCancelled);
     }
 
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
@@ -267,6 +270,29 @@ public class IdentityService {
         }
     }
 
+    /**
+     * Confirms the user's identity before a sensitive action (export download, data reset, account deletion).
+     * An account with a password re-enters it, at most 5 failures per 15 minutes for each {@code purpose}; a
+     * passwordless (Google) account must be using a session created in the last 10 minutes.
+     *
+     * @throws IdentityConfirmationException {@code PASSWORD_INCORRECT} or {@code RECENT_LOGIN_REQUIRED}
+     */
+    @Transactional(readOnly = true, noRollbackFor = IdentityConfirmationException.class)
+    public void confirmIdentity(UUID userId, UUID sessionId, String password, String purpose) {
+        if (hasPassword(userId)) {
+            try { reauthenticateLimited(userId, password, purpose); }
+            catch (InvalidCredentialsException e) {
+                throw new IdentityConfirmationException(IdentityConfirmationException.PASSWORD_INCORRECT);
+            }
+            return;
+        }
+        Instant signedIn = sessions(userId).stream()
+                .filter(session -> session.id().equals(sessionId))
+                .map(SessionSummary::createdAt).findFirst().orElse(null);
+        if (signedIn == null || signedIn.isBefore(clock.instant().minus(RECENT_LOGIN)))
+            throw new IdentityConfirmationException(IdentityConfirmationException.RECENT_LOGIN_REQUIRED);
+    }
+
     @Transactional(readOnly = true)
     public String exportEmail(UUID userId) {
         Account account = store.accountById(userId).orElseThrow(InvalidCredentialsException::new);
@@ -287,27 +313,10 @@ public class IdentityService {
         }
     }
 
-    @Transactional(noRollbackFor = InvalidCredentialsException.class)
-    public UUID authenticateForCancellation(String email, String password, String remoteAddress) {
-        Instant now = clock.instant();
-        String normalized = normalizeEmail(email);
-        rate("deletion-cancel-ip:" + remoteAddress, now, 10);
-        rate("deletion-cancel-email:" + normalized, now, 5);
-        Account account = store.accountByEmailHash(cipher.lookupHash(normalized)).orElse(null);
-        if (account == null) { passwords.matches(password, DUMMY_HASH); throw new InvalidCredentialsException(); }
-        if (!"DELETION_PENDING".equals(account.status()) || password == null || account.passwordHash() == null
-                || !passwords.matches(password, account.passwordHash())) throw new InvalidCredentialsException();
-        return account.id();
-    }
-
     @Transactional
     public void beginDeletion(UUID userId) {
         store.setStatus(userId, "DELETION_PENDING", clock.instant());
         store.revokeAllSessions(userId, "ACCOUNT_DELETION", clock.instant());
-    }
-
-    @Transactional public void cancelDeletion(UUID userId) {
-        store.setStatus(userId, "ACTIVE", clock.instant());
     }
 
     private void sendVerification(PendingRegistration pending, String email, Instant now) {

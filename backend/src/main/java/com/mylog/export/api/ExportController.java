@@ -14,6 +14,8 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
@@ -37,8 +39,14 @@ public class ExportController {
         return ExportResponse.from(exports.get(user(),id));
     }
     @PostMapping("/{id}:authorize-download")
-    public DownloadGrantResponse authorize(@PathVariable UUID id, @Valid @RequestBody AuthorizeDownloadRequest request) {
-        return DownloadGrantResponse.from(exports.authorizeDownload(user(),id,request.password()));
+    public DownloadGrantResponse authorize(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                           @Valid @RequestBody AuthorizeDownloadRequest request) {
+        return DownloadGrantResponse.from(exports.authorizeDownload(user(),sessionId(jwt),id,request.password()));
+    }
+    private static UUID sessionId(Jwt jwt) {
+        if (jwt == null || !jwt.hasClaim("sid")) return null;
+        try { return UUID.fromString(jwt.getClaimAsString("sid")); }
+        catch (RuntimeException ignored) { return null; }
     }
     @GetMapping("/{id}/file") public ResponseEntity<byte[]> download(@PathVariable UUID id,
             @RequestParam long expires,@RequestParam String signature) {

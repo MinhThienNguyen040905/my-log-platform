@@ -23,7 +23,9 @@ class JpaAccountPurge implements AccountPurge {
                 """).setParameter("user",userId).executeUpdate();
         em.createNativeQuery("DELETE FROM safety_events WHERE user_id=:user")
                 .setParameter("user",userId).executeUpdate();
-        em.createNativeQuery("DELETE FROM audit_logs WHERE actor_user_id=:user OR target_id=:user")
+        // The user's own audit trail goes; audit of admin or system actions on the account stays (UC-23),
+        // keeping only a target UUID that no longer points to anyone.
+        em.createNativeQuery("DELETE FROM audit_logs WHERE actor_user_id=:user AND actor_type='USER'")
                 .setParameter("user",userId).executeUpdate();
         int deleted=em.createNativeQuery("DELETE FROM users WHERE id=:user AND status='DELETION_PENDING'")
                 .setParameter("user",userId).executeUpdate();

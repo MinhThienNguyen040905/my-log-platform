@@ -120,11 +120,11 @@ class GoogleAuthFlowTest {
 
         GoogleOAuthClient client = new GoogleOAuthClient(disabledProps);
         GoogleAuthProvisioningService provisioningService = new GoogleAuthProvisioningService(
-                store, cipher, () -> fixedUserId, null, (u, s) -> "jwt"
+                store, cipher, () -> fixedUserId, null, (u, s) -> "jwt", reactivation(false)
         );
         IdentityService service = new IdentityService(
                 store, cipher, (u, s) -> "jwt", null, null, () -> fixedUserId, Clock.fixed(now, ZoneOffset.UTC),
-                new SecureRandom(), client, provisioningService, disabledProps, null, null
+                new SecureRandom(), client, provisioningService, disabledProps, null, null, reactivation(false)
         );
 
         assertThatThrownBy(() -> service.loginWithGoogle(
@@ -160,17 +160,18 @@ class GoogleAuthFlowTest {
             @Override public ProfileView get(UUID userId) { return null; }
             @Override public ProfileView update(UUID userId, String displayName, String penName, List<String> onboardingGoals, String timezone, String locale, String mascot, long expectedVersion) { return null; }
             @Override public ProfileView completeOnboarding(UUID userId, long expectedVersion) { return null; }
+            @Override public void resetPersonalDetails(UUID userId) {}
             @Override public void decideConsent(UUID userId, String type, String documentVersion, boolean granted) {}
             @Override public List<ConsentView> consents(UUID userId) { return List.of(); }
             @Override public boolean isConsentGranted(UUID userId, String type) { return false; }
         };
 
         GoogleAuthProvisioningService provisioningService = new GoogleAuthProvisioningService(
-                store, cipher, () -> fixedUserId, fakeProfiles, (u, s) -> "jwt-access-token"
+                store, cipher, () -> fixedUserId, fakeProfiles, (u, s) -> "jwt-access-token", reactivation(false)
         );
         IdentityService service = new IdentityService(
                 store, cipher, (u, s) -> "jwt", null, null, () -> fixedUserId, Clock.fixed(now, ZoneOffset.UTC),
-                new SecureRandom(), mockClient, provisioningService, props, null, null
+                new SecureRandom(), mockClient, provisioningService, props, null, null, reactivation(false)
         );
 
         AuthResult result = service.loginWithGoogle(
@@ -213,11 +214,11 @@ class GoogleAuthFlowTest {
         ));
 
         GoogleAuthProvisioningService provisioningService = new GoogleAuthProvisioningService(
-                store, cipher, () -> fixedUserId, null, (u, s) -> "jwt-token"
+                store, cipher, () -> fixedUserId, null, (u, s) -> "jwt-token", reactivation(false)
         );
         IdentityService service = new IdentityService(
                 store, cipher, (u, s) -> "jwt", null, null, () -> fixedUserId, Clock.fixed(now, ZoneOffset.UTC),
-                new SecureRandom(), mockClient, provisioningService, props, null, null
+                new SecureRandom(), mockClient, provisioningService, props, null, null, reactivation(false)
         );
 
         AuthResult result = service.loginWithGoogle(
@@ -251,10 +252,82 @@ class GoogleAuthFlowTest {
 
         IdentityService service = new IdentityService(
                 store, cipher, (u, s) -> "jwt", null, null, () -> fixedUserId, Clock.fixed(now, ZoneOffset.UTC),
-                new SecureRandom(), null, null, props, null, null
+                new SecureRandom(), null, null, props, null, null, reactivation(false)
         );
 
         assertThatThrownBy(() -> service.login("googleuser@example.com", "any-password", "Web", "127.0.0.1"))
                 .isInstanceOf(IdentityService.InvalidCredentialsException.class);
+    }
+
+    @Test
+    @DisplayName("UC-23: đăng nhập Google trong thời gian chờ xóa sẽ hủy yêu cầu xóa và kích hoạt lại tài khoản")
+    void googleSignInDuringGracePeriodCancelsDeletion() {
+        store.oauthUserId = Optional.of(fixedUserId);
+        store.accountByEmail = Optional.of(account("DELETION_PENDING"));
+        String[] status = {null};
+        FakeIdentityStore recording = new FakeIdentityStore() {
+            @Override public void setStatus(UUID userId, String next, Instant at) { status[0] = next; }
+        };
+        recording.oauthUserId = store.oauthUserId;
+        recording.accountByEmail = store.accountByEmail;
+
+        AuthResult result = googleService(recording, new AccountReactivation(recording, (u, n) -> true))
+                .loginWithGoogle(new GoogleAuthRequest("code", "Asia/Ho_Chi_Minh", "vi", "Web"), "127.0.0.1");
+
+        assertThat(result.deletionCancelled()).isTrue();
+        assertThat(status[0]).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    @DisplayName("UC-23: hết thời gian chờ thì đăng nhập Google bị từ chối như tài khoản không hoạt động")
+    void googleSignInAfterGracePeriodIsRefused() {
+        store.oauthUserId = Optional.of(fixedUserId);
+        store.accountByEmail = Optional.of(account("DELETION_PENDING"));
+
+        assertThatThrownBy(() -> googleService(store, reactivation(false))
+                .loginWithGoogle(new GoogleAuthRequest("code", "Asia/Ho_Chi_Minh", "vi", "Web"), "127.0.0.1"))
+                .isInstanceOf(IdentityService.InvalidCredentialsException.class);
+    }
+
+    @Test
+    @DisplayName("Đăng nhập thường của tài khoản ACTIVE không báo hủy xóa")
+    void activeGoogleSignInReportsNoCancellation() {
+        store.oauthUserId = Optional.of(fixedUserId);
+        store.accountByEmail = Optional.of(account("ACTIVE"));
+
+        AuthResult result = googleService(store, reactivation(true))
+                .loginWithGoogle(new GoogleAuthRequest("code", "Asia/Ho_Chi_Minh", "vi", "Web"), "127.0.0.1");
+
+        assertThat(result.deletionCancelled()).isFalse();
+    }
+
+    private AccountReactivation reactivation(boolean cancels) {
+        return new AccountReactivation(store, (u, n) -> cancels);
+    }
+
+    private IdentityStore.Account account(String status) {
+        return new IdentityStore.Account(fixedUserId, new byte[]{1},
+                new SensitiveDataCipher.Encrypted(new byte[]{1}, new byte[]{2}, new byte[]{3}, "v1"),
+                null, status, 0, null, 1, now);
+    }
+
+    private IdentityService googleService(FakeIdentityStore identityStore, AccountReactivation reactivation) {
+        MylogProperties props = new MylogProperties(
+                "all",
+                new MylogProperties.Web(List.of("http://localhost:3000")),
+                new MylogProperties.OpenApi(false),
+                new MylogProperties.Identity(true, new MylogProperties.Identity.OAuth(
+                        new MylogProperties.Identity.OAuth.Google(true, "cid", "sec")
+                ))
+        );
+        GoogleOAuthClient client = new GoogleOAuthClient(props) {
+            @Override public GoogleTokenPayload exchangeCode(String code) {
+                return new GoogleTokenPayload("google-sub-789", "pending@example.com", true, "Pending");
+            }
+        };
+        GoogleAuthProvisioningService provisioning = new GoogleAuthProvisioningService(
+                identityStore, cipher, () -> fixedUserId, null, (u, s) -> "jwt", reactivation);
+        return new IdentityService(identityStore, cipher, (u, s) -> "jwt", null, null, () -> fixedUserId,
+                Clock.fixed(now, ZoneOffset.UTC), new SecureRandom(), client, provisioning, props, null, null, reactivation);
     }
 }

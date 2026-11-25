@@ -132,9 +132,11 @@ mylog:
   exports:
     enabled: ${MYLOG_EXPORTS_ENABLED:true}
     poll-delay-ms: ${MYLOG_EXPORTS_POLL_DELAY_MS:5000}
-  deletion:
-    enabled: ${MYLOG_DELETION_ENABLED:true}
-    poll-delay-ms: ${MYLOG_DELETION_POLL_DELAY_MS:5000}
+  # UC-23. Off by default: when false, the account deletion endpoint returns 404 and the worker does not run.
+  # Signing in again still cancels any request made while it was on.
+  account-deletion:
+    enabled: ${MYLOG_ACCOUNT_DELETION_ENABLED:false}
+    poll-delay-ms: ${MYLOG_ACCOUNT_DELETION_POLL_DELAY_MS:5000}
   feedback:
     retention-delay-ms: ${MYLOG_FEEDBACK_RETENTION_DELAY_MS:86400000}
   identity:

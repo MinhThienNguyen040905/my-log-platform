@@ -2,7 +2,7 @@
 
 > Spec là nguồn sự thật duy nhất về feature này. Khi feature thay đổi, cập nhật file này trong cùng commit/PR. Xem [quy ước](../README.md).
 
-> **Trạng thái spec:** điền từ code và quyết định ngày 2026-11-25, **chờ xác nhận**. Phần đánh dấu *(thay đổi)* khác với code hiện tại và sẽ được sửa trong PR backend/web.
+> **Trạng thái spec:** điền từ code và quyết định ngày 2026-11-25, **chờ xác nhận**. Backend đã làm theo spec này (2026-11-25); phần web của xóa tài khoản và tài khoản Google khi tải export còn chưa làm.
 
 Quyền của người dùng đối với dữ liệu của mình: lấy bản sao, xóa toàn bộ dữ liệu nhưng giữ tài khoản ("bắt đầu lại"), và xóa hẳn tài khoản.
 
@@ -10,7 +10,7 @@ Quyền của người dùng đối với dữ liệu của mình: lấy bản s
 - **API gốc:** `/api/v1/exports`, `/api/v1/me/data:reset`, `/api/v1/account-deletion-requests`
 - **Web:** [`features/export`](../../front-end/my-app-web/features/export), `StartOverCard` và mục "Dữ liệu" trong [`features/user/components/SettingsView.tsx`](../../front-end/my-app-web/features/user/components/SettingsView.tsx)
 - **Mobile:** [`src/features/user/export-api.ts`](../../front-end/my-app-mobile/src/features/user/export-api.ts), [`src/app/(app)/settings.tsx`](<../../front-end/my-app-mobile/src/app/(app)/settings.tsx>)
-- **Migration:** `V14`, `V23` *(thay đổi, hàng đợi xóa file)* (trong [`db/migration`](../../backend/src/main/resources/db/migration))
+- **Migration:** `V14`, `V23` (trong [`db/migration`](../../backend/src/main/resources/db/migration))
 - **Tài liệu bổ trợ:** [`adr/0007-encrypted-database-export-artifacts.md`](../../backend/docs/adr/0007-encrypted-database-export-artifacts.md)
 
 ## 1. Mục tiêu và phạm vi
@@ -29,7 +29,7 @@ Người dùng kiểm soát dữ liệu nhạy cảm của mình: lấy về đ�
 ## 3. Business rule và phân quyền chung
 
 - Mọi endpoint cần bearer token và lọc theo `userId` hiện tại; tài nguyên của người khác trả `404`.
-- **Xác nhận lại danh tính** cho thao tác nhạy cảm (tải file export, bắt đầu lại, xóa tài khoản), dùng chung một quy tắc *(thay đổi: hiện chỉ "bắt đầu lại" làm đúng)*:
+- **Xác nhận lại danh tính** cho thao tác nhạy cảm (tải file export, bắt đầu lại, xóa tài khoản), dùng chung một quy tắc:
   - tài khoản có mật khẩu: nhập mật khẩu, tối đa 5 lần sai / 15 phút cho mỗi loại thao tác; sai → `403 PASSWORD_INCORRECT`, quá số lần → `429`;
   - tài khoản chỉ Google: phiên hiện tại phải được tạo trong vòng 10 phút; không thỏa → `403 RECENT_LOGIN_REQUIRED`, client hiện thông báo yêu cầu đăng nhập lại.
 - Job xuất, job xóa tài khoản và job xóa file chạy trong worker (không chạy khi `mylog.app-profile=api`), claim bằng `FOR UPDATE SKIP LOCKED`.
@@ -38,7 +38,7 @@ Người dùng kiểm soát dữ liệu nhạy cảm của mình: lấy về đ�
   | Cờ | Mặc định | Tác dụng |
   |---|---|---|
   | `mylog.exports.enabled` | `true` | Worker xuất |
-  | `mylog.account-deletion.enabled` *(thay đổi)* | `false` | Bật cả endpoint lẫn worker xóa tài khoản. Tắt → endpoint `404` |
+  | `mylog.account-deletion.enabled` | `false` | Bật cả endpoint lẫn worker xóa tài khoản. Tắt → endpoint `404` |
 
 - Toàn bộ feature chỉ bật khi `mylog.identity.enabled=true`.
 - Không có quyền quản trị nào đọc file export hay thực hiện thay người dùng.
@@ -56,8 +56,8 @@ Người dùng kiểm soát dữ liệu nhạy cảm của mình: lấy về đ�
 
 - `ExportResponse` = `{id, format, status, createdAt, completedAt, expiresAt}`.
 - `DeletionResponse` = `{id, status, requestedAt, scheduledFor, completedAt}`.
-- Đăng nhập (`/auth/login`, `/auth/google`) trả thêm `deletionCancelled` *(thay đổi)*, xem [UC-23](UC-23-delete-account.md).
-- `:status` và `:cancel` của yêu cầu xóa bị bỏ *(thay đổi)*.
+- Đăng nhập (`/auth/login`, `/auth/google`) trả thêm `deletionCancelled`, xem [UC-23](UC-23-delete-account.md).
+- `:status` và `:cancel` của yêu cầu xóa bị bỏ.
 
 Đường dẫn tính từ `/api/v1`. Lỗi trả `application/problem+json`.
 
@@ -67,13 +67,13 @@ Người dùng kiểm soát dữ liệu nhạy cảm của mình: lấy về đ�
 |---|---|---|
 | `export_requests` | Yêu cầu xuất, file mã hóa, trạng thái, lease, `expires_at`. Mỗi user tối đa một yêu cầu `PENDING`/`PROCESSING`/`READY` | V14 |
 | `deletion_requests` | Yêu cầu xóa; `user_id` set `NULL` khi xong; `subject_hash` giữ để đối chiếu. Mỗi user tối đa một yêu cầu `GRACE_PERIOD`/`PROCESSING`/`FAILED` | V14 |
-| `asset_deletion_queue` *(thay đổi)* | File ảnh chờ xóa khỏi kho lưu trữ: `public_id`, `asset_type`, `delivery_type`, `attempt`, `available_at`, `last_error_code`. Không có FK tới `users` để còn tồn tại sau khi tài khoản bị xóa. Bật RLS, thu hồi grant `anon`/`authenticated` (ADR-0008) | V23 |
+| `asset_deletion_queue` | File ảnh chờ xóa khỏi kho lưu trữ: `public_id`, `asset_type`, `delivery_type`, `attempt`, `available_at`, `last_error_code`. Không có FK tới `users` để còn tồn tại sau khi tài khoản bị xóa. Bật RLS, thu hồi grant `anon`/`authenticated` (ADR-0008) | V23 |
 | `auth_rate_limits` | Quota xuất (3/24 giờ), giới hạn nhập sai mật khẩu | V2 |
 | `audit_logs` | `DATA_RESET`, `ACCOUNT_DELETION_CANCELLED` | V2 |
 
 Bản ghi export `EXPIRED` bị xóa sau 30 ngày; `deletion_requests` đã `COMPLETED`/`CANCELLED` bị xóa sau 365 ngày.
 
-### Hàng đợi xóa file *(thay đổi)*
+### Hàng đợi xóa file
 
 - "Bắt đầu lại" và xóa tài khoản ghi file cần xóa vào hàng đợi **trong cùng transaction** với việc xóa dữ liệu, nên không bao giờ mất dấu file.
 - Job xóa file (mỗi lần một lô, `FOR UPDATE SKIP LOCKED`): xóa thành công hoặc kho trả "not found" → xóa dòng; lỗi → tăng `attempt`, thử lại với backoff tối đa 24 giờ. Sau 10 lần lỗi vẫn giữ dòng và hiện ở màn hình vận hành.
@@ -91,7 +91,7 @@ Bản ghi export `EXPIRED` bị xóa sau 30 ngày; `deletion_requests` đã `COM
 
 | Phần | Trạng thái | Ghi chú |
 |---|---|---|
-| Backend | đang làm | `M7IntegrationTest`, `DataResetIntegrationTest`. Các phần *(thay đổi)* chưa làm |
+| Backend | đã kiểm chứng | `M7IntegrationTest`, `DataResetIntegrationTest`, `AccountDeletionDisabledTest`, `AssetDeletionQueueJobTest`, `GoogleAuthFlowTest`. Chưa thử với Cloudinary thật |
 | Web | đang làm | Xuất và bắt đầu lại xong; xóa tài khoản chưa có |
 | Mobile | đang làm | Có xuất; bắt đầu lại và xóa tài khoản chờ quyết định phát hành mobile |
 

@@ -2,7 +2,7 @@
 
 > Spec là nguồn sự thật duy nhất về feature này. Khi feature thay đổi, cập nhật file này trong cùng commit/PR. Xem [quy ước](../README.md).
 
-> **Trạng thái spec:** điền từ code ngày 2026-11-25, **chờ xác nhận**. Phần đánh dấu *(thay đổi)* khác với code hiện tại.
+> **Trạng thái spec:** điền từ code ngày 2026-11-25, **chờ xác nhận**. Backend đã làm theo spec này (2026-11-25); web và mobile chưa xử lý tài khoản Google.
 
 - **Feature:** [Xuất dữ liệu, bắt đầu lại và xóa tài khoản](README.md)
 - **Catalog:** UC-22 trong [`USE_CASE_CATALOG.md`](../../backend/docs/USE_CASE_CATALOG.md) (bổ trợ, spec này được ưu tiên)
@@ -21,7 +21,7 @@ Người dùng đã đăng nhập, tài khoản `ACTIVE`.
 1. Người dùng chọn định dạng CSV hoặc PDF → `POST /exports` → `202`, `status = PENDING`.
 2. Worker nhận job, chụp dữ liệu, tạo file, mã hóa và lưu → `READY`, `expiresAt = completedAt + 24 giờ` (`ExportService.java:90-107`).
 3. Client hỏi trạng thái bằng `GET /exports/{id}` (web hỏi mỗi 5 giây trong một khoảng giới hạn).
-4. Khi `READY`, người dùng xác nhận lại danh tính theo quy tắc chung ([README](README.md) mục 3: mật khẩu, hoặc đăng nhập trong 10 phút với tài khoản Google *(thay đổi)*) → `POST /exports/{id}:authorize-download` → nhận URL có chữ ký, sống **60 giây** (`ExportService.java:60-67`).
+4. Khi `READY`, người dùng xác nhận lại danh tính theo quy tắc chung ([README](README.md) mục 3: mật khẩu, hoặc đăng nhập trong 10 phút với tài khoản Google) → `POST /exports/{id}:authorize-download` → nhận URL có chữ ký, sống **60 giây** (`ExportService.java:60-67`).
 5. Client gọi URL đó kèm bearer token → nhận file `mylog-export.csv` hoặc `.pdf`.
 
 ### Nội dung file
@@ -38,8 +38,8 @@ Theo `ExportSnapshot.java:44-77`: email tài khoản, hồ sơ, consent, phiên 
 - Worker lỗi: retry với backoff 30 giây × 2^lần thử (tối đa 1 giờ); sau 3 lần → `FAILED` vĩnh viễn, `lastErrorCode = EXPORT_FAILED`.
 - File lớn hơn 5 MB hoặc hơn 10.000 bài nhật ký: job lỗi.
 - Tài khoản không còn `ACTIVE` khi worker chạy (ví dụ vừa bị đình chỉ): job lỗi.
-- Sai mật khẩu khi authorize: `403 PASSWORD_INCORRECT`; quá 5 lần sai / 15 phút: `429` *(thay đổi; hiện trả `401` và không giới hạn)*.
-- Tài khoản chỉ Google *(thay đổi; hiện không authorize được)*: phiên tạo trong vòng 10 phút thì authorize không cần mật khẩu; quá 10 phút → `403 RECENT_LOGIN_REQUIRED`. Client kiểm tra `canChangePassword = false` trong `GET /me`, không hiện ô mật khẩu, và khi gặp `RECENT_LOGIN_REQUIRED` thì **hiện thông báo** yêu cầu đăng xuất, đăng nhập lại rồi tải trong 10 phút.
+- Sai mật khẩu khi authorize: `403 PASSWORD_INCORRECT`; quá 5 lần sai / 15 phút: `429`.
+- Tài khoản chỉ Google: phiên tạo trong vòng 10 phút thì authorize không cần mật khẩu; quá 10 phút → `403 RECENT_LOGIN_REQUIRED`. Client kiểm tra `canChangePassword = false` trong `GET /me`, không hiện ô mật khẩu, và khi gặp `RECENT_LOGIN_REQUIRED` thì **hiện thông báo** yêu cầu đăng xuất, đăng nhập lại rồi tải trong 10 phút.
 - URL hết 60 giây, chữ ký sai, file hết hạn, hoặc người khác gọi: `404`. Không có bearer: `401`.
 - Băm SHA-256 của file sau giải mã không khớp: lỗi nội bộ, không trả file.
 
@@ -70,17 +70,18 @@ Theo `ExportSnapshot.java:44-77`: email tài khoản, hồ sơ, consent, phiên 
 - [x] Tải file qua HTTP: không có token → 401, người khác → 404, chủ sở hữu → 200 và `no-store`.
 - [x] Chữ ký hết hạn, sai mật khẩu, file hết hạn đều bị từ chối; yêu cầu hết hạn không chặn yêu cầu mới; PDF hợp lệ.
 - [x] Quota dùng chung, tính theo user và hành động (`writeQuotaPersistsAfterRejectionAndIsScopedByActionAndUser`).
-- [ ] Test HTTP cho `POST /exports`, `GET /exports/{id}`, `:authorize-download`, và `429`.
+- [x] Test HTTP cho `:authorize-download`: sai mật khẩu `403`, quá số lần `429`, tài khoản Google (`M7IntegrationTest.exportDownloadConfirmsIdentityForPasswordAndGoogleAccounts`).
+- [ ] Test HTTP cho `POST /exports` (gồm `429` quota) và `GET /exports/{id}`.
 - [ ] Playwright cho luồng xuất trên web.
 - [ ] Kiểm tra tải và chia sẻ file trên Android/iOS thật.
-- [ ] Tài khoản Google đăng nhập trong 10 phút tải được file; quá 10 phút → `403 RECENT_LOGIN_REQUIRED`; sai mật khẩu → `403`, quá số lần → `429`.
+- [x] Tài khoản Google đăng nhập trong 10 phút tải được file; quá 10 phút → `403 RECENT_LOGIN_REQUIRED`; sai mật khẩu → `403`, quá số lần → `429`.
 - [ ] Web và mobile không hiện ô mật khẩu cho tài khoản Google và hiện thông báo khi gặp `RECENT_LOGIN_REQUIRED`.
 
 ## 9. Trạng thái triển khai
 
 | Phần | Trạng thái | Ghi chú |
 |---|---|---|
-| Backend | đã kiểm chứng | `M7IntegrationTest`; một phần chỉ test ở mức service |
+| Backend | đã kiểm chứng | `M7IntegrationTest` (gồm `:authorize-download` qua HTTP cho mật khẩu, giới hạn số lần sai và tài khoản Google); tạo và xem yêu cầu chỉ test ở mức service |
 | Web | đang làm | Chưa xử lý tài khoản Google; chưa có Playwright |
 | Mobile | đang làm | Chưa xử lý tài khoản Google; chưa chạy trên thiết bị thật |
 

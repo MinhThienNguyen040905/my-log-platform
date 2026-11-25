@@ -22,8 +22,8 @@
 | Insight, report và nhận diện kiểu suy nghĩ | 8 | V9, V22; hai bảng tín hiệu thuộc module analysis |
 | Self-care và tùy chọn gợi ý Companion | 4 | V10, V21; bảng tùy chọn thuộc module journal |
 | Knowledge và prompt | 5 | V11; V13 điều chỉnh trigger |
-| Export, xóa tài khoản, feedback | 3 | V14 |
-| **Tổng** | **50** | Schema sau V22 |
+| Export, xóa tài khoản, feedback, hàng đợi xóa file | 4 | V14, V23 |
+| **Tổng** | **51** | Schema sau V23 |
 
 ## 2. Tài khoản, quyền, hồ sơ và audit — 14 bảng
 
@@ -322,9 +322,9 @@ Nguồn schema: [V11](../src/main/resources/db/migration/V11__knowledge_and_prom
 - **Cột quan trọng:** locale, category, `prompt_text`, status `DRAFT/PUBLISHED/ARCHIVED`, display order và khoảng hiệu lực.
 - **Cách dùng:** schema cho workflow câu hỏi đã duyệt; admin/user prompt API còn roadmap. Endpoint `journal-writing-suggestions` hiện chọn các câu **hardcode trong service**, không đọc bảng này.
 
-## 9. Xuất dữ liệu, xóa tài khoản và phản hồi — 3 bảng
+## 9. Xuất dữ liệu, xóa tài khoản và phản hồi — 4 bảng
 
-Nguồn schema: [V14](../src/main/resources/db/migration/V14__exports_deletion_feedback.sql).
+Nguồn schema: [V14](../src/main/resources/db/migration/V14__exports_deletion_feedback.sql), [V23](../src/main/resources/db/migration/V23__asset_deletion_queue.sql).
 
 ### 9.1 `export_requests` — job và artifact CSV/PDF
 
@@ -336,7 +336,13 @@ Nguồn schema: [V14](../src/main/resources/db/migration/V14__exports_deletion_f
 
 - **Khóa/quan hệ:** PK `id`; `user_id` FK `ON DELETE SET NULL` vì request/audit giảm định danh có thể còn sau khi xóa user, `subject_hash` giúp nhận diện giảm định danh.
 - **Cột quan trọng:** status `GRACE_PERIOD/PROCESSING/COMPLETED/CANCELLED/FAILED`, requested/scheduled/completed/cancelled time, checkpoint, attempt/lease/error; partial unique ngăn hai yêu cầu active cùng user.
-- **Cách dùng:** sau xác thực lại, thu hồi phiên và chờ grace period 7 ngày; worker xóa theo checkpoint, có thể retry hoặc hủy đúng điều kiện. Không báo đã xóa toàn bộ chỉ vì DB cascade xong; object/provider/cache và backup retention phải được xét riêng.
+- **Cách dùng:** chỉ khi bật `MYLOG_ACCOUNT_DELETION_ENABLED`. Sau xác thực lại, thu hồi phiên và chờ grace period 7 ngày; đăng nhập lại trong thời gian này sẽ hủy (`CANCELLED`). Worker xếp file ảnh vào `asset_deletion_queue` và purge DB trong một transaction, retry khi lỗi (`CLEANUP_RETRY`, sau 10 lần `DELETION_STUCK`). Cột `checkpoint` không còn được dùng để điều khiển worker. Dữ liệu phía provider AI và backup retention phải được xét riêng.
+
+### 9.4 `asset_deletion_queue` — file chờ xóa khỏi kho lưu trữ
+
+- **Khóa/quan hệ:** PK `id`; **không** có FK tới `users` để dòng còn sau khi tài khoản bị xóa. Bật RLS, thu hồi quyền `anon`/`authenticated` (ADR-0008).
+- **Cột quan trọng:** `public_id`, `asset_type`, `delivery_type` (đủ để xóa file), `attempt`, `available_at`, `lease_expires_at`, `last_error_code` (`ASSET_DELETE_RETRY`, sau 10 lần `ASSET_DELETE_STUCK`).
+- **Cách dùng:** "bắt đầu lại" và xóa tài khoản ghi dòng trong cùng transaction với việc xóa `journal_assets`; `AssetDeletionQueueJob` xóa file ngoài transaction, xóa dòng khi thành công hoặc kho báo "not found", ngược lại lùi lịch (60 giây × 2^lần thử). Không ghi `public_id` vào log.
 
 ### 9.3 `feedback` — góp ý/bug report
 

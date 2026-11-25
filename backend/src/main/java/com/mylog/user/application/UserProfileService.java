@@ -89,6 +89,15 @@ public class UserProfileService implements UserProfileUseCase {
     }
 
     @Override @Transactional
+    public void resetPersonalDetails(UUID userId) {
+        UserStore.Profile current = require(userId);
+        var next = new UserStore.Profile(userId, encrypted(userId, new ProfilePayload("", "", List.of(), null)),
+                current.timezone(), current.locale(), current.onboardingCompletedAt(), current.version() + 1);
+        if (!store.update(next, current.version(), clock.instant()))
+            throw new ConflictException("Hồ sơ đã được cập nhật ở nơi khác.");
+    }
+
+    @Override @Transactional
     public ProfileView completeOnboarding(UUID userId, long expectedVersion) {
         UserStore.Profile current = require(userId);
         Instant now = clock.instant();

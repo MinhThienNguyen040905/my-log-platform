@@ -539,9 +539,7 @@ POST   /exports
 GET    /exports/{exportId}
 POST   /exports/{exportId}:authorize-download
 GET    /exports/{exportId}/file?expires=...&signature=...
-POST   /account-deletion-requests
-POST   /account-deletion-requests/{requestId}:status
-POST   /account-deletion-requests/{requestId}:cancel
+POST   /account-deletion-requests            (chỉ khi MYLOG_ACCOUNT_DELETION_ENABLED=true; hủy bằng đăng nhập lại)
 POST   /feedback
 GET    /feedback/{feedbackId}
 ```

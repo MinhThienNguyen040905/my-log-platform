@@ -167,4 +167,55 @@ final class SmtpVerificationDelivery implements VerificationDelivery {
             log.error("Failed to deliver OAuth account notice email to {}", email, e);
         }
     }
+
+    @Override public void sendAccountDeletionScheduled(String email, Instant scheduledFor) {
+        String date = DELETION_DATE.format(scheduledFor);
+        sendNotice(email, "mylog: Yêu cầu xóa tài khoản",
+                "Chúng tôi đã nhận yêu cầu xóa tài khoản mylog của bạn."
+                        + "\nTài khoản và toàn bộ dữ liệu sẽ bị xóa vĩnh viễn vào " + date + " (giờ UTC)."
+                        + "\nMuốn giữ tài khoản, chỉ cần đăng nhập lại trước thời điểm đó; yêu cầu xóa sẽ tự hủy."
+                        + "\nNếu không phải bạn gửi yêu cầu này, hãy đăng nhập lại ngay và đổi mật khẩu.",
+                """
+                <!doctype html>
+                <html lang="vi"><body style="font-family:Arial,sans-serif;color:#1f2937;line-height:1.6">
+                <h1 style="font-size:22px">Yêu cầu xóa tài khoản mylog</h1>
+                <p>Chúng tôi đã nhận yêu cầu xóa tài khoản mylog của bạn.</p>
+                <p>Tài khoản và toàn bộ dữ liệu sẽ bị xóa vĩnh viễn vào <strong>%s</strong> (giờ UTC).</p>
+                <p>Muốn giữ tài khoản, chỉ cần <strong>đăng nhập lại</strong> trước thời điểm đó; yêu cầu xóa sẽ tự hủy.</p>
+                <p style="color:#6b7280;font-size:13px;margin-top:24px">Nếu không phải bạn gửi yêu cầu này, hãy đăng nhập lại ngay và đổi mật khẩu.</p>
+                </body></html>
+                """.formatted(HtmlUtils.htmlEscape(date)), "account deletion notice");
+    }
+
+    @Override public void sendAccountDeleted(String email) {
+        sendNotice(email, "mylog: Tài khoản đã được xóa",
+                "Tài khoản mylog của bạn và toàn bộ dữ liệu liên quan đã được xóa vĩnh viễn."
+                        + "\nCảm ơn bạn đã dùng mylog. Đây là email cuối cùng chúng tôi gửi tới địa chỉ này.",
+                """
+                <!doctype html>
+                <html lang="vi"><body style="font-family:Arial,sans-serif;color:#1f2937;line-height:1.6">
+                <h1 style="font-size:22px">Tài khoản đã được xóa</h1>
+                <p>Tài khoản mylog của bạn và toàn bộ dữ liệu liên quan đã được xóa vĩnh viễn.</p>
+                <p>Cảm ơn bạn đã dùng mylog. Đây là email cuối cùng chúng tôi gửi tới địa chỉ này.</p>
+                </body></html>
+                """, "account deleted notice");
+    }
+
+    private static final java.time.format.DateTimeFormatter DELETION_DATE =
+            java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").withZone(java.time.ZoneOffset.UTC);
+
+    /** Best effort: a failure is logged by kind only, never with the recipient address. */
+    private void sendNotice(String email, String subject, String plainText, String html, String kind) {
+        try {
+            var message = sender.createMimeMessage();
+            var helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+            helper.setFrom(from, "mylog");
+            helper.setTo(email);
+            helper.setSubject(subject);
+            helper.setText(plainText, html);
+            sender.send(message);
+        } catch (Exception e) {
+            log.warn("Failed to deliver {} email: {}", kind, e.getClass().getSimpleName());
+        }
+    }
 }

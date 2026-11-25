@@ -158,7 +158,7 @@ class PasswordResetUnitTest {
         identityService = new IdentityService(
                 store, cipher, (u, s) -> "jwt", null, null,
                 UUID::randomUUID, clock, new SecureRandom(),
-                null, null, props, null, eventPublisher
+                null, null, props, null, eventPublisher, new AccountReactivation(store, (u, n) -> false)
         );
     }
 
@@ -225,7 +225,7 @@ class PasswordResetUnitTest {
         IdentityService service = new IdentityService(
                 store, cipher, (u, s) -> "jwt", null, null,
                 UUID::randomUUID, Clock.fixed(Instant.parse("2026-03-31T10:00:00Z"), ZoneOffset.UTC), new SecureRandom(),
-                null, null, local, null, eventPublisher);
+                null, null, local, null, eventPublisher, new AccountReactivation(store, (u, n) -> false));
 
         service.requestPasswordReset("user@mylog.vn", "127.0.0.1");
 

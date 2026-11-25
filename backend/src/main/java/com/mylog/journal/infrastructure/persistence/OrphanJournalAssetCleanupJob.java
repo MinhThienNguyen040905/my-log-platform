@@ -36,7 +36,9 @@ public class OrphanJournalAssetCleanupJob {
         Instant draftCutoff = now.minus(Duration.ofHours(72));
         List<JournalAssetData> orphans = store.findOrphansBefore(draftCutoff, 50);
         for (JournalAssetData orphan : orphans) {
-            storage.delete(orphan.publicId, orphan.assetType, orphan.deliveryType);
+            // A storage failure leaves the row as is, so the next run retries it.
+            try { storage.delete(orphan.publicId, orphan.assetType, orphan.deliveryType); }
+            catch (RuntimeException e) { continue; }
             store.markDeleted(orphan.id, now);
         }
 
