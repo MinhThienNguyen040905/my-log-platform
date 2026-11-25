@@ -273,8 +273,8 @@ Backend chỉ chấp nhận schema TipTap đã allowlist: `paragraph`, `heading`
 ### M11. Yêu cầu xóa tài khoản (P1)
 
 - **Yêu cầu xóa:** `POST /api/v1/account-deletion-requests` với `{ password }`. Có thời gian chờ 7 ngày, phiên bị thu hồi ngay.
-- **Hủy hoặc xem trạng thái:** `POST /{id}:cancel` và `POST /{id}:status` với `{ email, password }`. Hai endpoint này công khai (không cần đăng nhập).
-- **Luồng:** màn xác nhận hai bước, nêu rõ hậu quả và thời gian chờ. Thành công thì xóa token khỏi SecureStore và về màn đăng nhập, kèm hướng dẫn cách hủy trong 7 ngày.
+- **Hủy:** đăng nhập lại trong 7 ngày (response đăng nhập có `deletionCancelled: true`). Endpoint `:cancel`/`:status` đã bỏ ngày 2026-11-25. Chức năng chỉ chạy khi backend bật `MYLOG_ACCOUNT_DELETION_ENABLED`; tài khoản Google bỏ `password` và cần đăng nhập trong 10 phút.
+- **Luồng:** màn xác nhận hai bước, nêu rõ hậu quả và thời gian chờ. Thành công thì xóa token khỏi SecureStore và về màn đăng nhập, kèm hướng dẫn: đăng nhập lại trong 7 ngày để hủy. Sau khi đăng nhập, nếu `deletionCancelled` thì hiện thông báo.
 - Đối chiếu luồng web ở `features/user` để dùng cùng thông điệp.
 
 ### M12. Đăng nhập Google (P2, cần sửa backend trước)
