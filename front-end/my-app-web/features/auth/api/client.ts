@@ -6,6 +6,12 @@ export async function authPost(path: string, body: unknown): Promise<Response> {
   });
 }
 
+/** True when a successful sign-in response says it cancelled a pending account deletion (UC-23). */
+export async function deletionWasCancelled(response: Response): Promise<boolean> {
+  try { return (await response.clone().json() as { deletionCancelled?: unknown }).deletionCancelled === true; }
+  catch { return false; }
+}
+
 export async function authError(response: Response, locale: 'vi' | 'en' = 'vi', context: 'login' | 'verification' = 'login'): Promise<string> {
   const en = locale === 'en';
   if (context === 'verification' && response.status === 401) return en ? 'The verification link or code is invalid or expired.' : 'Liên kết hoặc mã xác minh không hợp lệ hoặc đã hết hạn.';

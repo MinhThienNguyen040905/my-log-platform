@@ -2,7 +2,7 @@
 
 > Spec là nguồn sự thật duy nhất về feature này. Khi feature thay đổi, cập nhật file này trong cùng commit/PR. Xem [quy ước](../README.md).
 
-> **Trạng thái spec:** thiết kế theo quyết định ngày 2026-11-25, **chờ xác nhận**. Backend đã làm theo spec này (2026-11-25); web và mobile chưa làm.
+> **Trạng thái spec:** thiết kế theo quyết định ngày 2026-11-25, **chờ xác nhận**. Backend và web đã làm theo spec này (2026-11-25); mobile chưa làm.
 
 - **Feature:** [Xuất dữ liệu, bắt đầu lại và xóa tài khoản](README.md)
 - **Catalog:** UC-23 trong [`USE_CASE_CATALOG.md`](../../backend/docs/USE_CASE_CATALOG.md) (bổ trợ, spec này được ưu tiên)
@@ -77,7 +77,7 @@
 
 ## 7. Giao diện web và mobile
 
-- **Web** *(chưa làm)*: thẻ "Xóa tài khoản" trong tab "Dữ liệu" của cài đặt, theo mẫu `StartOverCard.tsx` (đánh dấu đã hiểu, gõ cụm từ, mật khẩu hoặc yêu cầu đăng nhập lại với Google). Chỉ hiện khi backend bật chức năng. Sau khi gửi: đăng xuất, hiện ngày xóa. Sau khi đăng nhập với `deletionCancelled: true`: hiện thông báo. Bỏ dòng "xóa tài khoản qua email".
+- **Web:** `features/user/components/DeleteAccountCard.tsx` trong tab "Dữ liệu" của cài đặt, theo mẫu `StartOverCard.tsx` (đánh dấu đã hiểu, gõ cụm từ, mật khẩu hoặc yêu cầu đăng nhập lại với Google). Chỉ hiện khi `NEXT_PUBLIC_ACCOUNT_DELETION_ENABLED=true` (phải khớp cờ backend). Gọi qua route `app/api/me/account-deletion/route.ts`. Sau khi gửi: đăng xuất, hiện ngày xóa. Sau khi đăng nhập với `deletionCancelled: true`: hiện thông báo. Bỏ dòng "xóa tài khoản qua email".
 - **Mobile:** chờ quyết định phát hành trên store (Apple và Google Play bắt buộc có xóa tài khoản trong app).
 
 ## 8. Tiêu chí chấp nhận
@@ -91,7 +91,7 @@
 - [x] Ảnh được đưa vào hàng đợi trong cùng transaction (rollback cùng purge khi lỗi); lỗi kho lưu trữ được thử lại (`AssetDeletionQueueJobTest`).
 - [x] Email xác nhận và email hoàn tất được gửi; không gửi email hoàn tất khi purge lỗi.
 - [ ] Test lỗi SMTP không chặn việc xóa (code đã bắt lỗi, chưa có test).
-- [ ] Web: Playwright cho yêu cầu xóa và thông báo hủy.
+- [ ] Web: chạy Playwright `account-deletion.spec.ts` (cần `ACCOUNT_DELETION_E2E=1` và cờ bật ở backend lẫn web).
 - [ ] Kiểm tra với Cloudinary thật trên staging.
 
 ## 9. Trạng thái triển khai
@@ -99,7 +99,7 @@
 | Phần | Trạng thái | Ghi chú |
 |---|---|---|
 | Backend | đã kiểm chứng | `M7IntegrationTest`, `AccountDeletionDisabledTest`, `GoogleAuthFlowTest`. Chưa thử với Cloudinary thật |
-| Web | chưa làm | Chỉ có link email hỗ trợ |
+| Web | xong | `DeleteAccountCard`, toast hủy xóa sau khi đăng nhập (mật khẩu và Google). Playwright `account-deletion.spec.ts` đã viết, chưa chạy |
 | Mobile | chưa làm | Chờ quyết định phát hành trên store |
 
 ## 10. Câu hỏi mở

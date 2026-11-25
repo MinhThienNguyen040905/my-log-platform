@@ -13,6 +13,8 @@ export async function POST(request: Request) {
     if (!response.ok) return forwardProblem(response);
     const tokens = await response.json();
     await saveTokens(tokens, rememberMe === true);
-    return Response.json({ userId: tokens.userId }, { headers: { 'Cache-Control': 'no-store' } });
+    // deletionCancelled: this sign-in cancelled a pending account deletion (UC-23).
+    return Response.json({ userId: tokens.userId, deletionCancelled: tokens.deletionCancelled === true },
+      { headers: { 'Cache-Control': 'no-store' } });
   } catch { return new Response(null, { status: 503 }); }
 }

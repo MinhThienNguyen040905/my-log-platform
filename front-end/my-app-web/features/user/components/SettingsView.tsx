@@ -9,6 +9,7 @@ import { useSettings } from '../hooks/useSettings';
 import { ConsentsPanel, SessionsPanel } from './AccountAccessPanel';
 import { ChangePasswordForm } from './ChangePasswordForm';
 import { StartOverCard } from './StartOverCard';
+import { DeleteAccountCard } from './DeleteAccountCard';
 import { AccountDataExport } from '@/features/export';
 import { UserFeedbackCard } from '@/features/feedback';
 import { useAccount } from '../context/AccountContext';
@@ -18,8 +19,8 @@ const TABS = ['profile', 'security', 'data', 'feedback'] as const;
 type Tab = (typeof TABS)[number];
 const TAB_ICONS: Record<Tab, React.ComponentType<{ className?: string }>> = { profile: User, security: Lock, data: Database, feedback: MessageSquarePlus };
 const isTab = (value: string | null): value is Tab => !!value && (TABS as readonly string[]).includes(value);
-/** Address users write to when they want their account deleted; the line is hidden when it is not configured. */
-const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || '';
+/** UC-23: show "Xóa tài khoản" only when the backend runs with MYLOG_ACCOUNT_DELETION_ENABLED=true. */
+const ACCOUNT_DELETION_ENABLED = process.env.NEXT_PUBLIC_ACCOUNT_DELETION_ENABLED === 'true';
 /** `?tab=` as an external store: read on the client only, so server and client markup stay identical. */
 const subscribeToUrl = (onChange: () => void) => {
   window.addEventListener('popstate', onChange);
@@ -237,14 +238,8 @@ function DataTab({ entryCount, hasDraft, userId, hasPassword }: { entryCount: nu
       )}
     </section>
 
-    <AccountDataExport userId={userId} />
+    <AccountDataExport userId={userId} hasPassword={hasPassword} />
     <StartOverCard userId={userId} hasPassword={hasPassword} />
-
-    {SUPPORT_EMAIL && (
-      <p className="font-sans text-sm text-gray-700" data-testid="account-deletion-contact">
-        {t('settingsExtra.deleteByEmail')}{' '}
-        <a className="font-bold underline" href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t('settingsExtra.deleteEmailSubject'))}`}>{SUPPORT_EMAIL}</a>
-      </p>
-    )}
+    {ACCOUNT_DELETION_ENABLED && <DeleteAccountCard userId={userId} hasPassword={hasPassword} />}
   </>;
 }

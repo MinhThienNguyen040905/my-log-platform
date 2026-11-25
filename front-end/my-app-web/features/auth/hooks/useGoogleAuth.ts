@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/providers/ToastProvider';
 import { useTranslation } from 'react-i18next';
-import { authPost, authError } from '../api/client';
+import { authPost, authError, deletionWasCancelled } from '../api/client';
 import { useAppLanguage } from '@/providers/AppLanguageProvider';
 
 declare global {
@@ -122,6 +122,9 @@ export function useGoogleAuth(rememberMe = false) {
             }
 
             showToast({ title: t('auth.loginSuccess'), type: 'success' });
+            if (await deletionWasCancelled(res)) {
+              showToast({ title: t('auth.deletionCancelled'), message: t('auth.deletionCancelledMessage'), type: 'info', duration: 10000 });
+            }
             router.replace('/dashboard');
             router.refresh();
           } catch (err: unknown) {

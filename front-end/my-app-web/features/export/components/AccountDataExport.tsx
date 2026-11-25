@@ -5,8 +5,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authorizeExportDownload, createExport, downloadExport, getExport, type ExportJob } from '../api/exports';
 import { useTranslation } from 'react-i18next';
 import { useAppLanguage } from '@/providers/AppLanguageProvider';
+import { ApiError } from '@/lib/api/client';
 
-export function AccountDataExport({ userId }: { userId: string }) {
+/** `hasPassword` false: a Google account confirms with a recent sign-in instead of a password. */
+export function AccountDataExport({ userId, hasPassword = true }: { userId: string; hasPassword?: boolean }) {
   const { t } = useTranslation();
   const { locale } = useAppLanguage();
   const client = useQueryClient();
@@ -64,10 +66,10 @@ export function AccountDataExport({ userId }: { userId: string }) {
   };
 
   const saveFile = async () => {
-    if (!job || job.status !== 'READY' || !password || busy) return;
+    if (!job || job.status !== 'READY' || (hasPassword && !password) || busy) return;
     setDownloading(true); setError(null); setMessage(null);
     try {
-      const grant = await authorizeExportDownload(job.id, password);
+      const grant = await authorizeExportDownload(job.id, hasPassword ? password : null);
       setPassword('');
       const response = await downloadExport(job.id, grant);
       const url = URL.createObjectURL(await response.blob());
@@ -80,8 +82,16 @@ export function AccountDataExport({ userId }: { userId: string }) {
       setMessage(t('export.downloaded'));
     } catch (cause) {
       setPassword('');
-      setError(locale === 'en' ? t('export.downloadError') : cause instanceof Error ? cause.message : t('export.downloadError'));
+      setError(downloadErrorMessage(cause));
     } finally { setDownloading(false); }
+  };
+
+  const downloadErrorMessage = (cause: unknown): string => {
+    if (cause instanceof ApiError && cause.status === 403) {
+      if (cause.message === 'PASSWORD_INCORRECT') return t('export.wrongPassword');
+      if (cause.message === 'RECENT_LOGIN_REQUIRED') return t('export.recentLogin');
+    }
+    return locale === 'en' ? t('export.downloadError') : cause instanceof Error ? cause.message : t('export.downloadError');
   };
 
   return <section className="bg-white border-2 border-black rounded-2xl p-5 sm:p-6 shadow-neo-sm space-y-4">
@@ -97,9 +107,12 @@ export function AccountDataExport({ userId }: { userId: string }) {
       <p role="status">{t('export.status')} <strong>{job.status === 'READY' ? t('export.ready') : job.status === 'EXPIRED' ? t('export.expired') : job.status === 'FAILED' ? t('export.failed') : t('export.processing')}</strong></p>
       {job.expiresAt && <p>{t('export.expires')} {new Date(job.expiresAt).toLocaleString(locale === 'en' ? 'en-US' : 'vi-VN')}</p>}
       {job.status !== 'EXPIRED' && <button type="button" disabled={busy || jobQuery.isFetching} onClick={() => void refresh()} className="text-sm font-bold underline disabled:opacity-50">{t('export.refresh')}</button>}
-      {job.status === 'READY' && <div className="flex flex-wrap items-end gap-3"><label className="flex flex-col gap-1 font-bold">{t('export.password')}
-        <input type="password" autoComplete="current-password" value={password} disabled={busy} onChange={(event) => setPassword(event.target.value)} className="rounded-lg border border-black bg-white px-3 py-2" /></label>
-        <button type="button" disabled={busy || !password} onClick={() => void saveFile()} className="rounded-lg border-2 border-black bg-primary-container px-4 py-2 font-bold disabled:opacity-50">{t('export.download')}</button></div>}
+      {job.status === 'READY' && <div className="flex flex-wrap items-end gap-3">
+        {hasPassword
+          ? <label className="flex flex-col gap-1 font-bold">{t('export.password')}
+              <input type="password" autoComplete="current-password" value={password} disabled={busy} onChange={(event) => setPassword(event.target.value)} className="rounded-lg border border-black bg-white px-3 py-2" /></label>
+          : <p className="basis-full text-xs text-gray-700" data-testid="export-google-notice">{t('export.googleNotice')}</p>}
+        <button type="button" disabled={busy || (hasPassword && !password)} onClick={() => void saveFile()} className="rounded-lg border-2 border-black bg-primary-container px-4 py-2 font-bold disabled:opacity-50">{t('export.download')}</button></div>}
     </div>}
     {(error || jobQuery.error) && <p role="alert" className="text-sm text-red-700">{error || (locale === 'en' ? t('export.checkError') : jobQuery.error instanceof Error ? jobQuery.error.message : t('export.checkError'))}</p>}
     {message && <p role="status" className="text-sm text-green-800">{message}</p>}
