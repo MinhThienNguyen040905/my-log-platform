@@ -4,7 +4,7 @@
 > PostgreSQL 17 + pgvector + Flyway  
 > Phạm vi: MVP và đường mở rộng đã xác định trong kiến trúc backend
 
-Tài liệu này là nguồn thiết kế chính cho schema. File DBML đi kèm để dựng sơ đồ trực quan: [database/mylog.dbml](database/mylog.dbml). Đọc [giải thích 43 bảng Flyway](DATABASE_TABLES_EXPLAINED.md) để xem mục đích, khóa, dữ liệu và luồng sử dụng của từng bảng ở schema hiện hành.
+Tài liệu này mô tả thiết kế schema; Flyway migration là nguồn schema thực thi. Repository hiện có V1–V22, tạo 50 bảng nghiệp vụ, không tính `flyway_schema_history`. Đọc [giải thích từng bảng Flyway](DATABASE_TABLES_EXPLAINED.md) để xem mục đích, khóa, dữ liệu và luồng sử dụng. Sơ đồ Mermaid bên dưới chỉ minh họa quan hệ chính; file `docs/database/mylog.dbml` được các tài liệu cũ nhắc tới hiện không có trong repository.
 
 ## 1. Mục tiêu thiết kế
 
@@ -922,13 +922,23 @@ V11__knowledge_and_prompts.sql
 V12__admin_roles_permissions.sql
 V13__knowledge_author_nullification.sql
 V14__exports_deletion_feedback.sql
+V15__restrict_direct_database_api_access.sql
+V16__email_verification_code.sql
+V17__pending_registrations.sql
+V18__knowledge_embedding_vector_indexes.sql
+V19__oauth_google_support.sql
+V20__allow_pending_journal_assets.sql
+V21__companion_habit_linking.sql
+V22__thinking_pattern_recognition.sql
 ```
 
 Quy tắc Flyway:
 
 - Migration đã merge/deploy không được sửa.
 - DDL mới có migration mới, kể cả sửa constraint/index.
-- V2 seed role `USER` tối thiểu để registration hoạt động; V12 bổ sung các admin role/permission. V13 cho phép null attribution FK khi xóa user; M7 tiếp tục ở V14.
+- V2 seed role `USER` tối thiểu để registration hoạt động; V12 bổ sung các admin role/permission. V13 cho phép null attribution FK khi xóa user; V14 thêm export/deletion/feedback; V15 khóa truy cập Data API trực tiếp.
+- V16 thêm mã xác minh; V17 tách đăng ký tạm; V18 thêm index embedding; V19 thêm Google OAuth; V20 mở rộng ảnh nháp; V21 nối công cụ với thói quen; V22 thêm bốn bảng nhận diện kiểu suy nghĩ và consent riêng.
+- Với cây migration hiện tại, thay đổi tiếp theo dùng V23 trở lên; kiểm tra lịch sử Flyway của đúng môi trường trước khi triển khai.
 - Seed chỉ dành cho stable system codes/roles, không seed journal/user thật.
 - Index lớn production dùng kế hoạch online/concurrent riêng; `CREATE INDEX CONCURRENTLY` không chạy trong transaction Flyway mặc định.
 - Mỗi migration phải chạy được trên database rỗng và database có dữ liệu representative.

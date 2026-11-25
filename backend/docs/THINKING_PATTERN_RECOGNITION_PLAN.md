@@ -1,6 +1,6 @@
 # Kế hoạch: Nhận diện kiểu suy nghĩ và thói quen (Pattern Recognition)
 
-> **Trạng thái tài liệu:** kế hoạch, **chưa triển khai**. Không có bảng, endpoint, model hay màn hình nào trong tài liệu này tồn tại trong code tại thời điểm viết (2026-11-19). Các phần "đã có" được ghi rõ và dẫn link tới code thật.
+> **Trạng thái tài liệu:** thiết kế ban đầu ngày 2026-11-19; cập nhật đối chiếu ngày 2026-11-22: đã có schema [V22](../src/main/resources/db/migration/V22__thinking_pattern_recognition.sql), luồng trích tín hiệu trong `analysis/application/PatternExtractionService`, persistence trong `JpaPatternSignalStore`/`JpaThinkingPatternStore`, và [ThinkingPatternController](../src/main/java/com/mylog/insight/api/ThinkingPatternController.java) với các API đọc/làm mới/phản hồi/bắt đầu kế hoạch. Database đang cấu hình đã áp dụng V22. Các mục bên dưới vẫn chứa thiết kế và công việc dự kiến; sự tồn tại của code/schema không xác nhận model, nội dung, giao diện hoặc provider đã được duyệt và kiểm chứng để phát hành. Kiểm thử integration PostgreSQL chưa được chạy lại trong lần đối chiếu này vì Docker daemon không hoạt động.
 >
 > **Phụ thuộc:** kho kiến thức RAG (`knowledge`, đã có), pattern insight `pattern-30d-v2` (đã có), tính năng thói quen `selfcare` (đã có), model local chạy qua Ollama (chưa có), quy trình duyệt nội dung có người chuyên môn (chưa có).
 

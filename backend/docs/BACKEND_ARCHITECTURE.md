@@ -382,7 +382,7 @@ Ba luồng **chưa triển khai** được mô tả trong [đề xuất tính n�
 
 ## 8. Mô hình dữ liệu
 
-Thiết kế table, constraint, index, encryption và retention chi tiết nằm tại [DATABASE_OVERVIEW.md](DATABASE_OVERVIEW.md). Sơ đồ có thể import vào dbdiagram nằm tại [database/mylog.dbml](database/mylog.dbml).
+Thiết kế table, constraint, index, encryption và retention chi tiết nằm tại [DATABASE_OVERVIEW.md](DATABASE_OVERVIEW.md); phạm vi schema hiện tại nằm tại [DATABASE_TABLES_EXPLAINED.md](DATABASE_TABLES_EXPLAINED.md). Repository hiện không có file `database/mylog.dbml` được cây thư mục minh họa phía trên nhắc tới; dùng sơ đồ Mermaid để xem quan hệ chính và Flyway migration để đối chiếu schema thực thi.
 
 Mọi bảng nghiệp vụ dùng `UUID`, `created_at timestamptz`, `updated_at timestamptz`. Timestamp lưu UTC; dữ liệu theo ngày lưu thêm `local_date` và timezone.
 

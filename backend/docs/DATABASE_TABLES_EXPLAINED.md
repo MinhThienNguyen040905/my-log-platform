@@ -1,8 +1,8 @@
 # Giải thích từng bảng trong database mylog
 
-> Phạm vi: **43 bảng nghiệp vụ được tạo bởi Flyway V2–V14, với trạng thái cuối sau V15**. Đối chiếu repository ngày 2026-10-07. V1 chỉ bật extension `vector` và `pgcrypto`; V15 thu hồi quyền truy cập trực tiếp và bật RLS cho các bảng `public`, không tạo bảng nghiệp vụ mới. `flyway_schema_history` do Flyway quản lý nên không tính vào 43 bảng dưới đây.
+> Phạm vi: **50 bảng nghiệp vụ, trạng thái schema sau Flyway V22**. Đối chiếu repository và metadata database đang cấu hình ngày 2026-11-22. V1 chỉ bật extension `vector` và `pgcrypto`; V15 thu hồi quyền truy cập trực tiếp và bật RLS; các bảng thêm sau V15 cũng có RLS và thu hồi grant tương ứng. `flyway_schema_history` do Flyway quản lý nên không tính vào 50 bảng dưới đây.
 
-Đây là tài liệu **giải thích schema đang có**, không phải đề xuất thêm bảng hoặc hướng dẫn truy vấn trực tiếp từ frontend. Khi tài liệu khác với migration, migration là nguồn thực thi. Xem [DATABASE_OVERVIEW.md](DATABASE_OVERVIEW.md) để đọc nguyên tắc thiết kế, [DBML](database/mylog.dbml) để dựng sơ đồ và [use case](USE_CASE_CATALOG.md) để biết bảng phục vụ chức năng nào.
+Đây là tài liệu **giải thích schema đang có**, không phải đề xuất thêm bảng hoặc hướng dẫn truy vấn trực tiếp từ frontend. Khi tài liệu khác với migration, migration là nguồn thực thi. Xem [DATABASE_OVERVIEW.md](DATABASE_OVERVIEW.md) để đọc nguyên tắc thiết kế và sơ đồ quan hệ chính, [use case](USE_CASE_CATALOG.md) để biết nhóm chức năng (trạng thái trong danh mục có thể cũ hơn code). Repository hiện không có file DBML được tài liệu cũ tham chiếu.
 
 ## 1. Cách đọc schema trước khi xem từng bảng
 
@@ -14,25 +14,25 @@
 
 | Nhóm | Bảng | Migration tạo bảng |
 |---|---:|---|
-| Tài khoản, RBAC, hồ sơ, audit | 12 | V2–V3; V4 đổi PK lịch sử refresh |
+| Tài khoản, RBAC, hồ sơ, audit | 14 | V2–V3, V17, V19; V4 đổi PK lịch sử refresh |
 | Nhật ký, tag, asset, check-in | 6 | V5 |
 | Outbox và idempotency | 2 | V6; V8 thêm lease cho outbox |
 | Safety | 3 | V7 |
 | AI job, kết quả và usage | 5 | V8 |
-| Insight và report | 4 | V9 |
-| Self-care | 3 | V10 |
+| Insight, report và nhận diện kiểu suy nghĩ | 8 | V9, V22; hai bảng tín hiệu thuộc module analysis |
+| Self-care và tùy chọn gợi ý Companion | 4 | V10, V21; bảng tùy chọn thuộc module journal |
 | Knowledge và prompt | 5 | V11; V13 điều chỉnh trigger |
 | Export, xóa tài khoản, feedback | 3 | V14 |
-| **Tổng** | **43** | V15 áp chính sách quyền/RLS |
+| **Tổng** | **50** | Schema sau V22 |
 
-## 2. Tài khoản, quyền, hồ sơ và audit — 12 bảng
+## 2. Tài khoản, quyền, hồ sơ và audit — 14 bảng
 
 Nguồn schema: [V2](../src/main/resources/db/migration/V2__identity_and_rbac.sql), [V3](../src/main/resources/db/migration/V3__user_profile_and_consent.sql), [V4](../src/main/resources/db/migration/V4__auth_refresh_history_id.sql); V12/V14 bổ sung role và permission.
 
 ### 2.1 `users` — danh tính và trạng thái tài khoản
 
 - **Khóa/quan hệ:** `id` là PK; nhiều bảng cá nhân trỏ tới nó. `email_lookup_hash` có unique index **chỉ với tài khoản `deleted_at IS NULL`**, cho phép kiểm tra email đang dùng mà không lưu email plaintext để tìm kiếm.
-- **Cột quan trọng:** nhóm `encrypted_email/email_iv/email_wrapped_key/email_key_version` chứa email mã hóa; `password_hash` chứa BCrypt hash; `auth_provider` hiện chỉ cho `LOCAL`. `status` có `PENDING`, `ACTIVE`, `SUSPENDED`, `DELETION_PENDING`, `DELETED`; `failed_login_count`, `locked_until` phục vụ chống thử mật khẩu; `row_version` chống ghi đè.
+- **Cột quan trọng:** nhóm `encrypted_email/email_iv/email_wrapped_key/email_key_version` chứa email mã hóa; `auth_provider` cho `LOCAL`/`GOOGLE` từ V19. `password_hash` có thể null với Google, nhưng CHECK bắt buộc có hash với `LOCAL`. Từ V17, `status` chỉ còn `ACTIVE`, `SUSPENDED`, `DELETION_PENDING`, `DELETED`; đăng ký chưa xác minh ở bảng riêng. `failed_login_count`, `locked_until` phục vụ chống thử mật khẩu; `row_version` chống ghi đè.
 - **Cách dùng:** đăng ký/đăng nhập/đình chỉ/xóa tài khoản. Không dùng `email_lookup_hash` như email hiển thị; không cho admin thường đọc/decrypt email hoặc nhật ký chỉ nhờ quyền xem metadata.
 
 ### 2.2 `roles` — vai trò
@@ -75,7 +75,7 @@ Nguồn schema: [V2](../src/main/resources/db/migration/V2__identity_and_rbac.sq
 
 - **Khóa/quan hệ:** PK `id`, FK `user_id`, `token_hash` unique.
 - **Cột quan trọng:** `purpose` chỉ `VERIFY_EMAIL`/`RESET_PASSWORD`, cùng `expires_at`, `consumed_at`.
-- **Cách dùng:** backend đã dùng luồng xác minh email; schema có chỗ cho reset password nhưng **không có nghĩa API reset password đã hoàn thành**. Token thô không lưu trong DB.
+- **Cách dùng:** giữ hash cho xác minh và đặt lại mật khẩu; V16 thêm `code_hash`, `code_expires_at`, `code_failed_attempts`. Challenge đăng ký mới chuyển sang `pending_registrations` từ V17. Backend đã có API reset password bằng link/mã; token và mã thô không lưu trong DB.
 
 ### 2.9 `auth_rate_limits` — bộ đếm chống lạm dụng
 
@@ -100,6 +100,18 @@ Nguồn schema: [V2](../src/main/resources/db/migration/V2__identity_and_rbac.sq
 - **Khóa/quan hệ:** PK `id`, FK `user_id`; index `(user_id, consent_type, decided_at DESC)` để lấy quyết định mới nhất.
 - **Cột quan trọng:** `consent_type` gồm `TERMS`, `PRIVACY`, `AI_PROCESSING`, `ANALYTICS`, `MODEL_TRAINING`, và từ V22 thêm `THINKING_PATTERNS` (bật riêng việc đọc nhật ký để nhận diện kiểu suy nghĩ; không có dòng nghĩa là tắt); `document_version`, `granted`, `decided_at`, `source`.
 - **Cách dùng:** lưu cả cấp và rút consent thay vì ghi đè một boolean. Worker phải kiểm tra `AI_PROCESSING` lúc **thực thi**; consent này không cấp quyền train model.
+
+### 2.13 `pending_registrations` — đăng ký chưa xác minh (V17)
+
+- **Khóa/quan hệ:** PK `id`, unique `email_lookup_hash` và `token_hash`; chưa có tài khoản user thật để tham chiếu.
+- **Cột quan trọng:** email mã hóa, password hash, timezone/locale, phiên bản terms/privacy, hash của link/mã, expiry và số lần nhập mã sai.
+- **Cách dùng:** chỉ tạo user sau khi xác minh thành công; đăng ký lại thay challenge cũ. Không lưu token/mã thô hoặc dùng bảng này làm danh sách tài khoản đang hoạt động.
+
+### 2.14 `user_oauth_identities` — liên kết danh tính Google (V19)
+
+- **Khóa/quan hệ:** PK `id`, FK `user_id` cascade; unique `(provider, provider_user_id)` và `(user_id, provider)`.
+- **Cột quan trọng:** `provider` hiện chỉ `GOOGLE`, subject do provider cấp và timestamps; không chứa access/refresh token của Google.
+- **Cách dùng:** nối danh tính federated với user nội bộ. Schema hỗ trợ OAuth không đồng nghĩa cấu hình provider hoặc luồng mobile đã sẵn sàng trên mọi môi trường.
 
 ## 3. Nhật ký, ảnh và check-in — 6 bảng
 
@@ -209,7 +221,7 @@ Nguồn schema: [V8](../src/main/resources/db/migration/V8__ai_analysis_and_jobs
 - **Cột quan trọng:** provider/model/operation, input/output tokens, estimated USD cost, latency, request status và thời điểm; các số có CHECK không âm.
 - **Cách dùng:** theo dõi chi phí/độ trễ mà không lưu raw prompt/response. **Bảng này có trong Flyway V8 nhưng hiện bị thiếu khỏi DBML**; không suy từ DBML rằng nó chưa tồn tại.
 
-## 6. Insight và báo cáo — 4 bảng
+## 6. Insight, báo cáo và nhận diện kiểu suy nghĩ — 8 bảng
 
 Nguồn schema: [V9](../src/main/resources/db/migration/V9__insights_and_reports.sql).
 
@@ -248,7 +260,7 @@ Nguồn schema: [V22](../src/main/resources/db/migration/V22__thinking_pattern_r
 
 Cả bốn bảng bật RLS không policy và đã thu hồi quyền `anon`/`authenticated` (ADR-0008). `data:reset` xóa thẻ và extraction của user; xóa tài khoản đi theo FK cascade.
 
-## 7. Mục tiêu và thói quen tự chăm sóc — 3 bảng
+## 7. Mục tiêu, thói quen và tùy chọn Companion — 4 bảng
 
 Nguồn schema: [V10](../src/main/resources/db/migration/V10__selfcare.sql).
 
@@ -261,7 +273,7 @@ Nguồn schema: [V10](../src/main/resources/db/migration/V10__selfcare.sql).
 ### 7.2 `habits` — hành vi lặp lại thuộc mục tiêu
 
 - **Khóa/quan hệ:** PK `id`, `user_id` FK; FK ghép `(goal_id, user_id)` tới `selfcare_goals` ngăn habit gắn goal của user khác.
-- **Cột quan trọng:** title mã hóa, target value/unit, `frequency_type` `DAILY/WEEKLY`, `frequency_config JSONB`, timezone snapshot, status/version.
+- **Cột quan trọng:** title mã hóa, target value/unit, `frequency_type` `DAILY/WEEKLY`, `frequency_config JSONB`, timezone snapshot, status/version. V21 thêm `tool_code` tùy chọn, CHECK giới hạn `BREATHING_2MIN`, `AMBIENT`, `VENT_PROMPT`.
 - **Cách dùng:** lịch thực hiện và progress; múi giờ chụp khi tạo habit, không tự đổi theo profile sau đó. API sửa habit chưa có dù bảng có `row_version`.
 
 ### 7.3 `habit_completions` — giá trị đã ghi vào một ngày
@@ -269,6 +281,12 @@ Nguồn schema: [V10](../src/main/resources/db/migration/V10__selfcare.sql).
 - **Khóa/quan hệ:** PK `id`; FK ghép `(habit_id, user_id)` tới `habits`, unique `(habit_id, local_date)`.
 - **Cột quan trọng:** ngày, value > 0, source `USER/IMPORT`, timestamps.
 - **Cách dùng:** `PUT` ghi/upsert idempotent, `DELETE` hoàn tác. Unique ngăn hai completion cho một habit/ngày; insight habit–mood vẫn cần minimum sample và không suy ra quan hệ nhân quả.
+
+### 7.4 `companion_habit_preferences` — tùy chọn gợi ý cũ (V21)
+
+- **Khóa/quan hệ:** `user_id` vừa là PK vừa là FK tới user, xóa cascade.
+- **Cột quan trọng:** `last_suggested_date`, `dismissed_until`, `updated_at`.
+- **Cách dùng hiện tại:** bảng vẫn tồn tại để giữ lịch sử migration và được dọn khi reset/xóa tài khoản. Theo thay đổi Companion ngày 2026-11-18, giới hạn gợi ý theo ngày đã bỏ; luồng gợi ý không còn đọc/ghi bảng này. Không xóa bảng bằng cách sửa V21.
 
 ## 8. Kho kiến thức và câu hỏi viết — 5 bảng
 
@@ -350,7 +368,8 @@ daily_checkins + journal_entries + active ai_analyses → insights/reports + evi
 ## 11. Quyền truy cập, khác biệt tài liệu và phạm vi chưa có bảng
 
 - **Quyền DB:** [V15](../src/main/resources/db/migration/V15__restrict_direct_database_api_access.sql) thu hồi grant của `PUBLIC`, `anon`, `authenticated` trên `public` và bật RLS không policy cho các bảng ứng dụng. Backend dùng DB owner; mọi API cá nhân vẫn phải owner-scope. Supabase Data API không phải lối truy cập dữ liệu ứng dụng.
-- **DBML chậm hơn Flyway:** DBML hiện có 42 bảng, thiếu `ai_usage_records`; Flyway tạo 43 bảng. `DATABASE_OVERVIEW.md` và tài liệu này mô tả usage table theo V8. Không dùng số bảng trong sơ đồ minh họa để suy ra schema triển khai.
-- **Bảng trong blueprint khác:** `system_configs` được nhắc trong DATABASE_OVERVIEW nhưng **chưa có `CREATE TABLE system_configs`** trong V1–V15. Không coi là bảng đang chạy.
+- **Phạm vi kiểm chứng 2026-11-22:** database đang cấu hình có đủ V1–V22, Flyway validate không báo checksum sai; Hibernate validate đạt với 45 JPA entity. Đối chiếu tên bảng/cột với migration ghi nhận 50 bảng nghiệp vụ, 587 cột và đủ 69 index khai báo tường minh. Cả 50 bảng bật RLS; truy vấn metadata không ghi nhận grant cho `PUBLIC`, `anon`, `authenticated`. Đây là kiểm tra schema của một môi trường, không thay cho kiểm thử nghiệp vụ, query plan hoặc toàn bộ constraint/index definition. Docker daemon không hoạt động nên chưa chạy lại PostgreSQL integration test trong lần đối chiếu này.
+- **Sơ đồ:** repository hiện không có `docs/database/mylog.dbml`; Mermaid trong DATABASE_OVERVIEW chỉ minh họa quan hệ chính. Không dùng số bảng trong sơ đồ để suy ra schema triển khai.
+- **Bảng trong blueprint khác:** `system_configs` được nhắc trong DATABASE_OVERVIEW nhưng **chưa có `CREATE TABLE system_configs`** trong V1–V22. Không coi là bảng đang chạy.
 - **Ba đề xuất self-compassion:** Thư gửi tương lai, Micro-Wins Vault và Therapist Handout [mới là đề xuất](SELF_COMPASSION_FEATURE_PROPOSALS.md); chưa có bảng riêng hoặc migration. Không tự dùng `journal_entries` hay `reports` như kho dữ liệu mới nếu chưa chốt consent, mã hóa, retention, owner check, export/deletion và migration mới.
-- **Migration email verification:** [V16](../src/main/resources/db/migration/V16__email_verification_code.sql) thêm `code_hash`, `code_expires_at`, `code_failed_attempts` cho `auth_action_tokens`; không thêm bảng. V1–V15 đã áp dụng và bất biến. Thay đổi schema tiếp theo cần V17 trở lên, cập nhật DBML/entity/test cùng lúc.
+- **Migration sau V15:** V16 thêm mã xác minh; V17 tạo đăng ký tạm; V18 thêm index embedding; V19 thêm Google OAuth; V20 thêm `position`/`is_cover`, cho phép ảnh chưa gắn bài và trạng thái `PENDING_ATTACH`; V21 thêm liên kết công cụ/thói quen; V22 thêm bốn bảng nhận diện kiểu suy nghĩ cùng consent `THINKING_PATTERNS`. Migration đã áp dụng là bất biến; thay đổi tiếp theo dùng V23 trở lên sau khi kiểm tra version hiện có, cập nhật mapping, tài liệu và test cùng lúc.

@@ -6,7 +6,7 @@ Tài liệu này áp dụng cho toàn bộ `backend/`. Đọc thêm `../AGENTS.m
 
 1. Đọc phần liên quan trong `docs/BACKEND_ARCHITECTURE.md` để hiểu module, luồng dữ liệu và quy ước code.
 2. Đọc `docs/BACKEND_DEVELOPMENT_PLAN.md` để biết dependency, acceptance/exit criteria và checklist tiến độ.
-3. Đọc `docs/DATABASE_OVERVIEW.md` và `docs/database/mylog.dbml` trước khi sửa persistence; Flyway migration mới là schema thực thi.
+3. Đọc `docs/DATABASE_OVERVIEW.md`, `docs/DATABASE_TABLES_EXPLAINED.md` và migration liên quan trước khi sửa persistence; Flyway migration mới là schema thực thi. Repository hiện không có file `docs/database/mylog.dbml`.
 4. Đọc `docs/adr/README.md` và ADR liên quan trước khi thay đổi quyết định nền tảng. ADR `Accepted` chỉ bị thay thế bằng ADR mới, không sửa mất lịch sử quyết định.
 5. Kiểm tra code, migration và test hiện tại trước khi kết luận một tính năng đã hoàn thành. Checklist trong kế hoạch là ảnh chụp tiến độ tại thời điểm viết, không thay thế việc kiểm tra repository.
 6. Khi làm AI, safety, insight hoặc RAG, đọc `docs/AI_ANALYSIS_GUIDE.md` để phân biệt luồng đã triển khai với phần provider/policy còn mở.
@@ -27,7 +27,7 @@ Nếu tài liệu, code và migration không khớp, chỉ rõ sự khác biệt
 ## 3. Tiến độ: luôn xác minh trước khi triển khai
 
 - `docs/BACKEND_DEVELOPMENT_PLAN.md` là tiến độ chi tiết. M0–M6 có backend và PostgreSQL integration tests nhưng các mục provider/safety content/frontend/hardening chưa xong. M7 có V14, export CSV/PDF, deletion và feedback; kiểm tra phần còn mở trong checklist trước khi coi milestone hoàn tất. M8 có quota journal/export, API/worker mode, readiness/security headers, profile `migrate` chạy Flyway một lần, threat model và release runbook; chưa đạt release gate vì cần staging, restore, safety/provider và phê duyệt vận hành. Xem `docs/M8_THREAT_MODEL.md` và `docs/M8_RELEASE_RUNBOOK.md`.
-- `platform` có security baseline, error contract, request ID, configuration, UUIDv7, OpenAPI, log redaction, Cloudinary configuration, idempotency và outbox worker. Flyway có V1–V16; V14–V15 đã áp dụng trên Supabase ngày 2026-10-01, còn V16 mới được thêm vào repository. Migration đã áp dụng là bất biến; thay đổi schema tiếp theo phải là V17 trở lên.
+- `platform` có security baseline, error contract, request ID, configuration, UUIDv7, OpenAPI, log redaction, Cloudinary configuration, idempotency và outbox worker. Repository có Flyway V1–V22, tạo 50 bảng nghiệp vụ. Kiểm tra chỉ đọc database đang cấu hình ngày 2026-11-22 xác nhận đủ 22 migration với checksum hợp lệ và mapping của 45 JPA entity khớp schema; đây không phải bằng chứng mọi môi trường đã được migrate. Migration đã áp dụng là bất biến; thay đổi schema tiếp theo phải là V23 trở lên, sau khi kiểm tra version hiện có.
 - Không giả định mọi class trong mã minh họa của tài liệu đã tồn tại. Mỗi phiên cần kiểm tra file/migration/test và `git status` thực tế, nhất là khi người dùng có thay đổi chưa lưu trong IDE.
 - Thứ tự phụ thuộc mục tiêu: M0 foundation → M1 identity/profile → M2 journal/check-in/safety đầu vào → M3 outbox/AI → M4 insight/report; M5 self-care có thể theo sau M2; M6 knowledge/admin, M7 data rights, M8 hardening theo kế hoạch.
 
